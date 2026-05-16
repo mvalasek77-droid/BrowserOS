@@ -1,0 +1,92 @@
+{
+  "images" : [
+    {
+      "idiom" : "watchMarketing",
+      "scale" : "1x"
+    },
+    {
+      "idiom" : "watchMarketing",
+      "scale" : "2x"
+    },
+    {
+      "idiom" : "watchMarketing",
+      "scale" : "3x"
+    },
+    {
+      "height" : 66,
+      "idiom" : "watchRoleAppIcon",
+      "scale" : "1x",
+      "width" : 66
+    },
+    {
+      "height" : 66,
+      "idiom" : "watchRoleAppIcon",
+      "scale" : "2x",
+      "width" : 66
+    },
+    {
+      "height" : 66,
+      "idiom" : "watchRoleAppIcon",
+      "scale" : "3x",
+      "width" : 66
+    },
+    {
+      "height" : 44,
+      "idiom" : "watchRoleCompanionSettingsAppIcon",
+      "scale" : "1x",
+      "width" : 44
+    },
+    {
+      "height" : 44,
+      "idiom" : "watchRoleCompanionSettingsAppIcon",
+      "scale" : "2x",
+      "width" : 44
+    },
+    {
+      "height" : 44,
+      "idiom" : "watchRoleCompanionSettingsAppIcon",
+      "scale" : "3x",
+      "width" : 44
+    },
+    {
+      "height" : 22,
+      "idiom" : "watchRoleNotificationCenter",
+      "scale" : "1x",
+      "width" : 22
+    },
+    {
+      "height" : 22,
+      "idiom" : "watchRoleNotificationCenter",
+      "scale" : "2x",
+      "width" : 22
+    },
+    {
+      "height" : 22,
+      "idiom" : "watchRoleNotificationCenter",
+      "scale" : "3x",
+      "width" : 22
+    },
+    {
+      "height" : 24,
+      "idiom" : "watchRoleQuickLook",
+      "scale" : "1x",
+      "width" : 24
+    },
+    {
+      "height" : 24,
+      "idiom" : "watchRoleQuickLook",
+      "scale" : "2x",
+      "width" : 24
+    },
+    {
+      "height" : 24,
+      "idiom" : "watchRoleQuickLook",
+      "scale" : "3x",
+      "width" : 24
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
