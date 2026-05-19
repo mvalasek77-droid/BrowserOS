@@ -38,9 +38,6 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         }
     }
     
-    // sessionDidBecomeInactive and sessionDidDeactivate are iOS-only
-    // On watchOS, the session stays active
-    
     func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async {
             self.isReachable = session.isReachable
@@ -63,28 +60,56 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         handleMessage(userInfo)
     }
     
+    /// Receive application context updates (used for lightweight progress updates)
+    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        handleMessage(applicationContext)
+    }
+    
     private func handleMessage(_ message: [String: Any]) {
-        DispatchQueue.main.async {
-            guard let type = message["type"] as? String else { return }
+        // Use WCKey enum for consistent key names (matches PhoneSessionManager)
+        guard let messageTypeRaw = message[WCKey.messageType.rawValue] as? String,
+              let messageType = WCMessageType(rawValue: messageTypeRaw) else { return }
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
             
-            switch type {
-            case "pageLoaded":
-                if let data = message["elements"] as? Data {
-                    let elements = self.deserializeNativeWebElements(data)
+            switch messageType {
+            case .pageLoaded:
+                // Elements come as JSON string (serialized by PhoneSessionManager)
+                if let elementsJSON = message[WCKey.elements.rawValue] as? String,
+                   let elementsData = elementsJSON.data(using: .utf8) {
+                    let elements = self.deserializeNativeWebElements(from: elementsData)
+                    var readerContent: ReaderContent? = nil
+                    if let readerJSON = message[WCKey.readerContent.rawValue] as? String,
+                       let readerData = readerJSON.data(using: .utf8) {
+                        readerContent = self.deserializeReaderContent(from: readerData)
+                    }
+                    let url = message[WCKey.url.rawValue] as? String ?? ""
+                    let title = message[WCKey.title.rawValue] as? String ?? ""
                     NotificationCenter.default.post(
                         name: .pageLoaded,
                         object: nil,
-                        userInfo: ["elements": elements]
+                        userInfo: [
+                            "elements": elements,
+                            "readerContent": readerContent as Any,
+                            "url": url,
+                            "title": title
+                        ]
                     )
                 }
                 
-            case "pageLoadProgress":
-                if let progress = message["progress"] as? Double {
+            case .pageLoadProgress:
+                if let progress = message[WCKey.loadProgress.rawValue] as? Double {
                     self.loadProgress = progress
+                    NotificationCenter.default.post(
+                        name: .pageLoadProgress,
+                        object: nil,
+                        userInfo: ["progress": progress]
+                    )
                 }
                 
-            case "pageError":
-                if let errorMessage = message["error"] as? String {
+            case .pageError:
+                if let errorMessage = message[WCKey.error.rawValue] as? String {
                     self.lastError = errorMessage
                     NotificationCenter.default.post(
                         name: .pageError,
@@ -93,9 +118,10 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                     )
                 }
                 
-            case "mediaDetected":
-                if let data = message["media"] as? Data {
-                    let items = self.deserializeMediaItems(data)
+            case .mediaDetected:
+                if let mediaJSON = message[WCKey.mediaItems.rawValue] as? String,
+                   let mediaData = mediaJSON.data(using: .utf8) {
+                    let items = self.deserializeMediaItems(from: mediaData)
                     NotificationCenter.default.post(
                         name: .mediaDetected,
                         object: nil,
@@ -103,13 +129,21 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                     )
                 }
                 
-            case "navigationState":
-                if let canBack = message["canGoBack"] as? Bool {
+            case .navigationState:
+                if let canBack = message[WCKey.canGoBack.rawValue] as? Bool {
                     self.canGoBack = canBack
                 }
-                if let canForward = message["canGoForward"] as? Bool {
+                if let canForward = message[WCKey.canGoForward.rawValue] as? Bool {
                     self.canGoForward = canForward
                 }
+                NotificationCenter.default.post(
+                    name: .navigationStateChanged,
+                    object: nil,
+                    userInfo: [
+                        "canGoBack": self.canGoBack,
+                        "canGoForward": self.canGoForward
+                    ]
+                )
                 
             default:
                 break
@@ -120,19 +154,33 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     // MARK: - Sending Commands to iPhone
     
     func loadURL(_ url: String) {
-        sendMessage(["type": "loadURL", "url": url])
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.loadURL.rawValue,
+            WCKey.url.rawValue: url
+        ]
+        sendMessage(message)
     }
     
     func goBack() {
-        sendMessage(["type": "goBack"])
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.goBack.rawValue
+        ]
+        sendMessage(message)
     }
     
     func goForward() {
-        sendMessage(["type": "goForward"])
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.goForward.rawValue
+        ]
+        sendMessage(message)
     }
     
     func addBookmark(title: String, url: String) {
-        let message: [String: Any] = ["type": "addBookmark", "title": title, "url": url]
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.addBookmark.rawValue,
+            WCKey.title.rawValue: title,
+            WCKey.url.rawValue: url
+        ]
         if session.isReachable {
             sendMessage(message)
         } else {
@@ -141,11 +189,18 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     }
     
     func removeBookmark(id: String) {
-        sendMessage(["type": "removeBookmark", "id": id])
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.removeBookmark.rawValue,
+            WCKey.tabId.rawValue: id
+        ]
+        sendMessage(message)
     }
     
     func clearHistory() {
-        sendMessage(["type": "clearHistory"])
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.clearHistory.rawValue
+        ]
+        sendMessage(message)
     }
     
     func openOniPhone(url: String) {
@@ -160,13 +215,12 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     
     private func sendMessage(_ message: [String: Any]) {
         guard session.isReachable else {
-            // Fall back to user info transfer if phone not immediately reachable
             transferUserInfo(message)
             return
         }
         session.sendMessage(message, replyHandler: nil, errorHandler: { error in
-            DispatchQueue.main.async {
-                self.lastError = error.localizedDescription
+            DispatchQueue.main.async { [weak self] in
+                self?.lastError = error.localizedDescription
             }
         })
     }
@@ -177,7 +231,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     
     // MARK: - Deserialization Helpers
     
-    private func deserializeNativeWebElements(_ data: Data) -> [NativeWebElement] {
+    private func deserializeNativeWebElements(from data: Data) -> [NativeWebElement] {
         do {
             return try JSONDecoder().decode([NativeWebElement].self, from: data)
         } catch {
@@ -186,7 +240,16 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         }
     }
     
-    private func deserializeMediaItems(_ data: Data) -> [MediaItem] {
+    private func deserializeReaderContent(from data: Data) -> ReaderContent? {
+        do {
+            return try JSONDecoder().decode(ReaderContent.self, from: data)
+        } catch {
+            lastError = "Failed to decode reader content: \(error.localizedDescription)"
+            return nil
+        }
+    }
+    
+    private func deserializeMediaItems(from data: Data) -> [MediaItem] {
         do {
             return try JSONDecoder().decode([MediaItem].self, from: data)
         } catch {
@@ -200,6 +263,8 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
 
 extension Notification.Name {
     static let pageLoaded = Notification.Name("pageLoaded")
+    static let pageLoadProgress = Notification.Name("pageLoadProgress")
     static let pageError = Notification.Name("pageError")
     static let mediaDetected = Notification.Name("mediaDetected")
+    static let navigationStateChanged = Notification.Name("navigationStateChanged")
 }

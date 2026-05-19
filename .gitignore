@@ -36,4 +36,4 @@ fastlane/test_output
 .LSOverride
 ._*
 .Spotlight-V100
-.Trashes
+.Trashesbuild/

@@ -30,6 +30,18 @@ struct BrowserPageView: View {
                     })
                 }
                 
+                // Phone connection status
+                if !viewModel.isPhoneReachable {
+                    HStack(spacing: 4) {
+                        Image(systemName: "iphone.slash")
+                            .font(.caption2)
+                        Text("Offline — fetching directly")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(.orange)
+                    .padding(.vertical, 4)
+                }
+                
                 // Error Banner
                 if let error = viewModel.errorMessage {
                     ErrorBannerView(message: error, onRetry: {
@@ -41,7 +53,7 @@ struct BrowserPageView: View {
                 }
                 
                 // Home page (shown when on DuckDuckGo/new tab)
-                if showHomePage && browserState.activeTab.url.contains("duckduckgo.com") {
+                if showHomePage && (browserState.activeTab.url.isEmpty || browserState.activeTab.url.contains("duckduckgo.com")) {
                     WatchHomePage()
                 }
                 
@@ -70,12 +82,12 @@ struct BrowserPageView: View {
             ToolbarItemGroup(placement: .bottomBar) {
                 // Back
                 Button {
+                    viewModel.goBackOnPhone()
                     browserState.goBack()
-                    viewModel.loadPage(url: browserState.activeTab.url, readerMode: browserState.activeTab.isReaderMode)
                 } label: {
                     Image(systemName: "chevron.left")
                 }
-                .disabled(!browserState.activeTab.canGoBack)
+                .disabled(!WatchSessionManager.shared.canGoBack)
                 
                 // Reader Mode
                 Button {
@@ -115,20 +127,26 @@ struct BrowserPageView: View {
             }
         }
         .onAppear {
+            viewModel.activate()
+            viewModel.isPhoneReachable = WatchSessionManager.shared.isPhoneReachable
+            
             let url = browserState.activeTab.url
-            showHomePage = url.contains("duckduckgo.com")
+            showHomePage = url.isEmpty || url.contains("duckduckgo.com")
             if viewModel.pageElements.isEmpty && viewModel.readerContent == nil {
                 viewModel.addressBarText = url
-                if !showHomePage {
+                if !showHomePage && !url.isEmpty {
                     viewModel.loadPage(url: url, readerMode: browserState.activeTab.isReaderMode)
                 }
             }
         }
         .onChange(of: browserState.activeTab.url) { _, newURL in
-            showHomePage = newURL.contains("duckduckgo.com")
-            if !showHomePage {
+            showHomePage = newURL.isEmpty || newURL.contains("duckduckgo.com")
+            if !showHomePage && !newURL.isEmpty {
                 viewModel.loadPage(url: newURL, readerMode: browserState.activeTab.isReaderMode)
             }
+        }
+        .onChange(of: WatchSessionManager.shared.isPhoneReachable) { _, reachable in
+            viewModel.isPhoneReachable = reachable
         }
     }
 }
