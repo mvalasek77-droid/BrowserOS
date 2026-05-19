@@ -36,6 +36,9 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         ENABLE_PREVIEWS: true
         SWIFT_EMIT_LOC_STRINGS: YES
+    dependencies:
+      - target: BrowserOS Watch App
+        embed: true
 
   # watchOS app — native SwiftUI rendering of structured data from iPhone
   BrowserOS Watch App:
@@ -52,7 +55,7 @@ targets:
           - "**/.DS_Store"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.browseros.watchapp
+        PRODUCT_BUNDLE_IDENTIFIER: com.browseros.ios.watchapp
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.9"
@@ -68,3 +71,5 @@ targets:
         SWIFT_EMIT_LOC_STRINGS: YES
         ENABLE_STRICT_OBJC_MSGSEND: YES
         CLANG_ENABLE_MODULES: YES
+        SDKROOT: watchos
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"

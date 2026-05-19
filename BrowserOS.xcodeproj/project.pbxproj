@@ -35,6 +35,7 @@
 		67AB298E6156B9B4E7AA57B2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 788CAB08BC01550E79069EA7 /* SettingsView.swift */; };
 		86067E47BBFC22D83E4F6589 /* NativeWebContentRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555E1ECA0AB5D946FA4E1C91 /* NativeWebContentRenderer.swift */; };
 		892A7D95596FB3963B9FB4AD /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BDA8D6F6747B83AF6F41A2C /* SharedModels.swift */; };
+		8984470E6AE641ECC17D6794 /* BrowserOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = ED4161975F993886BB440B19 /* BrowserOS Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		8D62753AA3C4F1D57A4D3399 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73514936137B0030893CBE3 /* ErrorBannerView.swift */; };
 		ABA3B293705E8E64452FDA9F /* AddressBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D12435A06B1187693850018 /* AddressBarView.swift */; };
 		AF5837CF133B7FB74E40E5F8 /* ReaderModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33E51DF46E4525A426C5BC0F /* ReaderModeView.swift */; };
@@ -47,6 +48,30 @@
 		F07C883EB470A2D85D86BA8A /* BrowserPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF734B0BC4B9265ECF4D0123 /* BrowserPageView.swift */; };
 		F49736D6EF6F9E4C50EF085E /* BrowserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E3010AE86A95DF8A8D0297 /* BrowserViewModel.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EBFA5A9EFFD8A28FBA28AAF0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0256A65F218CDEB687EAFA0B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 5D9B722F73E9D6B0F417B657;
+			remoteInfo = "BrowserOS Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		764C8405829F555E310A17C6 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				8984470E6AE641ECC17D6794 /* BrowserOS Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		00E3010AE86A95DF8A8D0297 /* BrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewModel.swift; sourceTree = "<group>"; };
@@ -235,10 +260,12 @@
 			buildPhases = (
 				1BFE56C5DC894AB095C3B9F4 /* Sources */,
 				DFB69036E24A48A0347D09BA /* Resources */,
+				764C8405829F555E310A17C6 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				886538DA7BA663D7598D7A9F /* PBXTargetDependency */,
 			);
 			name = BrowserOS;
 			packageProductDependencies = (
@@ -376,6 +403,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		886538DA7BA663D7598D7A9F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5D9B722F73E9D6B0F417B657 /* BrowserOS Watch App */;
+			targetProxy = EBFA5A9EFFD8A28FBA28AAF0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		09C77108FF49FF449CBC4EA9 /* Debug */ = {
@@ -563,7 +598,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BrowserOS/Info.plist;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.browseros.watchapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.browseros.ios.watchapp;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -587,7 +622,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = BrowserOS/Info.plist;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.browseros.watchapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.browseros.ios.watchapp;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
