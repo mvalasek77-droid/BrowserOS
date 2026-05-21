@@ -1,0 +1,142 @@
+import AppIntents
+import Foundation
+
+// MARK: - App Intents
+// Expose BrowserOS to Siri Shortcuts, Spotlight, and the Action button on
+// Apple Watch Ultra. Each intent opens the app and parks a request in
+// UserDefaults under "browseros_pending_intent"; the app reads it on
+// launch via consumePendingIntent() and acts on it.
+
+struct PendingIntent: Codable {
+    enum Action: String, Codable {
+        case openURL
+        case search
+        case voiceSearch
+        case openHome
+    }
+    let action: Action
+    let payload: String?
+    let timestamp: Date
+}
+
+enum PendingIntentStore {
+    private static let key = "browseros_pending_intent"
+
+    static func store(_ intent: PendingIntent) {
+        if let data = try? JSONEncoder().encode(intent) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    /// Returns and clears any pending intent younger than 60 seconds.
+    static func consume() -> PendingIntent? {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let intent = try? JSONDecoder().decode(PendingIntent.self, from: data) else {
+            return nil
+        }
+        UserDefaults.standard.removeObject(forKey: key)
+        guard Date().timeIntervalSince(intent.timestamp) < 60 else { return nil }
+        return intent
+    }
+}
+
+// MARK: - Open Website
+
+struct OpenWebsiteIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open Website on BrowserOS"
+    static var description = IntentDescription("Opens a URL in BrowserOS.")
+    static var openAppWhenRun: Bool = true
+
+    @Parameter(title: "URL", description: "The website to open.")
+    var url: String
+
+    func perform() async throws -> some IntentResult {
+        PendingIntentStore.store(PendingIntent(action: .openURL, payload: url, timestamp: Date()))
+        return .result()
+    }
+}
+
+// MARK: - Search the Web
+
+struct SearchWebIntent: AppIntent {
+    static var title: LocalizedStringResource = "Search the Web on BrowserOS"
+    static var description = IntentDescription("Searches the web using your selected search engine.")
+    static var openAppWhenRun: Bool = true
+
+    @Parameter(title: "Query", description: "What to search for.")
+    var query: String
+
+    func perform() async throws -> some IntentResult {
+        PendingIntentStore.store(PendingIntent(action: .search, payload: query, timestamp: Date()))
+        return .result()
+    }
+}
+
+// MARK: - Voice Search
+
+struct VoiceSearchIntent: AppIntent {
+    static var title: LocalizedStringResource = "Voice Search on BrowserOS"
+    static var description = IntentDescription("Opens BrowserOS and starts a voice search.")
+    static var openAppWhenRun: Bool = true
+
+    func perform() async throws -> some IntentResult {
+        PendingIntentStore.store(PendingIntent(action: .voiceSearch, payload: nil, timestamp: Date()))
+        return .result()
+    }
+}
+
+// MARK: - Open Home
+
+struct OpenHomeIntent: AppIntent {
+    static var title: LocalizedStringResource = "Open BrowserOS Home"
+    static var description = IntentDescription("Opens BrowserOS to the home page.")
+    static var openAppWhenRun: Bool = true
+
+    func perform() async throws -> some IntentResult {
+        PendingIntentStore.store(PendingIntent(action: .openHome, payload: nil, timestamp: Date()))
+        return .result()
+    }
+}
+
+// MARK: - Shortcuts Provider
+
+struct BrowserOSShortcuts: AppShortcutsProvider {
+    static var appShortcuts: [AppShortcut] {
+        AppShortcut(
+            intent: OpenWebsiteIntent(),
+            phrases: [
+                "Open \(\.$url) on \(.applicationName)",
+                "Visit \(\.$url) with \(.applicationName)"
+            ],
+            shortTitle: "Open Website",
+            systemImageName: "globe"
+        )
+        AppShortcut(
+            intent: SearchWebIntent(),
+            phrases: [
+                "Search \(\.$query) on \(.applicationName)",
+                "Search the web for \(\.$query) on \(.applicationName)"
+            ],
+            shortTitle: "Search",
+            systemImageName: "magnifyingglass"
+        )
+        AppShortcut(
+            intent: VoiceSearchIntent(),
+            phrases: [
+                "Voice search on \(.applicationName)",
+                "Speak a search on \(.applicationName)"
+            ],
+            shortTitle: "Voice Search",
+            systemImageName: "mic.fill"
+        )
+        AppShortcut(
+            intent: OpenHomeIntent(),
+            phrases: [
+                "Open \(.applicationName)",
+                "Launch \(.applicationName)"
+            ],
+            shortTitle: "Open BrowserOS",
+            systemImageName: "house.fill"
+        )
+    }
+}

@@ -21,6 +21,11 @@ class BrowserState: ObservableObject {
     @Published var pageElements: [NativeWebElement] = []
     @Published var readerContent: ReaderContent? = nil
     @Published var detectedMedia: [MediaItem] = []
+
+    /// Set to true by App Intents (or other external triggers) to request the
+    /// address bar to begin voice input on its next render. AddressBarView
+    /// observes it and resets it after triggering.
+    @Published var voiceInputRequested: Bool = false
     
     private let bookmarkStore = BookmarkStore()
     private let historyStore = HistoryStore()
@@ -160,11 +165,32 @@ class BrowserState: ObservableObject {
         }
         isLoading = true
         errorMessage = nil
-        
+
         // On watchOS, send URL to iPhone via WatchConnectivity
         #if os(watchOS)
         WatchSessionManager.shared.loadURL(finalURL)
         #endif
+    }
+
+    /// Drain any AppIntent that fired before the app was foregrounded and
+    /// apply it to current state (navigate, search, start voice).
+    func consumePendingIntent() {
+        guard let intent = PendingIntentStore.consume() else { return }
+        switch intent.action {
+        case .openURL:
+            if let url = intent.payload {
+                navigate(to: url)
+            }
+        case .search:
+            if let query = intent.payload {
+                navigate(to: settings.searchEngine.searchURL(for: query))
+            }
+        case .voiceSearch:
+            voiceInputRequested = true
+        case .openHome:
+            // Home is rendered by MainNavigationView's first tab; no nav needed.
+            break
+        }
     }
     
     func goBack() {

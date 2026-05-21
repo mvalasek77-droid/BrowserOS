@@ -68,5 +68,11 @@ struct AddressBarView: View {
                 }
             }
         }
+        .onChange(of: browserState.voiceInputRequested) { _, requested in
+            if requested {
+                browserState.voiceInputRequested = false
+                voice.start()
+            }
+        }
     }
 }
