@@ -26,5 +26,9 @@
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.browseros.ios</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BrowserOS uses the microphone to let you speak URLs and search queries.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BrowserOS uses speech recognition to convert your voice into URLs and search queries.</string>
 </dict>
 </plist>
