@@ -44,5 +44,16 @@
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
 	</dict>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>youtube</string>
+		<string>nflx</string>
+		<string>fb</string>
+		<string>tiktok</string>
+		<string>truthsocial</string>
+		<string>twitter</string>
+		<string>claude</string>
+		<string>chatgpt</string>
+	</array>
 </dict>
 </plist>
