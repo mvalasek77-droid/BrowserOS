@@ -1,40 +1,68 @@
 # BrowserOS
 
-A full-featured web browser for Apple Watch — the first of its kind.
+The most capable native browser experience for Apple Watch — built from the ground up for the wrist.
 
-## Revolutionary Architecture
+## Why It's Different
 
-BrowserOS takes a fundamentally different approach than every other browser. Since **WKWebView doesn't exist on watchOS**, we can't just embed a web view. Instead, BrowserOS uses a **native HTML rendering engine** that parses web pages and converts them into first-class SwiftUI components.
+Every other watch "browser" either takes screenshots on a server and ships pixels to the watch, or runs JavaScript on iPhone and mirrors the result as an image. BrowserOS does neither: pages are fetched and parsed on the paired iPhone, then sent to the watch as **structured data** that the watch renders as first-class SwiftUI — real `Text`, real `Button`, real `List`. Every element gets Digital Crown scrolling, haptics, Dynamic Type, and VoiceOver for free.
 
-### How It Works
+There is no `WKWebView` on watchOS. So the watch app isn't running a browser engine; it's running a native content viewer that speaks the same protocol as the iPhone fetcher.
 
-1. **Native Render** — HTML is parsed into SwiftUI components. Headings become `Text`, lists become `List`, links become `Button`, images become `AsyncImage`. Every element is a native watchOS citizen with Digital Crown scrolling, haptic feedback, and native accessibility.
+## What You Can Do
 
-2. **Reader Mode** — Mozilla Readability-inspired algorithm extracts article content into clean, distraction-free native text. Optimized for the tiny watch screen with adjustable fonts.
+**Browse**
+- Real tabs (create, switch, close) — no other watch browser ships this
+- Bookmarks with persistent storage, browsing history with search
+- Four search engines: DuckDuckGo, Google, Ecosia, Brave
+- Forward / back navigation
 
-3. **Media Streaming** — Full video playback via AVPlayer. YouTube videos are extracted using Invidious API for direct stream URLs. Netflix deep-links to the Netflix app. Vimeo and direct streams play inline.
+**Read**
+- Reader Mode — Mozilla Readability-inspired extraction into clean, distraction-free native text
+- Adjustable font size
+- Optimized typography for the watch screen
 
-4. **Smart Detection** — The browser automatically detects videos on any page and shows a "Play" banner. One tap launches fullscreen video with Digital Crown scrubbing.
+**Watch**
+- Direct video playback (Vimeo, MP4, HLS, WebM, MOV) via AVPlayer with Digital Crown scrubbing, haptic feedback, and quality picker
+- One-tap "Open in App" Handoff to YouTube, TikTok, Netflix, Facebook, X, and Truth Social for content best viewed in their dedicated iOS apps
+- *Experimental:* opt-in YouTube stream extraction via Invidious in Settings (off by default; see notes below)
 
-## Features
+**Discover**
+- Categorized speed-dial home page: AI assistants (Claude, ChatGPT), Social (Reddit, Facebook, X, TikTok, Truth Social), Media (Vimeo, Internet Archive, NASA TV), Knowledge (Wikipedia, GitHub)
+- Recent history surfaced inline
 
-- URL bar with search engine support (DuckDuckGo, Google, Ecosia, Brave)
-- Tab management (create, switch, close)
-- Bookmarks with persistent storage
-- Browsing history with search
-- Reader Mode with clean typography
-- Video playback with quality selection
-- YouTube stream extraction via Invidious
-- Netflix deep-linking
-- Digital Crown video scrubbing
-- Home page with quick access tiles
-- Watch face complication (coming soon)
-- Ad blocking
-- Image compression for watch data savings
+**Watch-native**
+- Watch face complication for quick launch
+- Smart Stack widget
+- Dynamic Type + VoiceOver throughout
+
+## Architecture
+
+```
+┌───────────────────────────────┐         ┌──────────────────────────────┐
+│  iPhone Companion             │         │  Apple Watch App             │
+│                               │         │                              │
+│  WKWebView (offscreen)        │   ──→   │  Native SwiftUI Renderer     │
+│   ├ fetch URL                 │   WC    │   ├ Headings, Text, Lists    │
+│   ├ JS executes, DOM settles  │  msg    │   ├ Images (compressed)      │
+│   ├ DOMParser extracts:       │ (proto) │   ├ Buttons, Forms           │
+│   │   • structured elements   │   ←──   │   ├ Tables, Blockquotes      │
+│   │   • reader content        │  taps   │   └ Media tiles → AVPlayer   │
+│   │   • detected media URLs   │         │                              │
+│   └ pushes to watch           │         │  Reader Mode + Media Hub     │
+└───────────────────────────────┘         └──────────────────────────────┘
+```
+
+The watch issues navigation intents (load URL, go back, tap link); the iPhone returns rendered representations. The watch also has direct network fallback for permitted media URLs so video plays without round-tripping bytes through WatchConnectivity.
+
+## Content Policy
+
+BrowserOS is a **content viewer**, not a re-distributor. For services that don't permit third-party rendering of their content (Netflix, large parts of YouTube, Facebook News Feed, TikTok), BrowserOS deep-links to the official iOS app via Handoff rather than attempting to scrape or re-stream. This keeps the app aligned with platform terms and Apple's App Review guidelines (5.2.1, 5.2.5).
+
+For YouTube specifically: stream extraction via third-party Invidious instances is included as an off-by-default experimental setting. Enabling it accepts the risk that the YouTube ToS may be violated, that extraction may break at any time, and that the path may be removed in a future release.
 
 ## Requirements
 
-- watchOS 10.0+
+- watchOS 10.0+ (paired iPhone running iOS 17.0+)
 - Xcode 16+
 - Swift 5.9+
 
@@ -42,41 +70,46 @@ BrowserOS takes a fundamentally different approach than every other browser. Sin
 
 ```bash
 xcodegen generate
-xcodebuild -project BrowserOS.xcodeproj -scheme "BrowserOS Watch App" -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)' build
+xcodebuild -project BrowserOS.xcodeproj -scheme "BrowserOS Watch App" \
+  -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)' build
 ```
 
-## Project Structure
+## Project Layout
 
 ```
-BrowserOS/
-  BrowserOSApp.swift              — App entry point
-  Models/
-    BrowserModels.swift           — Data models (BrowserTab, Bookmark, etc.)
+BrowserOS/                     # watchOS app
+  BrowserOSApp.swift           — Watch app entry
+  BrowserOSComplication.swift  — Watch face complication + Smart Stack widget
   Services/
-    BrowserState.swift            — Central app state management
-    HTMLNativeRenderer.swift      — HTML → SwiftUI element parser
-    MediaDetector.swift           — Video/media detection on pages
-    WebFetcher.swift              — Network layer
-    PersistenceStore.swift        — UserDefaults persistence
+    BrowserState.swift         — Tabs, bookmarks, history, settings
+    HTMLNativeRenderer.swift   — HTML → NativeWebElement parser
+    MediaDetector.swift        — YouTube / Vimeo / HLS detection
+    PersistenceStore.swift     — UserDefaults persistence
+    WatchSessionManager.swift  — WatchConnectivity client
+    WebFetcher.swift           — Direct-from-watch fallback fetcher
   ViewModels/
-    BrowserViewModel.swift        — Page loading + address bar logic
-    VideoPlayerViewModel.swift    — AVPlayer playback control
+    VideoPlayerViewModel.swift — AVPlayer control
   Views/
-    MainNavigationView.swift      — Root tab navigation
-    BrowserPageView.swift         — Main browser content view
-    WatchHomePage.swift           — Quick-access home page
-    WatchVideoPlayerView.swift    — Full-featured video player
-    VideoRenderer.swift           — AVPlayer display bridge
-    MediaHubView.swift            — YouTube/Netflix/Vimeo hub
-    BookmarksView.swift           — Bookmark management
-    HistoryView.swift             — Browsing history
-    SettingsView.swift            — App settings
-    TabManagerView.swift          — Tab overview/management
-    Components/
-      AddressBarView.swift        — URL input bar
-      NativeWebContentRenderer.swift — HTML → native SwiftUI rendering
-      ReaderModeView.swift        — Clean reading mode
-      VideoControlsView.swift     — Scrubber + quality picker
+    MainNavigationView.swift   — Root tab navigation
+    WatchHomePage.swift        — Speed-dial tiles
+    BrowserPageView.swift      — Main browsing surface
+    WatchVideoPlayerView.swift — Full-screen player
+    MediaHubView.swift         — Detected-media browser
+    BookmarksView.swift / HistoryView.swift / SettingsView.swift / TabManagerView.swift
+    Components/                — AddressBar, NativeWebContentRenderer, ReaderModeView, VideoControls
+  Shared/
+    SharedModels.swift         — Codable models shared with iPhone
+    WatchConnectivityProtocol.swift — message-type enum + keys
+
+BrowserOS-iOS/                 # iPhone companion
+  BrowserOS_iOSApp.swift       — iPhone app entry
+  Services/
+    DOMParser.swift            — JS injected into WKWebView, extracts structured data
+    PhoneSessionManager.swift  — WatchConnectivity host
+  ViewModels/
+  Views/
+    iPhoneBrowserView.swift    — iPhone-side browser UI (also functional standalone)
+    iPhoneWebView.swift        — WKWebView host
 ```
 
 ## License
