@@ -153,6 +153,36 @@ struct WatchHomePage: View {
     }
 }
 
+// MARK: - Recent History Row
+
+struct RecentHistoryRow: View {
+    let entry: HistoryEntry
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.title ?? entry.url)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+
+                    Text(entry.url)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Quick Access Tile
 
 struct QuickAccessTile: View {

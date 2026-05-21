@@ -40,39 +40,7 @@ enum PendingIntentStore {
     }
 }
 
-// MARK: - Open Website
-
-struct OpenWebsiteIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open Website on BrowserOS"
-    static var description = IntentDescription("Opens a URL in BrowserOS.")
-    static var openAppWhenRun: Bool = true
-
-    @Parameter(title: "URL", description: "The website to open.")
-    var url: String
-
-    func perform() async throws -> some IntentResult {
-        PendingIntentStore.store(PendingIntent(action: .openURL, payload: url, timestamp: Date()))
-        return .result()
-    }
-}
-
-// MARK: - Search the Web
-
-struct SearchWebIntent: AppIntent {
-    static var title: LocalizedStringResource = "Search the Web on BrowserOS"
-    static var description = IntentDescription("Searches the web using your selected search engine.")
-    static var openAppWhenRun: Bool = true
-
-    @Parameter(title: "Query", description: "What to search for.")
-    var query: String
-
-    func perform() async throws -> some IntentResult {
-        PendingIntentStore.store(PendingIntent(action: .search, payload: query, timestamp: Date()))
-        return .result()
-    }
-}
-
-// MARK: - Voice Search
+// MARK: - Voice Search Intent
 
 struct VoiceSearchIntent: AppIntent {
     static var title: LocalizedStringResource = "Voice Search on BrowserOS"
@@ -85,7 +53,7 @@ struct VoiceSearchIntent: AppIntent {
     }
 }
 
-// MARK: - Open Home
+// MARK: - Open Home Intent
 
 struct OpenHomeIntent: AppIntent {
     static var title: LocalizedStringResource = "Open BrowserOS Home"
@@ -102,24 +70,6 @@ struct OpenHomeIntent: AppIntent {
 
 struct BrowserOSShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
-        AppShortcut(
-            intent: OpenWebsiteIntent(),
-            phrases: [
-                "Open \(\.$url) on \(.applicationName)",
-                "Visit \(\.$url) with \(.applicationName)"
-            ],
-            shortTitle: "Open Website",
-            systemImageName: "globe"
-        )
-        AppShortcut(
-            intent: SearchWebIntent(),
-            phrases: [
-                "Search \(\.$query) on \(.applicationName)",
-                "Search the web for \(\.$query) on \(.applicationName)"
-            ],
-            shortTitle: "Search",
-            systemImageName: "magnifyingglass"
-        )
         AppShortcut(
             intent: VoiceSearchIntent(),
             phrases: [

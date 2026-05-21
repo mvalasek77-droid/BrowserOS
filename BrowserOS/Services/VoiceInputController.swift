@@ -1,4 +1,5 @@
 import Foundation
+#if canImport(Speech)
 import Speech
 import AVFoundation
 import Combine
@@ -136,3 +137,4 @@ final class VoiceInputController: ObservableObject {
         }
     }
 }
+#endif
