@@ -14,7 +14,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     @Published var canGoForward: Bool = false
     
     private let session = WCSession.default
-    
+
+    /// Buffer of incoming page chunks keyed by tabId. Cleared once the full
+    /// page has been assembled and dispatched as a pageLoaded notification.
+    private var pendingChunks: [String: [Int: [String: Any]]] = [:]
+
     override init() {
         super.init()
         activateSession()
@@ -75,7 +79,8 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             
             switch messageType {
             case .pageLoaded:
-                // Elements come as JSON string (serialized by PhoneSessionManager)
+                // Legacy single-message path (kept for backward compat with
+                // older iPhone builds). New builds use .pageChunk instead.
                 if let elementsJSON = message[WCKey.elements.rawValue] as? String,
                    let elementsData = elementsJSON.data(using: .utf8) {
                     let elements = self.deserializeNativeWebElements(from: elementsData)
@@ -97,6 +102,9 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                         ]
                     )
                 }
+
+            case .pageChunk:
+                self.handlePageChunk(message)
                 
             case .pageLoadProgress:
                 if let progress = message[WCKey.loadProgress.rawValue] as? Double {
@@ -151,6 +159,60 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         }
     }
     
+    // MARK: - Chunk Reassembly
+
+    /// Buffer one page chunk and, once all chunks for a tab have arrived,
+    /// assemble them into a complete element list and post pageLoaded.
+    /// Chunks may arrive out of order if the system reorders userInfo
+    /// transfers, so we key them by chunk index within a per-tab dictionary.
+    private func handlePageChunk(_ message: [String: Any]) {
+        guard let tabId = message[WCKey.tabId.rawValue] as? String,
+              let chunkIndex = message[WCKey.chunkIndex.rawValue] as? Int,
+              let totalChunks = message[WCKey.totalChunks.rawValue] as? Int else { return }
+
+        if pendingChunks[tabId] == nil {
+            pendingChunks[tabId] = [:]
+        }
+        pendingChunks[tabId]?[chunkIndex] = message
+
+        guard let chunks = pendingChunks[tabId], chunks.count >= totalChunks else { return }
+
+        // All chunks present — assemble in order.
+        var combinedElements: [NativeWebElement] = []
+        var url = ""
+        var title = ""
+        var readerContent: ReaderContent? = nil
+        for i in 0..<totalChunks {
+            guard let chunk = chunks[i] else { return }
+            if let elementsJSON = chunk[WCKey.elements.rawValue] as? String,
+               let data = elementsJSON.data(using: .utf8) {
+                let elements = self.deserializeNativeWebElements(from: data)
+                combinedElements.append(contentsOf: elements)
+            }
+            if url.isEmpty, let u = chunk[WCKey.url.rawValue] as? String { url = u }
+            if title.isEmpty, let t = chunk[WCKey.title.rawValue] as? String { title = t }
+            // Reader content rides on the last chunk only.
+            if i == totalChunks - 1,
+               let readerJSON = chunk[WCKey.readerContent.rawValue] as? String,
+               let data = readerJSON.data(using: .utf8) {
+                readerContent = self.deserializeReaderContent(from: data)
+            }
+        }
+
+        pendingChunks[tabId] = nil
+
+        NotificationCenter.default.post(
+            name: .pageLoaded,
+            object: nil,
+            userInfo: [
+                "elements": combinedElements,
+                "readerContent": readerContent as Any,
+                "url": url,
+                "title": title
+            ]
+        )
+    }
+
     // MARK: - Sending Commands to iPhone
     
     func loadURL(_ url: String) {

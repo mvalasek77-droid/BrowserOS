@@ -22,10 +22,13 @@ enum WCKey: String {
     case formAction
     case formMethod
     case formValues
+    case chunkIndex
+    case totalChunks
 }
 
 enum WCMessageType: String, Codable {
     case pageLoaded
+    case pageChunk
     case pageLoadProgress
     case pageError
     case mediaDetected
@@ -34,7 +37,7 @@ enum WCMessageType: String, Codable {
     case bookmarksSync
     case historySync
     case handshake
-    
+
     case loadURL
     case goBack
     case goForward
