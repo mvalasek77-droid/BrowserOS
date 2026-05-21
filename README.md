@@ -4,7 +4,7 @@ The most capable native browser experience for Apple Watch — built from the gr
 
 ## Why It's Different
 
-Every other watch "browser" either takes screenshots on a server and ships pixels to the watch, or runs JavaScript on iPhone and mirrors the result as an image. BrowserOS does neither: pages are fetched and parsed on the paired iPhone, then sent to the watch as **structured data** that the watch renders as first-class SwiftUI — real `Text`, real `Button`, real `List`. Every element gets Digital Crown scrolling, haptics, Dynamic Type, and VoiceOver for free.
+Every other watch "browser" either takes screenshots on a server and ships pixels to the watch, or runs JavaScript on an iPhone and mirrors the result as an image. BrowserOS does neither: pages are fetched and parsed on the paired iPhone, then sent to the watch as **structured data** that the watch renders as first-class SwiftUI — real `Text`, real `Button`, real `List`. Every element gets Digital Crown scrolling, haptics, Dynamic Type, and VoiceOver for free.
 
 There is no `WKWebView` on watchOS. So the watch app isn't running a browser engine; it's running a native content viewer that speaks the same protocol as the iPhone fetcher.
 
@@ -27,7 +27,7 @@ There is no `WKWebView` on watchOS. So the watch app isn't running a browser eng
 - *Experimental:* opt-in YouTube stream extraction via Invidious in Settings (off by default; see notes below)
 
 **Discover**
-- Categorized speed-dial home page: AI assistants (Claude, ChatGPT), Social (Reddit, Facebook, X, TikTok, Truth Social), Media (Vimeo, Internet Archive, NASA TV), Knowledge (Wikipedia, GitHub)
+- Categorized speed-dial home page: AI assistants (Claude, ChatGPT), Social (Reddit, Facebook, X, TikTok, Hacker News, Truth Social), Media (Vimeo, Internet Archive, NASA TV), Knowledge (Wikipedia, GitHub)
 - Recent history surfaced inline
 
 **Watch-native**
@@ -56,9 +56,9 @@ The watch issues navigation intents (load URL, go back, tap link); the iPhone re
 
 ## Content Policy
 
-BrowserOS is a **content viewer**, not a re-distributor. For services that don't permit third-party rendering of their content (Netflix, large parts of YouTube, Facebook News Feed, TikTok), BrowserOS deep-links to the official iOS app via Handoff rather than attempting to scrape or re-stream. This keeps the app aligned with platform terms and Apple's App Review guidelines (5.2.1, 5.2.5).
+BrowserOS is a **content viewer**, not a redistributor. For services that don't permit third-party rendering of their content (Netflix, large parts of YouTube, Facebook News Feed, TikTok), BrowserOS deep-links to the official iOS app via Handoff rather than attempting to scrape or re-stream. This keeps the app aligned with each platform's terms of service and Apple's App Review guidelines (5.2.1, 5.2.5).
 
-For YouTube specifically: stream extraction via third-party Invidious instances is included as an off-by-default experimental setting. Enabling it accepts the risk that the YouTube ToS may be violated, that extraction may break at any time, and that the path may be removed in a future release.
+For YouTube specifically: stream extraction via third-party Invidious instances is included as an off-by-default experimental setting. Enabling it accepts the risk that YouTube's terms of service may be violated, that extraction may break at any time, and that the feature may be removed in a future release.
 
 ## Requirements
 

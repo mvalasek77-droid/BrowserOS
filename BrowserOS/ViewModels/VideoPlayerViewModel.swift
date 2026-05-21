@@ -79,7 +79,7 @@ class VideoPlayerViewModel: ObservableObject {
         // Default path: hand off to the official YouTube app on iPhone.
         // Stream extraction is opt-in via Settings → Experimental (legal/operational risk).
         guard UserDefaults.standard.bool(forKey: "browseros_invidious_enabled") else {
-            errorMessage = "Open in YouTube app on iPhone to play this video."
+            errorMessage = "Open in the YouTube app on your iPhone to play this video."
             return
         }
 

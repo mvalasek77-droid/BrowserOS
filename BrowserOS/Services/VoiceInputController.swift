@@ -32,7 +32,7 @@ final class VoiceInputController: ObservableObject {
                 guard let self else { return }
                 self.isAuthorized = (status == .authorized)
                 if status != .authorized {
-                    self.errorMessage = "Speech recognition not authorized"
+                    self.errorMessage = "Speech recognition access is not authorized. Enable it in Settings."
                 }
                 completion(self.isAuthorized)
             }
@@ -71,7 +71,7 @@ final class VoiceInputController: ObservableObject {
             try session.setCategory(.record, mode: .measurement, options: .duckOthers)
             try session.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
-            errorMessage = "Audio session error: \(error.localizedDescription)"
+            errorMessage = "Could not start the microphone. Please try again."
             return
         }
 
@@ -91,7 +91,7 @@ final class VoiceInputController: ObservableObject {
         do {
             try audioEngine.start()
         } catch {
-            errorMessage = "Audio engine start failed: \(error.localizedDescription)"
+            errorMessage = "Could not start audio recording. Please try again."
             return
         }
 

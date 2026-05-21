@@ -93,7 +93,7 @@ class BrowserState: ObservableObject {
         NotificationCenter.default.publisher(for: .mediaDetected)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
-                if let items = notification.userInfo?["mediaItems"] as? [MediaItem] {
+                if let items = notification.userInfo?["media"] as? [MediaItem] {
                     self?.detectedMedia = items
                 }
             }
@@ -119,7 +119,13 @@ class BrowserState: ObservableObject {
     // MARK: - Tabs
     
     var activeTab: BrowserTab {
-        tabs.first(where: { $0.id == activeTabId }) ?? tabs[0]
+        if let found = tabs.first(where: { $0.id == activeTabId }) { return found }
+        if let first = tabs.first { return first }
+        // Guard against the degenerate case where all tabs were removed externally.
+        let fallback = BrowserTab(url: "https://duckduckgo.com", title: "New Tab")
+        tabs = [fallback]
+        activeTabId = fallback.id
+        return fallback
     }
     
     func updateActiveTab(_ transform: (inout BrowserTab) -> Void) {
@@ -142,7 +148,8 @@ class BrowserState: ObservableObject {
         guard tabs.count > 1 else { return }
         tabs.removeAll { $0.id == tabId }
         if activeTabId == tabId {
-            activeTabId = tabs[0].id
+            // tabs is guaranteed non-empty because count was > 1 before removal
+            activeTabId = tabs.first!.id
         }
     }
     

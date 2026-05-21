@@ -35,7 +35,7 @@ struct BrowserPageView: View {
                     HStack(spacing: 4) {
                         Image(systemName: "iphone.slash")
                             .font(.caption2)
-                        Text("Offline — fetching directly")
+                        Text("iPhone offline — loading directly")
                             .font(.caption2)
                     }
                     .foregroundColor(.orange)

@@ -27,7 +27,7 @@ struct SettingsView: View {
             
             // Display
             Section("Display") {
-                Toggle("Reader Mode Default", isOn: $readerModeDefault)
+                Toggle("Default to Reader Mode", isOn: $readerModeDefault)
                 Toggle("Compress Images", isOn: $compressImages)
                 
                 VStack(alignment: .leading) {
@@ -59,7 +59,7 @@ struct SettingsView: View {
                 Toggle("YouTube Stream Extraction", isOn: $invidiousEnabled)
 
                 if invidiousEnabled {
-                    Text("Uses third-party Invidious instances. May break without notice or violate YouTube terms. Disable to deep-link the official YouTube app instead.")
+                    Text("Uses third-party Invidious instances. May break without warning or violate YouTube's terms of service. Disable to deep-link the official YouTube app instead.")
                         .font(.system(size: 9))
                         .foregroundStyle(.secondary)
                 }
@@ -67,7 +67,7 @@ struct SettingsView: View {
                 Text("Experimental")
             } footer: {
                 if !invidiousEnabled {
-                    Text("YouTube videos open in the YouTube app on iPhone via Handoff.")
+                    Text("YouTube videos open in the YouTube app on your iPhone via Handoff.")
                         .font(.system(size: 9))
                 }
             }
@@ -84,7 +84,7 @@ struct SettingsView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("The Revolutionary Watch Browser")
+                    Text("Native Browser for Apple Watch")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text("Native HTML rendering — no WKWebView")

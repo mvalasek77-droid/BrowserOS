@@ -260,7 +260,7 @@ struct WatchVideoPlayerView: View {
         activity.title = "Open in \(appName)"
         activity.userInfo = ["url": webURL]
         activity.becomeCurrent()
-        viewModel.errorMessage = "Continue on iPhone — open in the \(appName) app via Handoff."
+        viewModel.errorMessage = "Continue on your iPhone — open in the \(appName) app via Handoff."
         #endif
     }
     

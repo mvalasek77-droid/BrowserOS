@@ -15,10 +15,16 @@ class BrowserViewModel: ObservableObject {
     
     private var currentURL: String = ""
     private let sessionManager = WatchSessionManager.shared
-    
+    /// Tokens from addObserver(forName:…) — retained so observers are
+    /// automatically removed when the view model is deallocated.
+    private var observerTokens: [NSObjectProtocol] = []
+
     func activate() {
+        // Guard against duplicate registration when activate() is called again.
+        guard observerTokens.isEmpty else { return }
+
         // Observe WatchSessionManager notifications
-        NotificationCenter.default.addObserver(
+        let pageLoadedToken = NotificationCenter.default.addObserver(
             forName: .pageLoaded,
             object: nil,
             queue: .main

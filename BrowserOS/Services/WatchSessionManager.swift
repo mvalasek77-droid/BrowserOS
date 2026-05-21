@@ -33,7 +33,8 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     // MARK: - WCSessionDelegate
     
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
             if let error = error {
                 self.lastError = error.localizedDescription
             }
@@ -41,9 +42,10 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             self.isPhoneReachable = session.isReachable
         }
     }
-    
+
     func sessionReachabilityDidChange(_ session: WCSession) {
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
             self.isReachable = session.isReachable
             self.isPhoneReachable = session.isReachable
         }
@@ -178,12 +180,19 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         guard let chunks = pendingChunks[tabId], chunks.count >= totalChunks else { return }
 
         // All chunks present — assemble in order.
+        // Always clear the buffer first so a partial-decode failure cannot leak it.
+        pendingChunks[tabId] = nil
+
         var combinedElements: [NativeWebElement] = []
         var url = ""
         var title = ""
         var readerContent: ReaderContent? = nil
         for i in 0..<totalChunks {
-            guard let chunk = chunks[i] else { return }
+            guard let chunk = chunks[i] else {
+                // A chunk is registered but its slot is empty — this should
+                // not happen, but bail gracefully rather than posting a partial page.
+                return
+            }
             if let elementsJSON = chunk[WCKey.elements.rawValue] as? String,
                let data = elementsJSON.data(using: .utf8) {
                 let elements = self.deserializeNativeWebElements(from: data)
@@ -198,8 +207,6 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                 readerContent = self.deserializeReaderContent(from: data)
             }
         }
-
-        pendingChunks[tabId] = nil
 
         NotificationCenter.default.post(
             name: .pageLoaded,
