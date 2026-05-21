@@ -30,5 +30,18 @@
 	<string>BrowserOS uses the microphone to let you speak URLs and search queries.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>BrowserOS uses speech recognition to convert your voice into URLs and search queries.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.browseros.scheme</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>browseros</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
