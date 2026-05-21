@@ -7,6 +7,7 @@ struct SettingsView: View {
     @AppStorage("browseros_block_ads") private var blockAds = true
     @AppStorage("browseros_compress_images") private var compressImages = true
     @AppStorage("browseros_font_size") private var fontSize = 14.0
+    @AppStorage("browseros_invidious_enabled") private var invidiousEnabled = false
     
     private var searchEngine: SearchEngine {
         get { SearchEngine(rawValue: searchEngineRaw) ?? .duckduckgo }
@@ -39,17 +40,35 @@ struct SettingsView: View {
             // Privacy
             Section("Privacy") {
                 Toggle("Block Ads", isOn: $blockAds)
-                
+
                 Button(role: .destructive) {
                     browserState.clearHistory()
                 } label: {
                     Label("Clear History", systemImage: "clock")
                 }
-                
+
                 Button(role: .destructive) {
                     browserState.clearAllData()
                 } label: {
                     Label("Clear All Data", systemImage: "trash")
+                }
+            }
+
+            // Experimental
+            Section {
+                Toggle("YouTube Stream Extraction", isOn: $invidiousEnabled)
+
+                if invidiousEnabled {
+                    Text("Uses third-party Invidious instances. May break without notice or violate YouTube terms. Disable to deep-link the official YouTube app instead.")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Experimental")
+            } footer: {
+                if !invidiousEnabled {
+                    Text("YouTube videos open in the YouTube app on iPhone via Handoff.")
+                        .font(.system(size: 9))
                 }
             }
             

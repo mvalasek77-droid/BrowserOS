@@ -180,6 +180,7 @@ struct BrowserSettings: Codable {
     var blockAds: Bool = true
     var compressImages: Bool = true
     var fontSize: Double = 14.0
+    var enableInvidiousYouTube: Bool = false
 }
 
 // MARK: - Media Items

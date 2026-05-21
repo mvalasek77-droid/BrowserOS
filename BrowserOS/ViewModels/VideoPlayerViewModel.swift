@@ -76,32 +76,28 @@ class VideoPlayerViewModel: ObservableObject {
     }
     
     func playYouTube(videoID: String) async {
-        let detector = MediaDetector()
-        let streams = await detector.extractYouTubeStreams(videoID: videoID)
-        
-        if streams.isEmpty {
-            // Fallback: Invidious direct stream
-            let fallbacks = [
-                "https://inv.nadeko.net/latest_version?id=\(videoID)&local=true",
-                "https://invidious.nerdvpn.de/latest_version?id=\(videoID)&local=true"
-            ]
-            for fallback in fallbacks {
-                if let url = URL(string: fallback) {
-                    play(url: url)
-                    return
-                }
-            }
-            errorMessage = "Could not extract video stream"
+        // Default path: hand off to the official YouTube app on iPhone.
+        // Stream extraction is opt-in via Settings → Experimental (legal/operational risk).
+        guard UserDefaults.standard.bool(forKey: "browseros_invidious_enabled") else {
+            errorMessage = "Open in YouTube app on iPhone to play this video."
             return
         }
-        
+
+        let detector = MediaDetector()
+        let streams = await detector.extractYouTubeStreams(videoID: videoID)
+
+        if streams.isEmpty {
+            errorMessage = "Could not extract video stream. Disable YouTube Stream Extraction in Settings to use the YouTube app instead."
+            return
+        }
+
         availableQualities = streams
-        
+
         // Pick 480p for watch performance, fallback to first available
         let bestStream = streams.first(where: { $0.quality.contains("480") })
             ?? streams.first(where: { $0.quality.contains("360") })
             ?? streams.first
-        
+
         if let stream = bestStream {
             currentQuality = stream.quality
             play(url: stream.url)

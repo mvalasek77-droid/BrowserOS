@@ -201,7 +201,17 @@ struct WatchVideoPlayerView: View {
         case .youtube:
             if let streamURL = mediaItem.streamURL,
                let videoID = extractYouTubeID(from: streamURL) {
-                Task { await viewModel.playYouTube(videoID: videoID) }
+                let invidiousEnabled = UserDefaults.standard.bool(forKey: "browseros_invidious_enabled")
+                if invidiousEnabled {
+                    Task { await viewModel.playYouTube(videoID: videoID) }
+                } else {
+                    handOffToExternalApp(
+                        scheme: "youtube://watch?v=\(videoID)",
+                        webURL: "https://www.youtube.com/watch?v=\(videoID)",
+                        appName: "YouTube",
+                        activityType: "com.browseros.youtube"
+                    )
+                }
             }
         case .direct, .vimeo, .dailymotion, .other:
             if let streamURL = mediaItem.streamURL,
@@ -209,7 +219,12 @@ struct WatchVideoPlayerView: View {
                 viewModel.play(url: url)
             }
         case .netflix:
-            openInNetflixApp()
+            handOffToExternalApp(
+                scheme: "nflx://",
+                webURL: mediaItem.pageURL,
+                appName: "Netflix",
+                activityType: "com.browseros.netflix"
+            )
         }
     }
     
@@ -230,24 +245,23 @@ struct WatchVideoPlayerView: View {
         return nil
     }
     
-    private func openInNetflixApp() {
-        if let url = URL(string: "nflx://") {
-            #if os(iOS)
-            if UIApplication.shared.canOpenURL(url) {
-                UIApplication.shared.open(url)
-            } else {
-                viewModel.errorMessage = "Install the Netflix app to watch content"
-            }
-            #else
-            // On watchOS, use Handoff to open on iPhone instead
-            let activity = NSUserActivity(activityType: "com.browseros.netflix")
-            activity.webpageURL = URL(string: mediaItem.pageURL)
-            activity.title = "Watch on Netflix"
-            activity.userInfo = ["url": mediaItem.pageURL]
-            activity.becomeCurrent()
-            viewModel.errorMessage = "Use Handoff to open on iPhone"
-            #endif
+    private func handOffToExternalApp(scheme: String, webURL: String, appName: String, activityType: String) {
+        #if os(iOS)
+        if let url = URL(string: scheme), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        } else if let web = URL(string: webURL) {
+            UIApplication.shared.open(web)
+        } else {
+            viewModel.errorMessage = "Install the \(appName) app to continue."
         }
+        #else
+        let activity = NSUserActivity(activityType: activityType)
+        activity.webpageURL = URL(string: webURL)
+        activity.title = "Open in \(appName)"
+        activity.userInfo = ["url": webURL]
+        activity.becomeCurrent()
+        viewModel.errorMessage = "Continue on iPhone — open in the \(appName) app via Handoff."
+        #endif
     }
     
     private func formatTime(_ seconds: Double) -> String {
