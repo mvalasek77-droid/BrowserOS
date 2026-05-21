@@ -51,9 +51,29 @@ class iPhoneBrowserViewModel: ObservableObject {
     func goBack() {
         webView?.goBack()
     }
-    
+
     func goForward() {
         webView?.goForward()
+    }
+
+    /// Submit a form by index with the given field values. Runs JS inside
+    /// the current WKWebView so cookies, CSRF tokens, hidden fields, and any
+    /// onSubmit handlers fire as on a normal browser submit. The resulting
+    /// navigation triggers the usual onPageLoadFinished pipeline and ships
+    /// the response page to the watch.
+    func submitForm(formIndex: Int, values: [String: String]) {
+        let js = DOMParser.formSubmitJavaScript(formIndex: formIndex, values: values)
+        isLoading = true
+        loadProgress = 0.1
+        sessionManager?.sendProgressToWatch(tabId: currentTabId, progress: 0.1)
+        webView?.evaluateJavaScript(js) { result, error in
+            if let error = error {
+                print("[iPhoneBrowserViewModel] Form submit JS error: \(error.localizedDescription)")
+            }
+            if let res = result as? String, res != "submitted" {
+                print("[iPhoneBrowserViewModel] Form submit result: \(res)")
+            }
+        }
     }
     
     // MARK: - Page Load Completion
@@ -158,18 +178,22 @@ class iPhoneBrowserViewModel: ObservableObject {
     
     func setupWatchCallbacks(sessionManager: PhoneSessionManager) {
         self.sessionManager = sessionManager
-        
+
         sessionManager.onLoadURL = { [weak self] url in
             guard let self else { return }
             self.loadPage(url: url)
         }
-        
+
         sessionManager.onGoBack = { [weak self] in
             self?.goBack()
         }
-        
+
         sessionManager.onGoForward = { [weak self] in
             self?.goForward()
+        }
+
+        sessionManager.onSubmitForm = { [weak self] formIndex, values in
+            self?.submitForm(formIndex: formIndex, values: values)
         }
     }
 }

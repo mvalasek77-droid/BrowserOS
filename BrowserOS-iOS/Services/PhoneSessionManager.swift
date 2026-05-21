@@ -14,6 +14,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     var onLoadURL: ((String) -> Void)?
     var onGoBack: (() -> Void)?
     var onGoForward: (() -> Void)?
+    var onSubmitForm: ((Int, [String: String]) -> Void)?
     
     private let session = WCSession.default
     
@@ -90,6 +91,10 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                 self.onGoBack?()
             case .goForward:
                 self.onGoForward?()
+            case .submitForm:
+                let formIndex = message[WCKey.formIndex.rawValue] as? Int ?? 0
+                let values = (message[WCKey.formValues.rawValue] as? [String: String]) ?? [:]
+                self.onSubmitForm?(formIndex, values)
             default:
                 break
             }

@@ -37,8 +37,8 @@ enum NativeWebElement: Identifiable, Codable {
     case blockquote(String)
     case codeBlock(String)
     case table(headers: [String], rows: [[String]])
-    case form(inputs: [FormField])
-    
+    case form(formIndex: Int, action: String, method: String, inputs: [FormField])
+
     var id: String {
         switch self {
         case .heading(let t, let l): return "h\(l)-\(t.prefix(20))"
@@ -50,7 +50,7 @@ enum NativeWebElement: Identifiable, Codable {
         case .blockquote(let t): return "bq-\(t.prefix(20))"
         case .codeBlock(let t): return "code-\(t.prefix(20))"
         case .table(let h, _): return "table-\(h.joined())"
-        case .form: return "form-\(UUID().uuidString.prefix(8))"
+        case .form(let idx, _, _, _): return "form-\(idx)"
         }
     }
 }

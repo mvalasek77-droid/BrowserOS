@@ -18,6 +18,10 @@ enum WCKey: String {
     case bookmarks
     case historyEntries
     case formFields
+    case formIndex
+    case formAction
+    case formMethod
+    case formValues
 }
 
 enum WCMessageType: String, Codable {

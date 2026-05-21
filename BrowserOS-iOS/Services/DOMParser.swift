@@ -129,20 +129,40 @@ struct DOMParser {
             
             // Forms
             var forms = document.querySelectorAll('form');
-            forms.forEach(function(form) {
+            forms.forEach(function(form, formIdx) {
                 var inputs = [];
                 var fields = form.querySelectorAll('input, select, textarea');
                 fields.forEach(function(field) {
+                    var type = (field.getAttribute('type') || field.tagName.toLowerCase()).toLowerCase();
+                    // Skip non-user-visible fields, but they'll still be submitted by the form
+                    if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'image' || type === 'reset') {
+                        if (type === 'submit') {
+                            inputs.push({
+                                name: field.getAttribute('name') || '',
+                                type: type,
+                                placeholder: field.getAttribute('value') || null,
+                                value: null,
+                                label: null
+                            });
+                        }
+                        return;
+                    }
                     inputs.push({
                         name: field.getAttribute('name') || '',
-                        type: field.getAttribute('type') || field.tagName.toLowerCase(),
+                        type: type,
                         placeholder: field.getAttribute('placeholder') || null,
                         value: field.value || null,
                         label: findLabel(field)
                     });
                 });
                 if (inputs.length > 0) {
-                    result.push({type: 'form', inputs: inputs});
+                    result.push({
+                        type: 'form',
+                        formIndex: formIdx,
+                        action: resolveURL(form.getAttribute('action') || baseURL),
+                        method: (form.getAttribute('method') || 'GET').toUpperCase(),
+                        inputs: inputs
+                    });
                 }
             });
             
@@ -237,6 +257,42 @@ struct DOMParser {
         """
     }
     
+    /// JavaScript to submit a form: locates form by DOM index, fills the
+    /// provided fields, fires input+change events (so onChange validators run),
+    /// and clicks the submit button (preferring click over form.submit() so the
+    /// page's onSubmit handlers and onClick validation fire).
+    static func formSubmitJavaScript(formIndex: Int, values: [String: String]) -> String {
+        guard let valuesData = try? JSONSerialization.data(withJSONObject: values, options: []),
+              let valuesJSON = String(data: valuesData, encoding: .utf8) else {
+            return "false"
+        }
+        return """
+        (function() {
+            var form = document.forms[\(formIndex)];
+            if (!form) { return 'form_not_found'; }
+            var values = \(valuesJSON);
+            for (var name in values) {
+                if (!values.hasOwnProperty(name)) continue;
+                var field = form.elements[name];
+                if (!field) continue;
+                try {
+                    field.focus();
+                    field.value = values[name];
+                    field.dispatchEvent(new Event('input', { bubbles: true }));
+                    field.dispatchEvent(new Event('change', { bubbles: true }));
+                    field.blur();
+                } catch(e) { /* ignore per-field errors */ }
+            }
+            var btn = form.querySelector('input[type="submit"], button[type="submit"], button:not([type])');
+            try {
+                if (btn) { btn.click(); }
+                else { form.submit(); }
+            } catch(e) { form.submit(); }
+            return 'submitted';
+        })();
+        """
+    }
+
     /// JavaScript to detect media elements in the page
     static var mediaDetectionJavaScript: String {
         return """
@@ -404,7 +460,10 @@ struct DOMParser {
                         formFields.append(field)
                     }
                     if !formFields.isEmpty {
-                        elements.append(.form(inputs: formFields))
+                        let formIndex = item["formIndex"] as? Int ?? 0
+                        let action = item["action"] as? String ?? ""
+                        let method = item["method"] as? String ?? "GET"
+                        elements.append(.form(formIndex: formIndex, action: action, method: method, inputs: formFields))
                     }
                 }
                 

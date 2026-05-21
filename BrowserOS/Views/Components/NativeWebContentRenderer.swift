@@ -39,8 +39,8 @@ struct NativeWebContentRenderer: View {
             CodeBlockView(code: code)
         case .table(let headers, let rows):
             TableView(headers: headers, rows: rows)
-        case .form(let inputs):
-            FormView(inputs: inputs, onSubmit: { _ in })
+        case .form(let formIndex, let action, _, let inputs):
+            FormView(formIndex: formIndex, action: action, inputs: inputs)
         }
     }
 }
@@ -274,29 +274,116 @@ struct TableView: View {
 // MARK: - Form
 
 struct FormView: View {
+    let formIndex: Int
+    let action: String
     let inputs: [FormField]
-    let onSubmit: ([String: String]) -> Void
-    
+
+    @State private var values: [String: String] = [:]
+    @State private var isSubmitting = false
+
+    private var submitButtonLabel: String {
+        if let submit = inputs.first(where: { $0.type == "submit" }) {
+            return submit.placeholder ?? "Submit"
+        }
+        return "Submit"
+    }
+
+    private var editableFields: [FormField] {
+        inputs.filter { $0.type != "submit" && !$0.name.isEmpty }
+    }
+
     var body: some View {
         VStack(spacing: 6) {
-            ForEach(inputs) { field in
-                Group {
-                    if field.type == "submit" {
-                        Button("Submit") {}
-                            .buttonStyle(.borderedProminent)
-                    } else if field.type == "password" {
-                        SecureField(field.placeholder ?? field.name, text: .constant(""))
-                            .font(.system(size: 13))
-                    } else {
-                        TextField(field.placeholder ?? field.name, text: .constant(""))
-                            .font(.system(size: 13))
-                            .textInputAutocapitalization(.never)
-                    }
-                }
+            ForEach(editableFields) { field in
+                fieldView(for: field)
             }
+
+            Button {
+                submit()
+            } label: {
+                HStack(spacing: 4) {
+                    if isSubmitting {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .scaleEffect(0.6)
+                    }
+                    Text(submitButtonLabel)
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isSubmitting)
         }
         .padding(8)
-        .background(Color.gray.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+        .background(Color.gray.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+        .onAppear {
+            for field in editableFields where field.value != nil {
+                values[field.name] = field.value
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func fieldView(for field: FormField) -> some View {
+        let prompt = field.label ?? field.placeholder ?? field.name
+        let binding = Binding<String>(
+            get: { values[field.name] ?? "" },
+            set: { values[field.name] = $0 }
+        )
+
+        VStack(alignment: .leading, spacing: 2) {
+            if let label = field.label, !label.isEmpty {
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            switch field.type {
+            case "password":
+                SecureField(prompt, text: binding)
+                    .font(.system(size: 13))
+                    .textContentType(.password)
+            case "email":
+                TextField(prompt, text: binding)
+                    .font(.system(size: 13))
+                    .textContentType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+            case "url":
+                TextField(prompt, text: binding)
+                    .font(.system(size: 13))
+                    .textContentType(.URL)
+                    .textInputAutocapitalization(.never)
+            case "tel":
+                TextField(prompt, text: binding)
+                    .font(.system(size: 13))
+                    .textContentType(.telephoneNumber)
+            case "search":
+                TextField(prompt, text: binding)
+                    .font(.system(size: 13))
+                    .textInputAutocapitalization(.never)
+            case "number":
+                TextField(prompt, text: binding)
+                    .font(.system(size: 13))
+            default:
+                TextField(prompt, text: binding)
+                    .font(.system(size: 13))
+                    .textInputAutocapitalization(.never)
+            }
+        }
+    }
+
+    private func submit() {
+        isSubmitting = true
+        let payload = values.filter { !$0.value.isEmpty }
+        WatchSessionManager.shared.submitForm(formIndex: formIndex, values: payload)
+
+        // The iPhone will load the new page and push it back via the
+        // pageLoaded pipeline — at which point the form will be re-rendered
+        // (or replaced). Give a short visual confirmation either way.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            isSubmitting = false
+        }
     }
 }
 

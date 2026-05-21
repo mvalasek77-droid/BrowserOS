@@ -174,6 +174,19 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         ]
         sendMessage(message)
     }
+
+    /// Submit a form on the iPhone-hosted WKWebView. The iPhone fills the form
+    /// inside the live web view (preserving cookies, CSRF tokens, hidden
+    /// fields, and onSubmit handlers) and submits it. The resulting page is
+    /// pushed back via the normal pageLoaded pipeline.
+    func submitForm(formIndex: Int, values: [String: String]) {
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.submitForm.rawValue,
+            WCKey.formIndex.rawValue: formIndex,
+            WCKey.formValues.rawValue: values
+        ]
+        sendMessage(message)
+    }
     
     func addBookmark(title: String, url: String) {
         let message: [String: Any] = [
