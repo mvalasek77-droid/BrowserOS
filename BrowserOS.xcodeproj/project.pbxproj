@@ -38,7 +38,7 @@
 		67AB298E6156B9B4E7AA57B2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 788CAB08BC01550E79069EA7 /* SettingsView.swift */; };
 		86067E47BBFC22D83E4F6589 /* NativeWebContentRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 555E1ECA0AB5D946FA4E1C91 /* NativeWebContentRenderer.swift */; };
 		892A7D95596FB3963B9FB4AD /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BDA8D6F6747B83AF6F41A2C /* SharedModels.swift */; };
-		8984470E6AE641ECC17D6794 /* BrowserOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = ED4161975F993886BB440B19 /* BrowserOS Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8984470E6AE641ECC17D6794 /* BrowserOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = ED4161975F993886BB440B19 /* BrowserOS Watch App.app */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		8D62753AA3C4F1D57A4D3399 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B73514936137B0030893CBE3 /* ErrorBannerView.swift */; };
 		ABA3B293705E8E64452FDA9F /* AddressBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D12435A06B1187693850018 /* AddressBarView.swift */; };
 		AF5837CF133B7FB74E40E5F8 /* ReaderModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33E51DF46E4525A426C5BC0F /* ReaderModeView.swift */; };
