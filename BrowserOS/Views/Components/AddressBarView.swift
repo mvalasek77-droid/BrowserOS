@@ -4,14 +4,22 @@ struct AddressBarView: View {
     @ObservedObject var viewModel: BrowserViewModel
     @EnvironmentObject var browserState: BrowserState
     @FocusState private var isFocused: Bool
+    #if canImport(Speech)
     @StateObject private var voice = VoiceInputController()
+    #endif
 
     var body: some View {
         HStack(spacing: 6) {
+            #if canImport(Speech)
             Image(systemName: voice.isRecording ? "waveform" : "magnifyingglass")
                 .font(.system(size: 12))
                 .foregroundStyle(voice.isRecording ? .red : .secondary)
                 .symbolEffect(.variableColor.iterative, isActive: voice.isRecording)
+            #else
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            #endif
 
             TextField("Search or enter URL", text: $viewModel.addressBarText)
                 .font(.system(size: 13, weight: .medium))
@@ -22,7 +30,19 @@ struct AddressBarView: View {
                     viewModel.submitAddress(state: browserState)
                 }
 
-            if !viewModel.addressBarText.isEmpty && !voice.isRecording {
+            if !viewModel.addressBarText.isEmpty {
+                #if canImport(Speech)
+                if !voice.isRecording {
+                    Button {
+                        viewModel.addressBarText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                #else
                 Button {
                     viewModel.addressBarText = ""
                 } label: {
@@ -31,8 +51,10 @@ struct AddressBarView: View {
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                #endif
             }
 
+            #if canImport(Speech)
             Button {
                 if voice.isRecording {
                     voice.stop()
@@ -46,6 +68,7 @@ struct AddressBarView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(voice.isRecording ? "Stop voice input" : "Speak URL or search")
+            #endif
         }
         .padding(.horizontal, isFocused ? 12 : 10)
         .padding(.vertical, isFocused ? 10 : 8)
@@ -71,6 +94,7 @@ struct AddressBarView: View {
         .onChange(of: isFocused) { _, newValue in
             viewModel.isAddressBarFocused = newValue
         }
+        #if canImport(Speech)
         .onChange(of: voice.transcript) { _, newTranscript in
             if !newTranscript.isEmpty {
                 viewModel.addressBarText = newTranscript
@@ -90,5 +114,6 @@ struct AddressBarView: View {
                 voice.start()
             }
         }
+        #endif
     }
 }
