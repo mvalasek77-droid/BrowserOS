@@ -24,7 +24,7 @@ class BrowserViewModel: ObservableObject {
         guard observerTokens.isEmpty else { return }
 
         // Observe WatchSessionManager notifications
-        let pageLoadedToken = NotificationCenter.default.addObserver(
+        observerTokens.append(NotificationCenter.default.addObserver(
             forName: .pageLoaded,
             object: nil,
             queue: .main
@@ -49,8 +49,8 @@ class BrowserViewModel: ObservableObject {
                 self.isLoading = false
                 self.loadingProgress = 1.0
             }
-        }
-        
+        })
+
         NotificationCenter.default.addObserver(
             forName: .pageLoadProgress,
             object: nil,
@@ -96,11 +96,8 @@ class BrowserViewModel: ObservableObject {
             forName: .navigationStateChanged,
             object: nil,
             queue: .main
-        ) { [weak self] notification in
-            Task { @MainActor in
-                guard let self else { return }
-                // canGoBack/canGoForward are tracked by WatchSessionManager
-            }
+        ) { _ in
+            // canGoBack/canGoForward are tracked by WatchSessionManager
         }
         
         // Bind to session manager reachability

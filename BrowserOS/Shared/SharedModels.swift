@@ -46,7 +46,7 @@ enum NativeWebElement: Identifiable, Codable {
         case .listItem(let t, _): return "li-\(t.prefix(20))"
         case .link(let t, _): return "a-\(t.prefix(20))"
         case .image(let u, _): return "img-\(u)"
-        case .divider: return "hr-\(UUID().uuidString.prefix(8))"
+        case .divider: return "hr"
         case .blockquote(let t): return "bq-\(t.prefix(20))"
         case .codeBlock(let t): return "code-\(t.prefix(20))"
         case .table(let h, _): return "table-\(h.joined())"

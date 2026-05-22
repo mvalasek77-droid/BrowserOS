@@ -481,11 +481,7 @@ actor HTMLNativeRenderer {
                     inHeader = false
                 case "tr":
                     if !currentRow.isEmpty {
-                        if headers.isEmpty {
-                            headers = currentRow
-                        } else {
-                            rows.append(currentRow)
-                        }
+                        rows.append(currentRow)
                         currentRow = []
                     }
                 case "table":
@@ -499,7 +495,11 @@ actor HTMLNativeRenderer {
             case .text(let text):
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
-                    currentRow.append(trimmed)
+                    if inHeader {
+                        headers.append(trimmed)
+                    } else {
+                        currentRow.append(trimmed)
+                    }
                 }
             }
             j += 1

@@ -111,16 +111,15 @@ struct iPhoneWebView: UIViewRepresentable {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             switch message.name {
             case "domExtractor":
-                if let body = message.body as? String {
-                    // Could be used for incremental DOM updates
+                if message.body is String {
                     print("[iPhoneWebView] Received DOM extraction message")
                 }
             case "readerExtractor":
-                if let body = message.body as? String {
+                if message.body is String {
                     print("[iPhoneWebView] Received reader extraction message")
                 }
             case "mediaExtractor":
-                if let body = message.body as? String {
+                if message.body is String {
                     print("[iPhoneWebView] Received media extraction message")
                 }
             default:

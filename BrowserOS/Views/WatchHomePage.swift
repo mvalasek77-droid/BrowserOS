@@ -61,10 +61,21 @@ struct WatchHomePage: View {
             VStack(spacing: 12) {
                 // BrowserOS identity mark — globe/compass at the top
                 VStack(spacing: 4) {
-                    Image(systemName: "globe")
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .symbolEffect(.pulse.wholeSymbol, options: .repeating.speed(0.4))
+                    ZStack {
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                            .frame(width: 52, height: 52)
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white.opacity(0.25), lineWidth: 0.5)
+                            )
+                            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
+
+                        Image(systemName: "globe")
+                            .font(.system(size: 26, weight: .semibold))
+                            .foregroundStyle(.primary)
+                            .symbolEffect(.pulse.wholeSymbol, options: .repeating.speed(0.4))
+                    }
 
                     Text(greeting())
                         .font(.system(size: 11, weight: .semibold))
@@ -99,7 +110,7 @@ struct WatchHomePage: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.footnote)
-                .foregroundStyle(accentColor.opacity(0.85))
+                .foregroundStyle(accentColor.opacity(0.9))
                 .textCase(.uppercase)
                 .padding(.horizontal, 4)
 
@@ -108,7 +119,7 @@ struct WatchHomePage: View {
                 GridItem(.flexible(), spacing: 8)
             ], spacing: 8) {
                 ForEach(tiles) { tile in
-                    QuickAccessTile(tile: tile) {
+                    QuickAccessTile(tile: tile, accentColor: accentColor) {
                         handleTap(tile)
                     }
                 }
@@ -155,8 +166,17 @@ struct WatchHomePage: View {
 
 // MARK: - Quick Access Tile
 
+struct TileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.93 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+    }
+}
+
 struct QuickAccessTile: View {
     let tile: QuickTile
+    let accentColor: Color
     let action: () -> Void
 
     var body: some View {
@@ -164,20 +184,27 @@ struct QuickAccessTile: View {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(
-                            LinearGradient(
-                                colors: [tileGradient.0, tileGradient.1],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        // HIG: minimum tap target 44×44pt
+                        .fill(.thinMaterial)
+                        // HIG: minimum tap target 44x44pt
                         .frame(height: 44)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [tileGradient.0.opacity(0.55), tileGradient.1.opacity(0.35)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.white.opacity(0.25), lineWidth: 0.5)
+                        )
+                        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
 
                     Image(systemName: tile.icon)
                         .font(.system(size: 18, weight: .semibold))
-                        // HIG: always-white text on colored gradient — safe because
-                        // gradient provides sufficient contrast in both modes
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .accessibilityHidden(true)
@@ -193,34 +220,29 @@ struct QuickAccessTile: View {
                 }
 
                 Text(tile.name)
-                    // HIG: minimum font size 11pt — was 9pt
+                    // HIG: minimum font size 11pt
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(TileButtonStyle())
         .accessibilityLabel(tile.preferExternalApp ? "\(tile.name), opens in app" : tile.name)
     }
 
     private var tileGradient: (Color, Color) {
-        // HIG: avoid .black/.white literals; use dark navy/charcoal literals
-        // that read well in both Light and Dark appearance on the watch.
         switch tile.name {
         case "Claude": return (Color(red: 0.85, green: 0.45, blue: 0.25), Color(red: 0.6, green: 0.3, blue: 0.15))
         case "ChatGPT": return (Color(red: 0.05, green: 0.65, blue: 0.55), Color(red: 0.05, green: 0.4, blue: 0.35))
         case "YouTube": return (.red, .red.opacity(0.7))
         case "Vimeo": return (Color(red: 0.1, green: 0.6, blue: 0.85), Color(red: 0.05, green: 0.4, blue: 0.6))
         case "Archive.org": return (Color(red: 0.4, green: 0.3, blue: 0.2), Color(red: 0.25, green: 0.18, blue: 0.12))
-        // was .black — replaced with very dark navy
         case "NASA TV": return (Color(red: 0.05, green: 0.1, blue: 0.4), Color(red: 0.02, green: 0.04, blue: 0.18))
         case "Reddit": return (.orange, .orange.opacity(0.7))
         case "Facebook": return (Color(red: 0.23, green: 0.35, blue: 0.6), Color(red: 0.15, green: 0.25, blue: 0.45))
-        // was .black — replaced with very dark charcoal
         case "TikTok": return (Color(red: 0.95, green: 0.1, blue: 0.4), Color(red: 0.08, green: 0.08, blue: 0.08))
         case "Truth Social": return (Color(red: 0.4, green: 0.15, blue: 0.5), Color(red: 0.2, green: 0.1, blue: 0.3))
         case "Hacker News": return (.orange, .orange.opacity(0.6))
-        // was .black/.black — replaced with very dark charcoal
         case "X": return (Color(red: 0.12, green: 0.12, blue: 0.12), Color(red: 0.15, green: 0.15, blue: 0.15))
         case "Wikipedia": return (.gray, .gray.opacity(0.6))
         case "GitHub": return (.purple, .purple.opacity(0.7))

@@ -47,11 +47,27 @@ struct AddressBarView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(voice.isRecording ? "Stop voice input" : "Speak URL or search")
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
+        .padding(.horizontal, isFocused ? 12 : 10)
+        .padding(.vertical, isFocused ? 10 : 8)
         .background(.ultraThinMaterial, in: Capsule())
+        .overlay(
+            Capsule()
+                .stroke(
+                    isFocused
+                        ? Color.blue.opacity(0.5)
+                        : Color.white.opacity(0.25),
+                    lineWidth: isFocused ? 1 : 0.5
+                )
+        )
+        .shadow(
+            color: isFocused ? .blue.opacity(0.15) : .black.opacity(0.15),
+            radius: isFocused ? 10 : 8,
+            x: 0,
+            y: 4
+        )
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
         .onChange(of: isFocused) { _, newValue in
             viewModel.isAddressBarFocused = newValue
         }

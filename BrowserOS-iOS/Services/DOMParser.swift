@@ -539,7 +539,7 @@ struct DOMParser {
             guard let type = item["type"] as? String else { continue }
             
             var streamURL: String? = item["src"] as? String
-            var title: String = item["title"] as? String ?? "Video"
+            let title: String = item["title"] as? String ?? "Video"
             var thumbnailURL: String? = item["thumbnail"] as? String ?? item["poster"] as? String
             var source: MediaSource = .other
             
