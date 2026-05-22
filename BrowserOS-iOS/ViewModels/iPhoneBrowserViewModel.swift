@@ -68,10 +68,10 @@ class iPhoneBrowserViewModel: ObservableObject {
         sessionManager?.sendProgressToWatch(tabId: currentTabId, progress: 0.1)
         webView?.evaluateJavaScript(js) { result, error in
             if let error = error {
-                print("[iPhoneBrowserViewModel] Form submit JS error: \(error.localizedDescription)")
+                ErrorLog.log("Form submit JS error: \(error.localizedDescription)")
             }
             if let res = result as? String, res != "submitted" {
-                print("[iPhoneBrowserViewModel] Form submit result: \(res)")
+                ErrorLog.log("Form submit unexpected result: \(res)")
             }
         }
     }
@@ -136,7 +136,7 @@ class iPhoneBrowserViewModel: ObservableObject {
         
         webView?.evaluateJavaScript(js) { result, error in
             if let error = error {
-                print("[iPhoneBrowserViewModel] DOM extraction error: \(error.localizedDescription)")
+                ErrorLog.log("DOM extraction error: \(error.localizedDescription)")
                 completion("[]")
                 return
             }
@@ -150,7 +150,7 @@ class iPhoneBrowserViewModel: ObservableObject {
         
         webView?.evaluateJavaScript(js) { result, error in
             if let error = error {
-                print("[iPhoneBrowserViewModel] Reader mode extraction error: \(error.localizedDescription)")
+                ErrorLog.log("Reader mode extraction error: \(error.localizedDescription)")
                 completion("{}")
                 return
             }

@@ -87,6 +87,29 @@ struct SettingsView: View {
                 }
             }
 
+            // Diagnostics
+            Section("Diagnostics") {
+                NavigationLink {
+                    ErrorLogView()
+                } label: {
+                    HStack {
+                        Label("Error Log", systemImage: "exclamationmark.triangle")
+                        Spacer()
+                        if ErrorLog.shared.entries.isEmpty {
+                            Text("Clear")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text("\(ErrorLog.shared.entries.count)")
+                                .font(.caption2)
+                                .foregroundStyle(.red)
+                                .fontWeight(.semibold)
+                        }
+                    }
+                }
+                .accessibilityLabel("Error log, \(ErrorLog.shared.entries.isEmpty ? "no errors" : "\(ErrorLog.shared.entries.count) entries")")
+            }
+
             // About
             Section("About") {
                 HStack {

@@ -20,7 +20,7 @@ class BookmarkStore {
             let data = try JSONEncoder().encode(bookmarks)
             defaults.set(data, forKey: key)
         } catch {
-            print("Failed to save bookmarks: \(error)")
+            ErrorLog.log("Failed to save bookmarks: \(error)")
         }
     }
     
@@ -55,7 +55,7 @@ class HistoryStore {
             let data = try JSONEncoder().encode(history)
             defaults.set(data, forKey: key)
         } catch {
-            print("Failed to save history: \(error)")
+            ErrorLog.log("Failed to save history: \(error)")
         }
     }
 }
@@ -80,7 +80,7 @@ class SettingsStore {
             let data = try JSONEncoder().encode(settings)
             defaults.set(data, forKey: key)
         } catch {
-            print("Failed to save settings: \(error)")
+            ErrorLog.log("Failed to save settings: \(error)")
         }
     }
 }

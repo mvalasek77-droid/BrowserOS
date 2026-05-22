@@ -37,6 +37,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             guard let self else { return }
             if let error = error {
                 self.lastError = error.localizedDescription
+                ErrorLog.log("WC activation error: \(error.localizedDescription)")
             }
             self.isReachable = session.isReachable
             self.isPhoneReachable = session.isReachable
@@ -121,6 +122,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             case .pageError:
                 if let errorMessage = message[WCKey.error.rawValue] as? String {
                     self.lastError = errorMessage
+                    ErrorLog.log("Page error: \(errorMessage)")
                     NotificationCenter.default.post(
                         name: .pageError,
                         object: nil,
@@ -303,6 +305,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         session.sendMessage(message, replyHandler: nil, errorHandler: { error in
             DispatchQueue.main.async { [weak self] in
                 self?.lastError = error.localizedDescription
+                ErrorLog.log("WC send failed: \(error.localizedDescription)")
             }
         })
     }
@@ -318,6 +321,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             return try JSONDecoder().decode([NativeWebElement].self, from: data)
         } catch {
             lastError = "Failed to decode elements: \(error.localizedDescription)"
+            ErrorLog.log("Decode error (elements): \(error)")
             return []
         }
     }
@@ -327,6 +331,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             return try JSONDecoder().decode(ReaderContent.self, from: data)
         } catch {
             lastError = "Failed to decode reader content: \(error.localizedDescription)"
+            ErrorLog.log("Decode error (reader): \(error)")
             return nil
         }
     }
@@ -336,6 +341,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             return try JSONDecoder().decode([MediaItem].self, from: data)
         } catch {
             lastError = "Failed to decode media items: \(error.localizedDescription)"
+            ErrorLog.log("Decode error (media): \(error)")
             return []
         }
     }

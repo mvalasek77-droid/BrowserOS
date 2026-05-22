@@ -42,7 +42,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
             self.isWatchAppInstalled = session.isWatchAppInstalled
         }
         if let error = error {
-            print("[PhoneSessionManager] Activation error: \(error.localizedDescription)")
+            ErrorLog.log("WC activation error: \(error.localizedDescription)")
         }
     }
     
@@ -183,7 +183,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         do {
             try session.updateApplicationContext(context)
         } catch {
-            print("[PhoneSessionManager] Failed to update application context: \(error.localizedDescription)")
+            ErrorLog.log("Failed to update application context: \(error.localizedDescription)")
         }
     }
     
