@@ -42,7 +42,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
             self?.refreshWatchState(session)
         }
         if let error = error {
-            ErrorLog.log("WC activation error: \(error.localizedDescription)")
+            print("[BrowserOS]WC activation error: \(error.localizedDescription)")
         }
     }
 
@@ -86,7 +86,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                 self?.lastPingRoundTrip = Date().timeIntervalSince(sent)
             }
         }, errorHandler: { error in
-            ErrorLog.log("Ping failed: \(error.localizedDescription)")
+            print("[BrowserOS]Ping failed: \(error.localizedDescription)")
         })
     }
     
@@ -212,7 +212,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         do {
             try session.updateApplicationContext(context)
         } catch {
-            ErrorLog.log("Failed to update application context: \(error.localizedDescription)")
+            print("[BrowserOS]Failed to update application context: \(error.localizedDescription)")
         }
     }
     

@@ -80,7 +80,7 @@ struct iPhoneWebView: UIViewRepresentable {
         }
         
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            ErrorLog.log("Navigation failed: \(error.localizedDescription)")
+            print("[BrowserOS] Navigation failed: \(error.localizedDescription)")
             Task { @MainActor in
                 viewModel.isLoading = false
                 viewModel.loadProgress = 0
@@ -89,7 +89,7 @@ struct iPhoneWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            ErrorLog.log("Provisional navigation failed: \(error.localizedDescription)")
+            print("[BrowserOS] Provisional navigation failed: \(error.localizedDescription)")
             Task { @MainActor in
                 viewModel.isLoading = false
                 viewModel.loadProgress = 0

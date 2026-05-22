@@ -32,6 +32,8 @@ class VideoPlayerViewModel: ObservableObject {
         item.publisher(for: \.status)
             .sink { [weak self] status in
                 switch status {
+                case .unknown:
+                    break
                 case .readyToPlay:
                     self?.isBuffering = false
                     self?.duration = item.duration.seconds
@@ -58,7 +60,9 @@ class VideoPlayerViewModel: ObservableObject {
         // Time observer
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
         timeObserver = newPlayer.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
-            self?.currentTime = time.seconds
+            MainActor.assumeIsolated {
+                self?.currentTime = time.seconds
+            }
         }
         
         // Rate observer
