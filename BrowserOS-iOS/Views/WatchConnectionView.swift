@@ -154,15 +154,12 @@ struct WatchConnectionView: View {
     // MARK: - Helpers
 
     private func openWatchApp() {
-        guard let url = URL(string: "itms-watchkit://") else {
+        guard let url = URL(string: "itms-watchkit://"),
+              UIApplication.shared.canOpenURL(url) else {
             showManualInstructions = true
             return
         }
-        UIApplication.shared.open(url) { success in
-            if !success {
-                showManualInstructions = true
-            }
-        }
+        UIApplication.shared.open(url)
     }
 }
 
