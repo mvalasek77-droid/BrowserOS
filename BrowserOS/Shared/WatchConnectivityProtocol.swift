@@ -38,6 +38,7 @@ enum WCMessageType: String, Codable {
     case historySync
     case handshake
 
+    case ping
     case loadURL
     case goBack
     case goForward

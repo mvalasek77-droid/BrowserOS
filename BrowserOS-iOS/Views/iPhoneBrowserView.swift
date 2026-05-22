@@ -8,6 +8,7 @@ struct iPhoneBrowserView: View {
     @StateObject private var viewModel = iPhoneBrowserViewModel()
     
     @State private var showTabs = false
+    @State private var showWatchConnection = false
     @State private var tabs: [BrowserTab] = [BrowserTab(url: "", title: "New Tab")]
     @State private var activeTabIndex: Int = 0
     
@@ -42,6 +43,9 @@ struct iPhoneBrowserView: View {
             }
             .sheet(isPresented: $showTabs) {
                 tabDrawer
+            }
+            .sheet(isPresented: $showWatchConnection) {
+                WatchConnectionView(sessionManager: sessionManager)
             }
         }
         .onAppear {
@@ -88,16 +92,35 @@ struct iPhoneBrowserView: View {
     }
     
     // MARK: - Watch Connectivity Indicator
-    
+
     private var watchIndicator: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(sessionManager.isWatchReachable ? Color.green : Color.gray)
-                .frame(width: 8, height: 8)
-            Image(systemName: "applewatch")
-                .font(.caption)
-                .foregroundColor(sessionManager.isWatchReachable ? .green : .gray)
+        Button {
+            showWatchConnection = true
+        } label: {
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(indicatorColor)
+                    .frame(width: 8, height: 8)
+                Image(systemName: "applewatch")
+                    .font(.caption)
+                    .foregroundStyle(indicatorColor)
+            }
         }
+        .accessibilityLabel(indicatorAccessibilityLabel)
+    }
+
+    private var indicatorColor: Color {
+        if sessionManager.isWatchReachable { return .green }
+        if sessionManager.isWatchAppInstalled { return .yellow }
+        if sessionManager.isPaired { return .orange }
+        return .gray
+    }
+
+    private var indicatorAccessibilityLabel: String {
+        if sessionManager.isWatchReachable { return "Watch connected" }
+        if sessionManager.isWatchAppInstalled { return "Watch app installed but not reachable" }
+        if sessionManager.isPaired { return "Watch paired but app not installed" }
+        return "No watch paired"
     }
     
     // MARK: - Bottom Toolbar

@@ -59,6 +59,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     }
     
     func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
+        // Reply immediately for pings before any other processing
+        if (message[WCKey.messageType.rawValue] as? String) == WCMessageType.ping.rawValue {
+            replyHandler(["pong": true, "receivedAt": Date().timeIntervalSince1970])
+            return
+        }
         handleMessage(message)
         replyHandler(["ack": true])
     }

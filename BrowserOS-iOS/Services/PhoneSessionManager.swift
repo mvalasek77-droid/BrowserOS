@@ -5,10 +5,12 @@ import WatchConnectivity
 // Manages WatchConnectivity on the iPhone side, sending structured page data to the Watch
 
 class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
-    
+
     @Published var isWatchReachable: Bool = false
     @Published var isWatchAppInstalled: Bool = false
+    @Published var isPaired: Bool = false
     @Published var lastSyncDate: Date? = nil
+    @Published var lastPingRoundTrip: Double? = nil  // seconds
     
     // Callbacks that the browser view model hooks into
     var onLoadURL: ((String) -> Void)?
@@ -37,28 +39,55 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     
     func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.isWatchReachable = session.isReachable
-            self.isWatchAppInstalled = session.isWatchAppInstalled
+            self?.refreshWatchState(session)
         }
         if let error = error {
             ErrorLog.log("WC activation error: \(error.localizedDescription)")
         }
     }
-    
-    func sessionDidBecomeInactive(_ session: WCSession) {
-        // Not needed for iOS — no-op
-    }
-    
+
+    func sessionDidBecomeInactive(_ session: WCSession) {}
+
     func sessionDidDeactivate(_ session: WCSession) {
-        // Not needed for iOS — no-op
+        // Re-activate after the old session deactivates (required for watch switching)
+        session.activate()
     }
-    
+
     func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            self.isWatchReachable = session.isReachable
+            self?.refreshWatchState(session)
         }
+    }
+
+    func sessionWatchStateDidChange(_ session: WCSession) {
+        DispatchQueue.main.async { [weak self] in
+            self?.refreshWatchState(session)
+        }
+    }
+
+    private func refreshWatchState(_ session: WCSession) {
+        isWatchReachable    = session.isReachable
+        isWatchAppInstalled = session.isWatchAppInstalled
+        isPaired            = session.isPaired
+    }
+
+    // MARK: - Ping
+
+    /// Send a timestamped ping to the watch and record the round-trip time.
+    func ping() {
+        guard session.isReachable else { return }
+        let sent = Date()
+        let msg: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.ping.rawValue,
+            "sentAt": sent.timeIntervalSince1970
+        ]
+        session.sendMessage(msg, replyHandler: { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.lastPingRoundTrip = Date().timeIntervalSince(sent)
+            }
+        }, errorHandler: { error in
+            ErrorLog.log("Ping failed: \(error.localizedDescription)")
+        })
     }
     
     // MARK: - Receiving Messages from Watch
