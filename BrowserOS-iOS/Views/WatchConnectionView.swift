@@ -1,5 +1,4 @@
 import SwiftUI
-import WatchConnectivity
 
 // MARK: - Watch Connection Sheet
 // Shows live WatchConnectivity state and gives the user actions to fix pairing issues.
@@ -7,6 +6,7 @@ import WatchConnectivity
 struct WatchConnectionView: View {
     @ObservedObject var sessionManager: PhoneSessionManager
     @Environment(\.dismiss) private var dismiss
+    @State private var showManualInstructions = false
 
     var body: some View {
         NavigationStack {
@@ -22,6 +22,11 @@ struct WatchConnectionView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                 }
+            }
+            .alert("Open the Watch App Manually", isPresented: $showManualInstructions) {
+                Button("OK") {}
+            } message: {
+                Text("On your iPhone, open the built-in \"Watch\" app → tap \"Available Apps\" → tap Install next to BrowserOS.")
             }
         }
         .onAppear { sessionManager.ping() }
@@ -56,6 +61,13 @@ struct WatchConnectionView: View {
                     detail: String(format: "%.0f ms", rtt * 1000),
                     icon: "waveform.path",
                     color: rtt < 0.5 ? .green : rtt < 2 ? .yellow : .orange
+                )
+            } else if let msg = sessionManager.pingStatusMessage {
+                StatusRow(
+                    title: "Ping",
+                    detail: msg,
+                    icon: "waveform.path",
+                    color: msg.contains("not reachable") || msg.contains("failed") ? .orange : .blue
                 )
             }
         }
@@ -142,9 +154,14 @@ struct WatchConnectionView: View {
     // MARK: - Helpers
 
     private func openWatchApp() {
-        // Opens the Watch app on iPhone — user can install the companion from there
-        if let url = URL(string: "itms-watchkit://") {
-            UIApplication.shared.open(url)
+        guard let url = URL(string: "itms-watchkit://") else {
+            showManualInstructions = true
+            return
+        }
+        UIApplication.shared.open(url) { success in
+            if !success {
+                showManualInstructions = true
+            }
         }
     }
 }

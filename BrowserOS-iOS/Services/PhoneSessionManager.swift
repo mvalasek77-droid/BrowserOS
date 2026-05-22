@@ -11,6 +11,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var isPaired: Bool = false
     @Published var lastSyncDate: Date? = nil
     @Published var lastPingRoundTrip: Double? = nil  // seconds
+    @Published var pingStatusMessage: String?
     
     // Callbacks that the browser view model hooks into
     var onLoadURL: ((String) -> Void)?
@@ -75,7 +76,15 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Send a timestamped ping to the watch and record the round-trip time.
     func ping() {
-        guard session.isReachable else { return }
+        guard session.isReachable else {
+            DispatchQueue.main.async { [weak self] in
+                self?.pingStatusMessage = "Watch not reachable — wake your watch and try again."
+            }
+            return
+        }
+        DispatchQueue.main.async { [weak self] in
+            self?.pingStatusMessage = "Sending ping…"
+        }
         let sent = Date()
         let msg: [String: Any] = [
             WCKey.messageType.rawValue: WCMessageType.ping.rawValue,
@@ -84,8 +93,12 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         session.sendMessage(msg, replyHandler: { [weak self] _ in
             DispatchQueue.main.async {
                 self?.lastPingRoundTrip = Date().timeIntervalSince(sent)
+                self?.pingStatusMessage = nil
             }
-        }, errorHandler: { error in
+        }, errorHandler: { [weak self] error in
+            DispatchQueue.main.async {
+                self?.pingStatusMessage = "Ping failed: \(error.localizedDescription)"
+            }
             print("[BrowserOS]Ping failed: \(error.localizedDescription)")
         })
     }

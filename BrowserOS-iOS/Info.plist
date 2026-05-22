@@ -54,6 +54,7 @@
 	</dict>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>itms-watchkit</string>
 		<string>youtube</string>
 		<string>nflx</string>
 		<string>fb</string>
