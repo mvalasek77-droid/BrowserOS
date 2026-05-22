@@ -20,6 +20,7 @@ targets:
       - path: BrowserOS/Shared
         excludes:
           - "**/.DS_Store"
+      - path: BrowserOS/Services/ErrorLog.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.browseros.ios
@@ -66,10 +67,18 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: UDM4W27W9V
-        WATCHOS_DEPLOYMENT_TARGET: "10.0"
         ENABLE_PREVIEWS: true
         SWIFT_EMIT_LOC_STRINGS: YES
         ENABLE_STRICT_OBJC_MSGSEND: YES
         CLANG_ENABLE_MODULES: YES
         SDKROOT: watchos
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
+
+schemes:
+  BrowserOS:
+    build:
+      targets:
+        BrowserOS: all
+        BrowserOS Watch App: all
+    run:
+      config: Debug
