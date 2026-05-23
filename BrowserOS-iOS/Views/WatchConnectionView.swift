@@ -77,13 +77,11 @@ struct WatchConnectionView: View {
 
     private var actionsSection: some View {
         Section("Actions") {
-            if !sessionManager.isWatchAppInstalled {
-                Button {
-                    openWatchApp()
-                } label: {
-                    Label("Install on Watch", systemImage: "arrow.down.circle.fill")
-                        .foregroundStyle(.blue)
-                }
+            Button {
+                openWatchApp()
+            } label: {
+                Label("Open Watch App", systemImage: "applewatch")
+                    .foregroundStyle(.blue)
             }
 
             Button {
@@ -91,15 +89,6 @@ struct WatchConnectionView: View {
             } label: {
                 Label("Test Connection", systemImage: "arrow.trianglehead.2.clockwise")
                     .foregroundStyle(.blue)
-            }
-
-            if !sessionManager.isWatchReachable && sessionManager.isPaired {
-                Button {
-                    openWatchApp()
-                } label: {
-                    Label("Open Watch App on iPhone", systemImage: "applewatch")
-                        .foregroundStyle(.blue)
-                }
             }
         }
     }
@@ -154,12 +143,16 @@ struct WatchConnectionView: View {
     // MARK: - Helpers
 
     private func openWatchApp() {
-        guard let url = URL(string: "itms-watchkit://"),
-              UIApplication.shared.canOpenURL(url) else {
-            showManualInstructions = true
-            return
+        // "watch://" opens the Apple Watch companion management app on iPhone.
+        // "itms-watchkit://" is the Watch App Store fallback.
+        let schemes = ["watch://", "itms-watchkit://"]
+        for scheme in schemes {
+            if let url = URL(string: scheme), UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+                return
+            }
         }
-        UIApplication.shared.open(url)
+        showManualInstructions = true
     }
 }
 
