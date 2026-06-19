@@ -1,0 +1,718 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		071DF38D5E07BDCA622E3FF3 /* SharedModels+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */; };
+		1BD48220DA9C4A6E42D46FAD /* MediaDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80873ED12C212A76AFDA086A /* MediaDetector.swift */; };
+		1E9B36A1B2F21B59AFFC3F03 /* SteroidOS_iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */; };
+		2332ACCE81DD1E32066E5E47 /* BrowserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */; };
+		24369259D084913A93915222 /* VideoPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42F4E9C225EEA022B7A8F98E /* VideoPlayerViewModel.swift */; };
+		26C46D476A0B70BD064BD048 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45817CA88586537D24ED9831 /* WatchSessionManager.swift */; };
+		283F5EBA0F4213452ABEBF53 /* ErrorLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15088BCB756B2057ABD5334 /* ErrorLogView.swift */; };
+		2986C057FB20D2C8867D0D79 /* HTMLNativeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042C2B7443D81129A2EB6BA9 /* HTMLNativeRenderer.swift */; };
+		2A0EF31A137CB0D3CD692679 /* BrowserState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 716A1DCAAECFC159AF432BF4 /* BrowserState.swift */; };
+		309554F67984B1A9643DE6C0 /* iPhoneWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29FBAF03C87C6DBEF7444609 /* iPhoneWebView.swift */; };
+		315240B96EEB3EC81EE703E6 /* WatchVideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F83BE8C72A51777823290E32 /* WatchVideoPlayerView.swift */; };
+		316DB5788145CCD68F25FBA8 /* SteroidBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */; };
+		337FF2840877F2988843D93A /* iPhoneBrowserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */; };
+		396B31EC986F5CAF2508543D /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
+		4844595559349B8F6E6EA9FE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C416346CCFA67DFBABBDCE9D /* Assets.xcassets */; };
+		4A07FF9564DE950355AAAFB0 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
+		4BC44086F2F5AF224E4F4F24 /* WatchConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83A4ED7B65018DECA1F2737 /* WatchConnectionView.swift */; };
+		4BDD6E2A93E6B0587B03C214 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2EDD700B86C632A5E0A9A6 /* SettingsView.swift */; };
+		543CA158D7278647EFBADE59 /* SharedModels+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */; };
+		57539F96E0521EF180D2D70A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8333E635200AF1CDA701BC /* HistoryView.swift */; };
+		5B4A4B6116CC5EA140559339 /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
+		6FD17B021040A5F848753E80 /* SteroidComplianceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */; };
+		72E3ABD8EF33FA046BE595CE /* MediaHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825650AD59C1E72672543270 /* MediaHubView.swift */; };
+		751CE507984A3168DC2BDB3F /* ErrorLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15088BCB756B2057ABD5334 /* ErrorLogView.swift */; };
+		86A6401FC1312B91DEF0D4B0 /* WatchConnectivityProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F72685A91BC851C0BB366CF2 /* WatchConnectivityProtocol.swift */; };
+		89DF1A14A0FDB7BC521238A0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E10EC521F65D1AD78559BDCA /* Assets.xcassets */; };
+		8EB5891E6AE2CE2C471BF302 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738FFDB0D8ACCBE2C6E1416A /* ErrorBannerView.swift */; };
+		9233B275E369D783B1F79EC1 /* VideoControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA64EBF4546CA221A143CFD8 /* VideoControlsView.swift */; };
+		9A9C2971531E933AEEA895C1 /* SteroidOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A603FD5656DC6D052E02C64A /* SteroidOSApp.swift */; };
+		9C6F28AC5DD8A199D7838945 /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98D22680550D76F8788B9F9 /* SharedModels.swift */; };
+		A0AE525C4F9B6B1CCAD1DE19 /* NativeWebContentRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B044641F6F4C7BFDC4DDECC /* NativeWebContentRenderer.swift */; };
+		A7A247A17A0D7F91B7916BB9 /* iPhoneBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071A341EB3C832E0F5E8201F /* iPhoneBrowserView.swift */; };
+		AADBDDFD6E192C5853B9E8BB /* VideoRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9348BD9E6620DF36A4A71 /* VideoRenderer.swift */; };
+		AC9ACBD019FFE8D3ADCD8CD6 /* WebFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D2F17A43889A2E1569302B1 /* WebFetcher.swift */; };
+		AD049FD2533FB5AAD087BBED /* PhoneSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */; };
+		B25A05D77FA60CB999FE0E2E /* MediaDetectedBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F82FEC1D94BAA02A9ED32B /* MediaDetectedBanner.swift */; };
+		B99A42613A53281F8F899EDC /* TabManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5816CCD424567C7059FC243 /* TabManagerView.swift */; };
+		C332B70DDCA5D61D6280E533 /* SteroidComplianceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */; };
+		C6820C6D17653B4B9BD5680B /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98D22680550D76F8788B9F9 /* SharedModels.swift */; };
+		C74AA0296D3C99E88136B5CD /* DOMParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A6616440E2DF41084E4F5D /* DOMParser.swift */; };
+		C79C5725350EDDB6550D35A9 /* AddressBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52A557E2B21BBE889448533 /* AddressBarView.swift */; };
+		C805C3C4845953B807EA6FDC /* WatchConnectivityProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F72685A91BC851C0BB366CF2 /* WatchConnectivityProtocol.swift */; };
+		D080CF6C9AE42CF2D42BCBB1 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
+		D3A92CD9376D6BA885E471C6 /* ReaderModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB877F5C5D1965EAA07287B /* ReaderModeView.swift */; };
+		DB40B7EA8B7886BEF594CCD9 /* BrowserPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E94C6B6DB4DED288C0E85B /* BrowserPageView.swift */; };
+		DDAE97748BC8101B272653A3 /* MainNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466FE7DF25CEEAD30E16C83E /* MainNavigationView.swift */; };
+		E3812153517797D4FD684AEA /* VoiceInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FA02DDAFAAB97033FF807 /* VoiceInputController.swift */; };
+		E57A54BEC8BD8AEE8C409547 /* SteroidOSIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */; };
+		E6A51AB25299A05AC6C88084 /* SteroidBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */; };
+		E9ED677C8BEAFBE3AD4D48E7 /* SteroidOSComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */; };
+		F48DAA3954006344FE5B3D35 /* SteroidOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = D2338BDCCF3B866E573371D8 /* SteroidOS Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F6F6E52475F051BDB46F4FCC /* WatchHomePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562C197748888C64D99AEE52 /* WatchHomePage.swift */; };
+		F9D819C0D025E577AA99556F /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207F3C4B00312B5E5A4E5668 /* BookmarksView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		31E8698CABDAFA35A005C3AE /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 64EB93235BF7565D11ECA0BB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C89812CB602843555C888695;
+			remoteInfo = "SteroidOS Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8935BB5B30D5E73FB60FA126 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				F48DAA3954006344FE5B3D35 /* SteroidOS Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		042C2B7443D81129A2EB6BA9 /* HTMLNativeRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLNativeRenderer.swift; sourceTree = "<group>"; };
+		071A341EB3C832E0F5E8201F /* iPhoneBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneBrowserView.swift; sourceTree = "<group>"; };
+		207F3C4B00312B5E5A4E5668 /* BookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksView.swift; sourceTree = "<group>"; };
+		225FDB9430F461ED3944C454 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		29FBAF03C87C6DBEF7444609 /* iPhoneWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneWebView.swift; sourceTree = "<group>"; };
+		2F8333E635200AF1CDA701BC /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOS_iOSApp.swift; sourceTree = "<group>"; };
+		39A6616440E2DF41084E4F5D /* DOMParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMParser.swift; sourceTree = "<group>"; };
+		3D2EDD700B86C632A5E0A9A6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		42F4E9C225EEA022B7A8F98E /* VideoPlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerViewModel.swift; sourceTree = "<group>"; };
+		43655AABE57470C7A54DB8F7 /* SteroidOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SteroidOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidComplianceViews.swift; sourceTree = "<group>"; };
+		45817CA88586537D24ED9831 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
+		466FE7DF25CEEAD30E16C83E /* MainNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainNavigationView.swift; sourceTree = "<group>"; };
+		47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSessionManager.swift; sourceTree = "<group>"; };
+		562C197748888C64D99AEE52 /* WatchHomePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHomePage.swift; sourceTree = "<group>"; };
+		5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidBrand.swift; sourceTree = "<group>"; };
+		716A1DCAAECFC159AF432BF4 /* BrowserState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserState.swift; sourceTree = "<group>"; };
+		723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SharedModels+SwiftUI.swift"; sourceTree = "<group>"; };
+		738FFDB0D8ACCBE2C6E1416A /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
+		755076ADA1C094FA89609FBA /* SteroidOS-Watch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SteroidOS-Watch.entitlements"; sourceTree = "<group>"; };
+		7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSIntents.swift; sourceTree = "<group>"; };
+		7B044641F6F4C7BFDC4DDECC /* NativeWebContentRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWebContentRenderer.swift; sourceTree = "<group>"; };
+		80873ED12C212A76AFDA086A /* MediaDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetector.swift; sourceTree = "<group>"; };
+		825650AD59C1E72672543270 /* MediaHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaHubView.swift; sourceTree = "<group>"; };
+		896BD7A00D1ACE90FCB937B9 /* SteroidOS-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SteroidOS-iOS.entitlements"; sourceTree = "<group>"; };
+		944136042A42411F60A43475 /* ErrorLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorLog.swift; sourceTree = "<group>"; };
+		9D2F17A43889A2E1569302B1 /* WebFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFetcher.swift; sourceTree = "<group>"; };
+		9FB877F5C5D1965EAA07287B /* ReaderModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderModeView.swift; sourceTree = "<group>"; };
+		A16FA02DDAFAAB97033FF807 /* VoiceInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceInputController.swift; sourceTree = "<group>"; };
+		A603FD5656DC6D052E02C64A /* SteroidOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSApp.swift; sourceTree = "<group>"; };
+		B5816CCD424567C7059FC243 /* TabManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerView.swift; sourceTree = "<group>"; };
+		B83A4ED7B65018DECA1F2737 /* WatchConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectionView.swift; sourceTree = "<group>"; };
+		B98D22680550D76F8788B9F9 /* SharedModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedModels.swift; sourceTree = "<group>"; };
+		C416346CCFA67DFBABBDCE9D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		CA64EBF4546CA221A143CFD8 /* VideoControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoControlsView.swift; sourceTree = "<group>"; };
+		D0C9348BD9E6620DF36A4A71 /* VideoRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRenderer.swift; sourceTree = "<group>"; };
+		D2338BDCCF3B866E573371D8 /* SteroidOS Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SteroidOS Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D653BEA352BDAE196CE93A78 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E10EC521F65D1AD78559BDCA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		E15088BCB756B2057ABD5334 /* ErrorLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorLogView.swift; sourceTree = "<group>"; };
+		E1F82FEC1D94BAA02A9ED32B /* MediaDetectedBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetectedBanner.swift; sourceTree = "<group>"; };
+		E2E94C6B6DB4DED288C0E85B /* BrowserPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPageView.swift; sourceTree = "<group>"; };
+		E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSComplication.swift; sourceTree = "<group>"; };
+		E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewModel.swift; sourceTree = "<group>"; };
+		ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneBrowserViewModel.swift; sourceTree = "<group>"; };
+		EEC409FB208FB4072FAB822A /* PersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceStore.swift; sourceTree = "<group>"; };
+		F52A557E2B21BBE889448533 /* AddressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBarView.swift; sourceTree = "<group>"; };
+		F72685A91BC851C0BB366CF2 /* WatchConnectivityProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityProtocol.swift; sourceTree = "<group>"; };
+		F83BE8C72A51777823290E32 /* WatchVideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchVideoPlayerView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0E68E0269D5031BD66F3F4AE /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				F52A557E2B21BBE889448533 /* AddressBarView.swift */,
+				738FFDB0D8ACCBE2C6E1416A /* ErrorBannerView.swift */,
+				E1F82FEC1D94BAA02A9ED32B /* MediaDetectedBanner.swift */,
+				7B044641F6F4C7BFDC4DDECC /* NativeWebContentRenderer.swift */,
+				9FB877F5C5D1965EAA07287B /* ReaderModeView.swift */,
+				CA64EBF4546CA221A143CFD8 /* VideoControlsView.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		405E04F1C4D81A969529C61A /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				39A6616440E2DF41084E4F5D /* DOMParser.swift */,
+				47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		48ACFCB181ACEBFB26370A92 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				071A341EB3C832E0F5E8201F /* iPhoneBrowserView.swift */,
+				29FBAF03C87C6DBEF7444609 /* iPhoneWebView.swift */,
+				B83A4ED7B65018DECA1F2737 /* WatchConnectionView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		63CA5E1B75CA529F73B81B81 /* SteroidOS */ = {
+			isa = PBXGroup;
+			children = (
+				C416346CCFA67DFBABBDCE9D /* Assets.xcassets */,
+				D653BEA352BDAE196CE93A78 /* Info.plist */,
+				755076ADA1C094FA89609FBA /* SteroidOS-Watch.entitlements */,
+				A603FD5656DC6D052E02C64A /* SteroidOSApp.swift */,
+				E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */,
+				90F60ADAB58B7F5DB785D44D /* Services */,
+				F25A2F45FF1E2BA4B0C734A1 /* Shared */,
+				903C2A95F62A5C552FD56C0F /* ViewModels */,
+				898CCDB2AA3D61222B786CA7 /* Views */,
+			);
+			path = SteroidOS;
+			sourceTree = "<group>";
+		};
+		746CAB4FCECD802EBC6E2CAF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D2338BDCCF3B866E573371D8 /* SteroidOS Watch App.app */,
+				43655AABE57470C7A54DB8F7 /* SteroidOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7A71819C7FA3D00AB7AE5368 /* SteroidOS-iOS */ = {
+			isa = PBXGroup;
+			children = (
+				E10EC521F65D1AD78559BDCA /* Assets.xcassets */,
+				225FDB9430F461ED3944C454 /* Info.plist */,
+				347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */,
+				896BD7A00D1ACE90FCB937B9 /* SteroidOS-iOS.entitlements */,
+				405E04F1C4D81A969529C61A /* Services */,
+				A65CA9DF41C22A1D9FB17E02 /* ViewModels */,
+				48ACFCB181ACEBFB26370A92 /* Views */,
+			);
+			path = "SteroidOS-iOS";
+			sourceTree = "<group>";
+		};
+		898CCDB2AA3D61222B786CA7 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				207F3C4B00312B5E5A4E5668 /* BookmarksView.swift */,
+				E2E94C6B6DB4DED288C0E85B /* BrowserPageView.swift */,
+				E15088BCB756B2057ABD5334 /* ErrorLogView.swift */,
+				2F8333E635200AF1CDA701BC /* HistoryView.swift */,
+				466FE7DF25CEEAD30E16C83E /* MainNavigationView.swift */,
+				825650AD59C1E72672543270 /* MediaHubView.swift */,
+				3D2EDD700B86C632A5E0A9A6 /* SettingsView.swift */,
+				B5816CCD424567C7059FC243 /* TabManagerView.swift */,
+				D0C9348BD9E6620DF36A4A71 /* VideoRenderer.swift */,
+				562C197748888C64D99AEE52 /* WatchHomePage.swift */,
+				F83BE8C72A51777823290E32 /* WatchVideoPlayerView.swift */,
+				0E68E0269D5031BD66F3F4AE /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		8E22D27985B9319D61C5F9E2 = {
+			isa = PBXGroup;
+			children = (
+				63CA5E1B75CA529F73B81B81 /* SteroidOS */,
+				7A71819C7FA3D00AB7AE5368 /* SteroidOS-iOS */,
+				746CAB4FCECD802EBC6E2CAF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		903C2A95F62A5C552FD56C0F /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */,
+				42F4E9C225EEA022B7A8F98E /* VideoPlayerViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		90F60ADAB58B7F5DB785D44D /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				716A1DCAAECFC159AF432BF4 /* BrowserState.swift */,
+				944136042A42411F60A43475 /* ErrorLog.swift */,
+				042C2B7443D81129A2EB6BA9 /* HTMLNativeRenderer.swift */,
+				80873ED12C212A76AFDA086A /* MediaDetector.swift */,
+				EEC409FB208FB4072FAB822A /* PersistenceStore.swift */,
+				7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */,
+				A16FA02DDAFAAB97033FF807 /* VoiceInputController.swift */,
+				45817CA88586537D24ED9831 /* WatchSessionManager.swift */,
+				9D2F17A43889A2E1569302B1 /* WebFetcher.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A65CA9DF41C22A1D9FB17E02 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		F25A2F45FF1E2BA4B0C734A1 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				B98D22680550D76F8788B9F9 /* SharedModels.swift */,
+				723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */,
+				5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */,
+				439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */,
+				F72685A91BC851C0BB366CF2 /* WatchConnectivityProtocol.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		698416C02BFB24F88683D062 /* SteroidOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0B64F0C1868D78E58FC2730A /* Build configuration list for PBXNativeTarget "SteroidOS" */;
+			buildPhases = (
+				FACD5F644F03FF9227DEAE9E /* Sources */,
+				93A5A00193AE78CCC13284C4 /* Resources */,
+				8935BB5B30D5E73FB60FA126 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				32C102F72CE8CADE20D86F7E /* PBXTargetDependency */,
+			);
+			name = SteroidOS;
+			packageProductDependencies = (
+			);
+			productName = SteroidOS;
+			productReference = 43655AABE57470C7A54DB8F7 /* SteroidOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C89812CB602843555C888695 /* SteroidOS Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7DE87D662EF11B5E896D015E /* Build configuration list for PBXNativeTarget "SteroidOS Watch App" */;
+			buildPhases = (
+				D18CC2E80981327DE24D8732 /* Sources */,
+				A239543FD40532F60FCF5C01 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "SteroidOS Watch App";
+			packageProductDependencies = (
+			);
+			productName = "SteroidOS Watch App";
+			productReference = D2338BDCCF3B866E573371D8 /* SteroidOS Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		64EB93235BF7565D11ECA0BB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					698416C02BFB24F88683D062 = {
+						DevelopmentTeam = UDM4W27W9V;
+						ProvisioningStyle = Automatic;
+					};
+					C89812CB602843555C888695 = {
+						DevelopmentTeam = UDM4W27W9V;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 75896B0AFA6B4DC7EF65AAB7 /* Build configuration list for PBXProject "SteroidOS" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 8E22D27985B9319D61C5F9E2;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 746CAB4FCECD802EBC6E2CAF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				698416C02BFB24F88683D062 /* SteroidOS */,
+				C89812CB602843555C888695 /* SteroidOS Watch App */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		93A5A00193AE78CCC13284C4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				89DF1A14A0FDB7BC521238A0 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A239543FD40532F60FCF5C01 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4844595559349B8F6E6EA9FE /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D18CC2E80981327DE24D8732 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C79C5725350EDDB6550D35A9 /* AddressBarView.swift in Sources */,
+				F9D819C0D025E577AA99556F /* BookmarksView.swift in Sources */,
+				DB40B7EA8B7886BEF594CCD9 /* BrowserPageView.swift in Sources */,
+				2A0EF31A137CB0D3CD692679 /* BrowserState.swift in Sources */,
+				2332ACCE81DD1E32066E5E47 /* BrowserViewModel.swift in Sources */,
+				8EB5891E6AE2CE2C471BF302 /* ErrorBannerView.swift in Sources */,
+				396B31EC986F5CAF2508543D /* ErrorLog.swift in Sources */,
+				283F5EBA0F4213452ABEBF53 /* ErrorLogView.swift in Sources */,
+				2986C057FB20D2C8867D0D79 /* HTMLNativeRenderer.swift in Sources */,
+				57539F96E0521EF180D2D70A /* HistoryView.swift in Sources */,
+				DDAE97748BC8101B272653A3 /* MainNavigationView.swift in Sources */,
+				B25A05D77FA60CB999FE0E2E /* MediaDetectedBanner.swift in Sources */,
+				1BD48220DA9C4A6E42D46FAD /* MediaDetector.swift in Sources */,
+				72E3ABD8EF33FA046BE595CE /* MediaHubView.swift in Sources */,
+				A0AE525C4F9B6B1CCAD1DE19 /* NativeWebContentRenderer.swift in Sources */,
+				D080CF6C9AE42CF2D42BCBB1 /* PersistenceStore.swift in Sources */,
+				D3A92CD9376D6BA885E471C6 /* ReaderModeView.swift in Sources */,
+				4BDD6E2A93E6B0587B03C214 /* SettingsView.swift in Sources */,
+				543CA158D7278647EFBADE59 /* SharedModels+SwiftUI.swift in Sources */,
+				C6820C6D17653B4B9BD5680B /* SharedModels.swift in Sources */,
+				316DB5788145CCD68F25FBA8 /* SteroidBrand.swift in Sources */,
+				C332B70DDCA5D61D6280E533 /* SteroidComplianceViews.swift in Sources */,
+				9A9C2971531E933AEEA895C1 /* SteroidOSApp.swift in Sources */,
+				E9ED677C8BEAFBE3AD4D48E7 /* SteroidOSComplication.swift in Sources */,
+				E57A54BEC8BD8AEE8C409547 /* SteroidOSIntents.swift in Sources */,
+				B99A42613A53281F8F899EDC /* TabManagerView.swift in Sources */,
+				9233B275E369D783B1F79EC1 /* VideoControlsView.swift in Sources */,
+				24369259D084913A93915222 /* VideoPlayerViewModel.swift in Sources */,
+				AADBDDFD6E192C5853B9E8BB /* VideoRenderer.swift in Sources */,
+				E3812153517797D4FD684AEA /* VoiceInputController.swift in Sources */,
+				86A6401FC1312B91DEF0D4B0 /* WatchConnectivityProtocol.swift in Sources */,
+				F6F6E52475F051BDB46F4FCC /* WatchHomePage.swift in Sources */,
+				26C46D476A0B70BD064BD048 /* WatchSessionManager.swift in Sources */,
+				315240B96EEB3EC81EE703E6 /* WatchVideoPlayerView.swift in Sources */,
+				AC9ACBD019FFE8D3ADCD8CD6 /* WebFetcher.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FACD5F644F03FF9227DEAE9E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C74AA0296D3C99E88136B5CD /* DOMParser.swift in Sources */,
+				5B4A4B6116CC5EA140559339 /* ErrorLog.swift in Sources */,
+				751CE507984A3168DC2BDB3F /* ErrorLogView.swift in Sources */,
+				4A07FF9564DE950355AAAFB0 /* PersistenceStore.swift in Sources */,
+				AD049FD2533FB5AAD087BBED /* PhoneSessionManager.swift in Sources */,
+				071DF38D5E07BDCA622E3FF3 /* SharedModels+SwiftUI.swift in Sources */,
+				9C6F28AC5DD8A199D7838945 /* SharedModels.swift in Sources */,
+				E6A51AB25299A05AC6C88084 /* SteroidBrand.swift in Sources */,
+				6FD17B021040A5F848753E80 /* SteroidComplianceViews.swift in Sources */,
+				1E9B36A1B2F21B59AFFC3F03 /* SteroidOS_iOSApp.swift in Sources */,
+				4BC44086F2F5AF224E4F4F24 /* WatchConnectionView.swift in Sources */,
+				C805C3C4845953B807EA6FDC /* WatchConnectivityProtocol.swift in Sources */,
+				A7A247A17A0D7F91B7916BB9 /* iPhoneBrowserView.swift in Sources */,
+				337FF2840877F2988843D93A /* iPhoneBrowserViewModel.swift in Sources */,
+				309554F67984B1A9643DE6C0 /* iPhoneWebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		32C102F72CE8CADE20D86F7E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C89812CB602843555C888695 /* SteroidOS Watch App */;
+			targetProxy = 31E8698CABDAFA35A005C3AE /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		02EE560EA1047B89E53E9FAC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		226B7D1724CD35B8A44A862B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		32F9867BF2859A6CF817C086 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "SteroidOS-iOS/SteroidOS-iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UDM4W27W9V;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "SteroidOS-iOS/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.steroidos.ios;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		5E5F0ADBEAB509DB8B80DF06 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "SteroidOS/SteroidOS-Watch.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UDM4W27W9V;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SteroidOS/Info.plist;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.steroidos.ios.watchapp;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		7011E0C66DF90BF035477997 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "SteroidOS-iOS/SteroidOS-iOS.entitlements";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UDM4W27W9V;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "SteroidOS-iOS/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.steroidos.ios;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		829EE43DEB01668A12CF1826 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = "SteroidOS/SteroidOS-Watch.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UDM4W27W9V;
+				ENABLE_PREVIEWS = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SteroidOS/Info.plist;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.steroidos.ios.watchapp;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0B64F0C1868D78E58FC2730A /* Build configuration list for PBXNativeTarget "SteroidOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7011E0C66DF90BF035477997 /* Debug */,
+				32F9867BF2859A6CF817C086 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		75896B0AFA6B4DC7EF65AAB7 /* Build configuration list for PBXProject "SteroidOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				226B7D1724CD35B8A44A862B /* Debug */,
+				02EE560EA1047B89E53E9FAC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7DE87D662EF11B5E896D015E /* Build configuration list for PBXNativeTarget "SteroidOS Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				829EE43DEB01668A12CF1826 /* Debug */,
+				5E5F0ADBEAB509DB8B80DF06 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 64EB93235BF7565D11ECA0BB /* Project object */;
+}

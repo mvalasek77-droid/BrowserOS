@@ -1,6 +1,6 @@
-name: BrowserOS
+name: SteroidOS
 options:
-  bundleIdPrefix: com.browseros
+  bundleIdPrefix: com.steroidos
   deploymentTarget:
     iOS: "17.0"
     watchOS: "10.0"
@@ -10,62 +10,65 @@ options:
 
 targets:
   # iOS companion app — full WKWebView browser engine
-  BrowserOS:
+  SteroidOS:
     type: application
     platform: iOS
     sources:
-      - path: BrowserOS-iOS
+      - path: SteroidOS-iOS
         excludes:
           - "**/.DS_Store"
-      - path: BrowserOS/Shared
+      - path: SteroidOS/Shared
         excludes:
           - "**/.DS_Store"
-      - path: BrowserOS/Services/ErrorLog.swift
+      - path: SteroidOS/Services/ErrorLog.swift
+      - path: SteroidOS/Services/PersistenceStore.swift
+      - path: SteroidOS/Views/ErrorLogView.swift
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.browseros.ios
+        PRODUCT_BUNDLE_IDENTIFIER: com.steroidos.ios
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "1,2"
-        INFOPLIST_FILE: BrowserOS-iOS/Info.plist
+        INFOPLIST_FILE: SteroidOS-iOS/Info.plist
         GENERATE_INFOPLIST_FILE: false
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: SteroidOS-iOS/SteroidOS-iOS.entitlements
         DEVELOPMENT_TEAM: UDM4W27W9V
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         ENABLE_PREVIEWS: true
         SWIFT_EMIT_LOC_STRINGS: YES
     dependencies:
-      - target: BrowserOS Watch App
+      - target: SteroidOS Watch App
         embed: true
 
   # watchOS app — native SwiftUI rendering of structured data from iPhone
-  BrowserOS Watch App:
+  SteroidOS Watch App:
     type: application
     platform: watchOS
     sources:
-      - path: BrowserOS
+      - path: SteroidOS
         excludes:
           - "**/.DS_Store"
-          - "BrowserOSComplication.swift"
           - "Models/BrowserModels.swift.disabled"
-      - path: BrowserOS/Shared
+      - path: SteroidOS/Shared
         excludes:
           - "**/.DS_Store"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.browseros.ios.watchapp
+        PRODUCT_BUNDLE_IDENTIFIER: com.steroidos.ios.watchapp
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "5.9"
         TARGETED_DEVICE_FAMILY: "4"
-        INFOPLIST_FILE: BrowserOS/Info.plist
+        INFOPLIST_FILE: SteroidOS/Info.plist
         GENERATE_INFOPLIST_FILE: false
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: SteroidOS/SteroidOS-Watch.entitlements
         DEVELOPMENT_TEAM: UDM4W27W9V
         ENABLE_PREVIEWS: true
         SWIFT_EMIT_LOC_STRINGS: YES
@@ -75,10 +78,17 @@ targets:
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
 
 schemes:
-  BrowserOS:
+  SteroidOS:
     build:
       targets:
-        BrowserOS: all
-        BrowserOS Watch App: all
+        SteroidOS: all
     run:
       config: Debug
+      executable: SteroidOS
+  SteroidOS Watch App:
+    build:
+      targets:
+        "SteroidOS Watch App": all
+    run:
+      config: Debug
+      executable: "SteroidOS Watch App"

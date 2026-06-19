@@ -1,8 +1,8 @@
-# BrowserOS Dual-Target Implementation Plan
+# SteroidOS Dual-Target Implementation Plan
 
 > **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
 
-**Goal:** Restructure BrowserOS as a dual-target iOS + watchOS app where the iPhone provides the real WKWebView browsing engine and streams structured data to the Watch for native SwiftUI rendering.
+**Goal:** Restructure SteroidOS as a dual-target iOS + watchOS app where the iPhone provides the real WKWebView browsing engine and streams structured data to the Watch for native SwiftUI rendering.
 
 **Architecture:** iPhone runs a full WKWebView browser that parses pages into structured data (DOM elements, reader content, media URLs) and sends them to the Watch via WatchConnectivity. The Watch renders everything natively in SwiftUI. Video streams via AVPlayer (not screen capture). Netflix uses Handoff. This approach meets Apple's review guidelines because the Watch app is a purpose-built native citizen.
 
@@ -17,13 +17,13 @@
 **Objective:** Extract data models into a Shared/ directory so both iOS and watchOS targets can use them.
 
 **Files:**
-- Create: `BrowserOS/Shared/SharedModels.swift`
-- Delete from: `BrowserOS/Models/BrowserModels.swift` (move content, make it platform-neutral)
+- Create: `SteroidOS/Shared/SharedModels.swift`
+- Delete from: `SteroidOS/Models/BrowserModels.swift` (move content, make it platform-neutral)
 
 **Step 1:** Create the shared models file with all types that both targets need:
 
 ```swift
-// BrowserOS/Shared/SharedModels.swift
+// SteroidOS/Shared/SharedModels.swift
 import Foundation
 
 // MARK: - Browser Tab (shared state)
@@ -223,10 +223,10 @@ struct VideoStream: Identifiable, Codable {
 **Objective:** Define the structured messages that iPhone and Watch exchange.
 
 **Files:**
-- Create: `BrowserOS/Shared/WatchConnectivityProtocol.swift`
+- Create: `SteroidOS/Shared/WatchConnectivityProtocol.swift`
 
 ```swift
-// BrowserOS/Shared/WatchConnectivityProtocol.swift
+// SteroidOS/Shared/WatchConnectivityProtocol.swift
 import Foundation
 
 // MARK: - WatchConnectivity Message Keys
@@ -367,17 +367,17 @@ extension Dictionary where Key == String {
 
 ### Task 3: Create iOS App Entry Point
 
-**Objective:** Create the iOS BrowserOS app that hosts WKWebView and WatchConnectivity.
+**Objective:** Create the iOS SteroidOS app that hosts WKWebView and WatchConnectivity.
 
 **Files:**
-- Create: `BrowserOS-iOS/BrowserOS_iOSApp.swift`
+- Create: `SteroidOS-iOS/SteroidOS_iOSApp.swift`
 
 ```swift
 import SwiftUI
 import WatchConnectivity
 
 @main
-struct BrowserOS_iOSApp: App {
+struct SteroidOS_iOSApp: App {
     @StateObject private var phoneSession = PhoneSessionManager()
     
     var body: some Scene {
@@ -394,7 +394,7 @@ struct BrowserOS_iOSApp: App {
 **Objective:** Manage the WatchConnectivity session on the iPhone side — send page data, receive Watch commands.
 
 **Files:**
-- Create: `BrowserOS-iOS/Services/PhoneSessionManager.swift`
+- Create: `SteroidOS-iOS/Services/PhoneSessionManager.swift`
 
 This class:
 - Activates WCSession as `.default`
@@ -409,9 +409,9 @@ This class:
 **Objective:** Build the iOS browser view with WKWebView that serves as the real rendering engine.
 
 **Files:**
-- Create: `BrowserOS-iOS/Views/iPhoneBrowserView.swift`
-- Create: `BrowserOS-iOS/Views/iPhoneWebView.swift` (WKWebView UIViewRepresentable wrapper)
-- Create: `BrowserOS-iOS/ViewModels/iPhoneBrowserViewModel.swift`
+- Create: `SteroidOS-iOS/Views/iPhoneBrowserView.swift`
+- Create: `SteroidOS-iOS/Views/iPhoneWebView.swift` (WKWebView UIViewRepresentable wrapper)
+- Create: `SteroidOS-iOS/ViewModels/iPhoneBrowserViewModel.swift`
 
 The iPhone view:
 - Full WKWebView with address bar, tabs, navigation
@@ -424,7 +424,7 @@ The iPhone view:
 **Objective:** JavaScript injection + Swift parsing to extract structured DOM from WKWebView.
 
 **Files:**
-- Create: `BrowserOS-iOS/Services/DOMParser.swift`
+- Create: `SteroidOS-iOS/Services/DOMParser.swift`
 
 This service:
 - Injects JavaScript into WKWebView after page loads
@@ -472,7 +472,7 @@ let attrsStr = afterName < beforeClose ? String(tagStr[afterName..<beforeClose])
 **Objective:** Create the missing `MediaDetectedBanner` view referenced in BrowserPageView.swift.
 
 **Files:**
-- Create: `BrowserOS/Views/Components/MediaDetectedBanner.swift`
+- Create: `SteroidOS/Views/Components/MediaDetectedBanner.swift`
 
 ```swift
 import SwiftUI
@@ -511,7 +511,7 @@ struct MediaDetectedBanner: View {
 **Objective:** Create the missing `ErrorBannerView` referenced in BrowserPageView.swift.
 
 **Files:**
-- Create: `BrowserOS/Views/Components/ErrorBannerView.swift`
+- Create: `SteroidOS/Views/Components/ErrorBannerView.swift`
 
 ```swift
 import SwiftUI
@@ -550,7 +550,7 @@ struct ErrorBannerView: View {
 **Objective:** Manage WCSession on the Watch side — receive page data from iPhone, send commands.
 
 **Files:**
-- Create: `BrowserOS/Services/WatchSessionManager.swift`
+- Create: `SteroidOS/Services/WatchSessionManager.swift`
 
 This class:
 - Activates WCSession as `.default`
@@ -566,7 +566,7 @@ This class:
 **Objective:** Modify BrowserState to work in remote mode where data comes from iPhone, not from direct HTML fetching.
 
 **Files:**
-- Modify: `BrowserOS/Services/BrowserState.swift`
+- Modify: `SteroidOS/Services/BrowserState.swift`
 
 Add:
 - `@Published var isConnectedToPhone: Bool = false`
@@ -579,7 +579,7 @@ Add:
 **Objective:** Show connection status, handle offline gracefully.
 
 **Files:**
-- Modify: `BrowserOS/Views/BrowserPageView.swift`
+- Modify: `SteroidOS/Views/BrowserPageView.swift`
 
 Add:
 - Connection status banner at top when disconnected
@@ -600,16 +600,16 @@ Add:
 Structure:
 ```
 targets:
-  BrowserOS (iOS):
+  SteroidOS (iOS):
     platform: iOS
-    sources: [BrowserOS-iOS/, BrowserOS/Shared/]
-    dependencies: [BrowserOS Watch App]
+    sources: [SteroidOS-iOS/, SteroidOS/Shared/]
+    dependencies: [SteroidOS Watch App]
     
-  BrowserOS Watch App:
+  SteroidOS Watch App:
     platform: watchOS  
-    sources: [BrowserOS/, BrowserOS/Shared/]
+    sources: [SteroidOS/, SteroidOS/Shared/]
     
-  BrowserOS Watch App Extension:  (if needed for watchOS < 9)
+  SteroidOS Watch App Extension:  (if needed for watchOS < 9)
 ```
 
 ### Task 16: Create iOS Info.plist
@@ -617,16 +617,16 @@ targets:
 **Objective:** Info.plist for iOS target.
 
 **Files:**
-- Create: `BrowserOS-iOS/Info.plist`
+- Create: `SteroidOS-iOS/Info.plist`
 
 ### Task 17: Create iOS Assets
 
 **Objective:** Asset catalog for iOS target.
 
 **Files:**
-- Create: `BrowserOS-iOS/Assets.xcassets/Contents.json`
-- Create: `BrowserOS-iOS/Assets.xcassets/AppIcon.appiconset/Contents.json`
-- Create: `BrowserOS-iOS/Assets.xcassets/AcccentColor.colorset/Contents.json`
+- Create: `SteroidOS-iOS/Assets.xcassets/Contents.json`
+- Create: `SteroidOS-iOS/Assets.xcassets/AppIcon.appiconset/Contents.json`
+- Create: `SteroidOS-iOS/Assets.xcassets/AcccentColor.colorset/Contents.json`
 
 ---
 
@@ -637,27 +637,27 @@ targets:
 **Objective:** Run xcodegen and build both targets.
 
 ```bash
-cd ~/code/BrowserOS
-rm -rf BrowserOS.xcodeproj
+cd ~/code/SteroidOS
+rm -rf SteroidOS.xcodeproj
 xcodegen generate
 ```
 
 ### Task 19: Build iOS Target
 
 ```bash
-xcodebuild -project BrowserOS.xcodeproj -scheme "BrowserOS" -destination 'platform=iOS Simulator,name=iPhone 16' build
+xcodebuild -project SteroidOS.xcodeproj -scheme "SteroidOS" -destination 'platform=iOS Simulator,name=iPhone 16' build
 ```
 
 ### Task 20: Build watchOS Target
 
 ```bash
-xcodebuild -project BrowserOS.xcodeproj -scheme "BrowserOS Watch App" -destination 'id=8E254FB5-669D-4A3F-9DD0-79FBD144D568' build
+xcodebuild -project SteroidOS.xcodeproj -scheme "SteroidOS Watch App" -destination 'id=8E254FB5-669D-4A3F-9DD0-79FBD144D568' build
 ```
 
 ### Task 21: Initial Git Commit
 
 ```bash
-cd ~/code/BrowserOS
+cd ~/code/SteroidOS
 git add -A
-git commit -m "feat: dual-target BrowserOS with iOS WKWebView engine + watchOS native rendering via WatchConnectivity"
+git commit -m "feat: dual-target SteroidOS with iOS WKWebView engine + watchOS native rendering via WatchConnectivity"
 ```
