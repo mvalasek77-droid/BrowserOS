@@ -40,6 +40,10 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         ENABLE_PREVIEWS: true
         SWIFT_EMIT_LOC_STRINGS: YES
+        # StoreKit configuration file for local testing in the simulator.
+        # In production (App Store / TestFlight), the real App Store products
+        # are used automatically.
+        StoreKitConfigurationFile: SteroidOS.storekit
     dependencies:
       - target: SteroidOS Watch App
         embed: true

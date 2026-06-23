@@ -25,6 +25,9 @@ enum WCKey: String {
     case chunkIndex
     case totalChunks
     case settingsData
+    /// True when the page content is gated behind Pro. The watch shows a
+    /// "Subscribe to see full content" message instead of blank space.
+    case locked
 }
 
 enum WCMessageType: String, Codable {

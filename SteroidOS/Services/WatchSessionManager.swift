@@ -253,6 +253,28 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
               let chunkIndex = message[WCKey.chunkIndex.rawValue] as? Int,
               let totalChunks = message[WCKey.totalChunks.rawValue] as? Int else { return }
 
+        // Locked page: free-tier users get title + URL only, no elements.
+        // Post a locked pageLoaded so the watch UI shows the Pro upsell.
+        if let locked = message[WCKey.locked.rawValue] as? Bool, locked {
+            let url = (message[WCKey.url.rawValue] as? String) ?? ""
+            let title = (message[WCKey.title.rawValue] as? String) ?? ""
+            pendingChunks[tabId] = nil
+            pendingChunkTimestamps.removeValue(forKey: tabId)
+            NotificationCenter.default.post(
+                name: .pageLoaded,
+                object: nil,
+                userInfo: [
+                    "tabId": tabId,
+                    "elements": [NativeWebElement](),
+                    "readerContent": Optional<ReaderContent>.none as Any,
+                    "url": url,
+                    "title": title,
+                    "locked": true
+                ]
+            )
+            return
+        }
+
         // Stale chunk eviction: if a new tabId arrives, clear all chunks for previous tabIds
         if !pendingChunks.isEmpty {
             let otherTabIds = pendingChunks.keys.filter { $0 != tabId }

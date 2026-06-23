@@ -74,9 +74,57 @@ struct SupportAndPrivacyView: View {
     @ObservedObject private var log = ErrorLog.shared
     @AppStorage(SteroidBrand.termsAcceptedVersionKey) private var acceptedTermsVersion = 0
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var entitlement = EntitlementManager.shared
+
+    // Admin bypass tap tracking
+    @State private var versionTapCount = 0
+    @State private var firstTapTime: Date?
+    @State private var showAdminActivated = false
 
     var body: some View {
         List {
+            Section("Pro") {
+                HStack {
+                    Image(systemName: entitlement.isPro ? "crown.fill" : "crown")
+                        .foregroundStyle(entitlement.isPro ? .yellow : .secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(entitlement.isPro ? "Pro Unlocked" : "Free Tier")
+                            .font(.subheadline.weight(.medium))
+                        if entitlement.isAdminBypass {
+                            Text("Developer Mode")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                    Spacer()
+                }
+
+                if !entitlement.isPro {
+                    Button {
+                        // Present paywall from the parent view — we use a
+                        // notification since this shared view doesn't own
+                        // the paywall sheet state.
+                        NotificationCenter.default.post(name: .steroidOSPresentPaywall, object: nil)
+                    } label: {
+                        Label("Upgrade to Pro", systemImage: "sparkles")
+                    }
+                }
+
+                Button {
+                    Task { await entitlement.restorePurchases() }
+                } label: {
+                    Label("Restore Purchases", systemImage: "arrow.clockwise")
+                }
+
+                if entitlement.isAdminBypass {
+                    Button(role: .destructive) {
+                        entitlement.deactivateAdminBypass()
+                    } label: {
+                        Label("Disable Developer Mode", systemImage: "xmark.octagon")
+                    }
+                }
+            }
+
             Section("Support") {
                 NavigationLink {
                     BugReportView()
@@ -111,6 +159,27 @@ struct SupportAndPrivacyView: View {
                         .foregroundStyle(acceptedTermsVersion >= SteroidBrand.currentTermsVersion ? .green : .orange)
                 }
             }
+
+            Section {
+                HStack {
+                    Spacer()
+                    Text("SteroidOS \(appVersion) (\(buildNumber))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .onTapGesture {
+                            handleVersionTap()
+                        }
+                    Spacer()
+                }
+            } header: {
+                Text("")  // No header text — just a footer-like row
+            } footer: {
+                if entitlement.isAdminBypass {
+                    Text("Developer mode active — all Pro features unlocked on this build.")
+                } else {
+                    Text("Tap version \(EntitlementManager.adminBypassTapCount)× to toggle developer mode (developer builds only).")
+                }
+            }
         }
         .navigationTitle("Support")
         .toolbar {
@@ -120,7 +189,56 @@ struct SupportAndPrivacyView: View {
                 }
             }
         }
+        .alert("Developer Mode", isPresented: $showAdminActivated) {
+            Button("OK") {}
+        } message: {
+            Text("Pro features unlocked on this developer build. This does not affect real purchases.")
+        }
     }
+
+    // MARK: - Admin Bypass
+
+    private func handleVersionTap() {
+        let now = Date()
+
+        // Reset if taps are outside the time window
+        if let first = firstTapTime, now.timeIntervalSince(first) > EntitlementManager.adminBypassTapWindow {
+            versionTapCount = 0
+            firstTapTime = nil
+        }
+
+        if firstTapTime == nil {
+            firstTapTime = now
+        }
+
+        versionTapCount += 1
+
+        if versionTapCount >= EntitlementManager.adminBypassTapCount {
+            versionTapCount = 0
+            firstTapTime = nil
+
+            if entitlement.isAdminBypass {
+                entitlement.deactivateAdminBypass()
+            } else {
+                entitlement.activateAdminBypass()
+                showAdminActivated = true
+            }
+        }
+    }
+
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+    }
+
+    private var buildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+    }
+}
+
+// MARK: - Paywall Presentation Notification
+
+extension Notification.Name {
+    static let steroidOSPresentPaywall = Notification.Name("steroidOSPresentPaywall")
 }
 
 struct BugReportView: View {

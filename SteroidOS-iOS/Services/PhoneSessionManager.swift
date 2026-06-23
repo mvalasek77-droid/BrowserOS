@@ -299,6 +299,22 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
             sendPayload(payload)
         }
     }
+
+    /// Send a lightweight "locked" page notification to the Watch so it can
+    /// show the "Subscribe to see full content" message for free users. Only
+    /// the title and URL are sent — no page elements, reader content, or media.
+    func sendLockedPageToWatch(tabId: UUID, url: String, title: String) {
+        let payload: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.pageChunk.rawValue,
+            WCKey.tabId.rawValue: tabId.uuidString,
+            WCKey.url.rawValue: url,
+            WCKey.title.rawValue: title,
+            WCKey.chunkIndex.rawValue: 0,
+            WCKey.totalChunks.rawValue: 1,
+            WCKey.locked.rawValue: true
+        ]
+        sendPayload(payload)
+    }
     
     /// Send navigation state (canGoBack, canGoForward) to Watch
     func sendNavigationState(tabId: UUID, canGoBack: Bool, canGoForward: Bool) {
@@ -321,8 +337,9 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         sendPayload(payload)
     }
     
-    /// Send current browser settings to Watch
+    /// Send current browser settings to Watch (Pro only)
     func sendSettingsToWatch(_ settings: BrowserSettings) {
+        guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(settings),
               let json = String(data: data, encoding: .utf8) else {
             ErrorLog.log("Failed to encode settings for Watch sync")
@@ -335,8 +352,9 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         sendPayload(payload)
     }
     
-    /// Send current bookmarks to Watch
+    /// Send current bookmarks to Watch (Pro only)
     func sendBookmarksToWatch(_ bookmarks: [Bookmark]) {
+        guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(bookmarks),
               let json = String(data: data, encoding: .utf8) else {
             ErrorLog.log("Failed to encode bookmarks for Watch sync")
@@ -349,8 +367,9 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         sendPayload(payload)
     }
     
-    /// Send current history to Watch
+    /// Send current history to Watch (Pro only)
     func sendHistoryToWatch(_ history: [HistoryEntry]) {
+        guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(history),
               let json = String(data: data, encoding: .utf8) else {
             ErrorLog.log("Failed to encode history for Watch sync")

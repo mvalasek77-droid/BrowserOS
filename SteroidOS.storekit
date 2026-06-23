@@ -1,0 +1,146 @@
+{
+  "identifier" : "com.steroidos.storekit",
+  "type" : "Configuration",
+  "version" : 1,
+  "products" : [
+    {
+      "displayPrice" : "2.99",
+      "familyShareable" : false,
+      "internalID" : "steroidos_monthly",
+      "internalDescription" : "Monthly subscription to SteroidOS Pro — unlocks all site extractors, watch mirroring, reader mode, and media detection.",
+      "referenceName" : "SteroidOS Pro Monthly",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+          ],
+          "codeOffers" : [
+          ],
+          "internalDescription" : "Auto-renewable monthly subscription.",
+          "internalID" : "steroidos_monthly_sub",
+          "introductoryOffer" : {
+            "internalDescription" : "1 week free trial for new subscribers.",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "1 week"
+          },
+          "localizations" : [
+          ],
+          "productID" : "com.steroidos.pro.monthly",
+          "recurringSubscriptionPeriod" : "1 month",
+          "referenceName" : "SteroidOS Pro Monthly Subscription",
+          "subscriptionGroupID" : "steroidos_pro_group",
+          "winbackOffers" : [
+          ]
+        }
+      ],
+      "subscriptionGroupID" : "steroidos_pro_group",
+      "type" : "AutoRenewableSubscription"
+    },
+    {
+      "displayPrice" : "19.99",
+      "familyShareable" : false,
+      "internalID" : "steroidos_annual",
+      "internalDescription" : "Annual subscription to SteroidOS Pro — best value, unlocks everything.",
+      "referenceName" : "SteroidOS Pro Annual",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+          ],
+          "codeOffers" : [
+          ],
+          "internalDescription" : "Auto-renewable annual subscription.",
+          "internalID" : "steroidos_annual_sub",
+          "introductoryOffer" : {
+            "internalDescription" : "1 month free trial for new subscribers.",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "1 month"
+          },
+          "localizations" : [
+          ],
+          "productID" : "com.steroidos.pro.annual",
+          "recurringSubscriptionPeriod" : "1 year",
+          "referenceName" : "SteroidOS Pro Annual Subscription",
+          "subscriptionGroupID" : "steroidos_pro_group",
+          "winbackOffers" : [
+          ]
+        }
+      ],
+      "subscriptionGroupID" : "steroidos_pro_group",
+      "type" : "AutoRenewableSubscription"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "steroidos_lifetime",
+      "internalDescription" : "One-time lifetime purchase — unlocks all Pro features forever, including future additions.",
+      "referenceName" : "SteroidOS Pro Lifetime",
+      "type" : "NonConsumable",
+      "productID" : "com.steroidos.pro.lifetime"
+    }
+  ],
+  "settings" : {
+    "_accessLevel" : "developer",
+    "_applyToTransactionLimit" : true,
+    "_askToBuyEnabled" : false,
+    "_locale" : "en_US",
+    "_merchandisingBackend" : "production",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "LoadProducts",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "LoadSubscriptions",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "AppStoreSync",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "SubscriptionStatus",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "AppReceipt",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refresh",
+        "values" : [
+        ]
+      }
+    ]
+  }
+}

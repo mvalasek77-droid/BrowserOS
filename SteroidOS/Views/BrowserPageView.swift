@@ -134,8 +134,27 @@ struct BrowserPageView: View {
 
     private var contentArea: some View {
         VStack(spacing: 0) {
+            // Pro locked state — free-tier user, show upsell
+            if viewModel.isPageLocked {
+                VStack(spacing: 10) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(.yellow)
+
+                    Text("Pro Required")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+
+                    Text("Open the iPhone app to subscribe and see full page content on your watch.")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                }
+                .frame(maxWidth: .infinity, minHeight: 140)
+                .padding(.top, 24)
+            }
             // Loading placeholder
-            if viewModel.isLoading && viewModel.pageElements.isEmpty && viewModel.readerContent == nil && !showHomePage {
+            else if viewModel.isLoading && viewModel.pageElements.isEmpty && viewModel.readerContent == nil && !showHomePage {
                 VStack(spacing: 12) {
                     ProgressView()
                         .scaleEffect(1.2)

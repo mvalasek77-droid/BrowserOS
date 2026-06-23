@@ -12,6 +12,9 @@ class BrowserViewModel: ObservableObject {
     @Published var pageTitle: String = SteroidBrand.name
     @Published var detectedMedia: [MediaItem] = []
     @Published var isPhoneReachable: Bool = false
+    /// True when the current page is locked behind Pro. The watch shows a
+    /// "Subscribe to see full content" message instead of blank content.
+    @Published var isPageLocked: Bool = false
     
     private var currentURL: String = ""
     private var activeTabId: UUID?
@@ -35,6 +38,22 @@ class BrowserViewModel: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 guard self.shouldHandle(notification) else { return }
+                // Locked page: free-tier user — show Pro upsell on the watch.
+                if let locked = notification.userInfo?["locked"] as? Bool, locked {
+                    self.isPageLocked = true
+                    self.pageElements = []
+                    self.readerContent = nil
+                    self.pageTitle = notification.userInfo?["title"] as? String ?? SteroidBrand.name
+                    let url = notification.userInfo?["url"] as? String ?? ""
+                    if !url.isEmpty {
+                        self.currentURL = url
+                        self.addressBarText = url
+                    }
+                    self.isLoading = false
+                    self.loadingProgress = 1.0
+                    return
+                }
+                self.isPageLocked = false
                 if let elements = notification.userInfo?["elements"] as? [NativeWebElement] {
                     self.pageElements = elements
                 }

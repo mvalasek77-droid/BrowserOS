@@ -183,7 +183,21 @@ class iPhoneBrowserViewModel: ObservableObject {
 
     /// Extract page data from the webview and send to Watch.
     /// Called by iPhoneWebView coordinator after content stability wait.
+    ///
+    /// Pro entitlement gate: free users only get the page title + URL on the
+    /// watch (via `sendLockedPageToWatch`). Pro users get the full content —
+    /// page elements, reader mode, and media detection.
     func extractAndSendPageData() {
+        // Pro gate — free users get a locked notification, not page content.
+        guard EntitlementManager.shared.isPro else {
+            sessionManager?.sendLockedPageToWatch(
+                tabId: currentTabId,
+                url: urlText,
+                title: pageTitle
+            )
+            return
+        }
+
         extractDOM { [weak self] elementsJSON in
             guard let self else { return }
 
@@ -245,7 +259,10 @@ class iPhoneBrowserViewModel: ObservableObject {
     }
 
     /// Detect media elements on the current page.
+    /// Pro only — free users don't get media detection.
     func detectMedia() {
+        guard EntitlementManager.shared.isPro else { return }
+
         let js = DOMParser.mediaDetectionJavaScript
 
         webView?.evaluateJavaScript(js) { [weak self] result, error in
@@ -265,6 +282,16 @@ class iPhoneBrowserViewModel: ObservableObject {
 
     @discardableResult
     func resendCurrentPageToWatch() -> Bool {
+        // Pro gate for manual "send to watch" taps.
+        guard EntitlementManager.shared.isPro else {
+            sessionManager?.sendLockedPageToWatch(
+                tabId: currentTabId,
+                url: urlText,
+                title: pageTitle
+            )
+            return false
+        }
+
         guard let snapshot = lastPageSnapshot, snapshot.tabId == currentTabId else {
             extractAndSendPageData()
             return false

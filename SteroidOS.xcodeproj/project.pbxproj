@@ -25,6 +25,7 @@
 		4A07FF9564DE950355AAAFB0 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
 		4BC44086F2F5AF224E4F4F24 /* WatchConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83A4ED7B65018DECA1F2737 /* WatchConnectionView.swift */; };
 		4BDD6E2A93E6B0587B03C214 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2EDD700B86C632A5E0A9A6 /* SettingsView.swift */; };
+		4E946313DCA43CBCEC710F63 /* EntitlementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B81863195E1B0B3C7602304 /* EntitlementManager.swift */; };
 		543CA158D7278647EFBADE59 /* SharedModels+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */; };
 		57539F96E0521EF180D2D70A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8333E635200AF1CDA701BC /* HistoryView.swift */; };
 		5B4A4B6116CC5EA140559339 /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
@@ -38,11 +39,14 @@
 		9A9C2971531E933AEEA895C1 /* SteroidOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A603FD5656DC6D052E02C64A /* SteroidOSApp.swift */; };
 		9C6F28AC5DD8A199D7838945 /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98D22680550D76F8788B9F9 /* SharedModels.swift */; };
 		A0AE525C4F9B6B1CCAD1DE19 /* NativeWebContentRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B044641F6F4C7BFDC4DDECC /* NativeWebContentRenderer.swift */; };
+		A3A909ED6A5F554706E3D26D /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46227A6B44D587F55C13818 /* PaywallView.swift */; };
 		A7A247A17A0D7F91B7916BB9 /* iPhoneBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071A341EB3C832E0F5E8201F /* iPhoneBrowserView.swift */; };
+		A7AF464797C8C767AA7C9E3A /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46227A6B44D587F55C13818 /* PaywallView.swift */; };
 		AADBDDFD6E192C5853B9E8BB /* VideoRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9348BD9E6620DF36A4A71 /* VideoRenderer.swift */; };
 		AC9ACBD019FFE8D3ADCD8CD6 /* WebFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D2F17A43889A2E1569302B1 /* WebFetcher.swift */; };
 		AD049FD2533FB5AAD087BBED /* PhoneSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */; };
 		B25A05D77FA60CB999FE0E2E /* MediaDetectedBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F82FEC1D94BAA02A9ED32B /* MediaDetectedBanner.swift */; };
+		B5EDC4E1C1C7893236E65EC0 /* EntitlementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B81863195E1B0B3C7602304 /* EntitlementManager.swift */; };
 		B99A42613A53281F8F899EDC /* TabManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5816CCD424567C7059FC243 /* TabManagerView.swift */; };
 		C332B70DDCA5D61D6280E533 /* SteroidComplianceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */; };
 		C6820C6D17653B4B9BD5680B /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98D22680550D76F8788B9F9 /* SharedModels.swift */; };
@@ -102,6 +106,7 @@
 		45817CA88586537D24ED9831 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		466FE7DF25CEEAD30E16C83E /* MainNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainNavigationView.swift; sourceTree = "<group>"; };
 		47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSessionManager.swift; sourceTree = "<group>"; };
+		4B81863195E1B0B3C7602304 /* EntitlementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementManager.swift; sourceTree = "<group>"; };
 		562C197748888C64D99AEE52 /* WatchHomePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHomePage.swift; sourceTree = "<group>"; };
 		5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidBrand.swift; sourceTree = "<group>"; };
 		716A1DCAAECFC159AF432BF4 /* BrowserState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserState.swift; sourceTree = "<group>"; };
@@ -134,6 +139,7 @@
 		E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewModel.swift; sourceTree = "<group>"; };
 		ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneBrowserViewModel.swift; sourceTree = "<group>"; };
 		EEC409FB208FB4072FAB822A /* PersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceStore.swift; sourceTree = "<group>"; };
+		F46227A6B44D587F55C13818 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		F52A557E2B21BBE889448533 /* AddressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBarView.swift; sourceTree = "<group>"; };
 		F72685A91BC851C0BB366CF2 /* WatchConnectivityProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityProtocol.swift; sourceTree = "<group>"; };
 		F83BE8C72A51777823290E32 /* WatchVideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchVideoPlayerView.swift; sourceTree = "<group>"; };
@@ -275,6 +281,8 @@
 		F25A2F45FF1E2BA4B0C734A1 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				4B81863195E1B0B3C7602304 /* EntitlementManager.swift */,
+				F46227A6B44D587F55C13818 /* PaywallView.swift */,
 				B98D22680550D76F8788B9F9 /* SharedModels.swift */,
 				723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */,
 				5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */,
@@ -393,6 +401,7 @@
 				DB40B7EA8B7886BEF594CCD9 /* BrowserPageView.swift in Sources */,
 				2A0EF31A137CB0D3CD692679 /* BrowserState.swift in Sources */,
 				2332ACCE81DD1E32066E5E47 /* BrowserViewModel.swift in Sources */,
+				4E946313DCA43CBCEC710F63 /* EntitlementManager.swift in Sources */,
 				8EB5891E6AE2CE2C471BF302 /* ErrorBannerView.swift in Sources */,
 				396B31EC986F5CAF2508543D /* ErrorLog.swift in Sources */,
 				283F5EBA0F4213452ABEBF53 /* ErrorLogView.swift in Sources */,
@@ -403,6 +412,7 @@
 				1BD48220DA9C4A6E42D46FAD /* MediaDetector.swift in Sources */,
 				72E3ABD8EF33FA046BE595CE /* MediaHubView.swift in Sources */,
 				A0AE525C4F9B6B1CCAD1DE19 /* NativeWebContentRenderer.swift in Sources */,
+				A3A909ED6A5F554706E3D26D /* PaywallView.swift in Sources */,
 				D080CF6C9AE42CF2D42BCBB1 /* PersistenceStore.swift in Sources */,
 				D3A92CD9376D6BA885E471C6 /* ReaderModeView.swift in Sources */,
 				4BDD6E2A93E6B0587B03C214 /* SettingsView.swift in Sources */,
@@ -431,8 +441,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				C74AA0296D3C99E88136B5CD /* DOMParser.swift in Sources */,
+				B5EDC4E1C1C7893236E65EC0 /* EntitlementManager.swift in Sources */,
 				5B4A4B6116CC5EA140559339 /* ErrorLog.swift in Sources */,
 				751CE507984A3168DC2BDB3F /* ErrorLogView.swift in Sources */,
+				A7AF464797C8C767AA7C9E3A /* PaywallView.swift in Sources */,
 				4A07FF9564DE950355AAAFB0 /* PersistenceStore.swift in Sources */,
 				AD049FD2533FB5AAD087BBED /* PhoneSessionManager.swift in Sources */,
 				071DF38D5E07BDCA622E3FF3 /* SharedModels+SwiftUI.swift in Sources */,
@@ -601,6 +613,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.9;
+				StoreKitConfigurationFile = SteroidOS.storekit;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -653,6 +666,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.9;
+				StoreKitConfigurationFile = SteroidOS.storekit;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;

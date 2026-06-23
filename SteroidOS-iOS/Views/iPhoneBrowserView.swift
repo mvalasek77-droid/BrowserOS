@@ -10,9 +10,11 @@ struct iPhoneBrowserView: View {
     @State private var showTabs = false
     @State private var showWatchConnection = false
     @State private var showSupport = false
+    @State private var showPaywall = false
     @State private var tabs: [BrowserTab] = [BrowserTab(url: "", title: "New Tab")]
     @State private var activeTabIndex: Int = 0
     @State private var handoffFeedbackToken = 0
+    @StateObject private var entitlement = EntitlementManager.shared
 
     private let quickLinks: [QuickLink] = [
         QuickLink(title: "YouTube", url: iPhoneBrowserViewModel.youtubeURL, systemImage: "play.rectangle.fill", color: .red),
@@ -54,7 +56,10 @@ struct iPhoneBrowserView: View {
                     .accessibilityLabel("Support and Privacy")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    watchIndicator
+                    HStack(spacing: 10) {
+                        proStatusButton
+                        watchIndicator
+                    }
                 }
             }
             .sheet(isPresented: $showTabs) {
@@ -68,10 +73,16 @@ struct iPhoneBrowserView: View {
                     SupportAndPrivacyView(showsDoneButton: true)
                 }
             }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+            }
         }
         .onAppear {
             viewModel.setupWatchCallbacks(sessionManager: sessionManager)
             syncActiveTabMetadata()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .steroidOSPresentPaywall)) { _ in
+            showPaywall = true
         }
         .onChange(of: viewModel.urlText) { _, _ in
             syncActiveTabMetadata()
@@ -248,6 +259,23 @@ struct iPhoneBrowserView: View {
             )
         }
         .buttonStyle(QuickLinkButtonStyle())
+    }
+
+    // MARK: - Pro Status Button
+
+    private var proStatusButton: some View {
+        Button {
+            if entitlement.isPro {
+                // Already Pro — no-op (could show manage subscriptions later)
+            } else {
+                showPaywall = true
+            }
+        } label: {
+            Image(systemName: entitlement.isPro ? "crown.fill" : "crown")
+                .font(.caption)
+                .foregroundStyle(entitlement.isPro ? .yellow : .secondary)
+        }
+        .accessibilityLabel(entitlement.isPro ? "Pro unlocked" : "Upgrade to Pro")
     }
 
     // MARK: - Watch Connectivity Indicator
