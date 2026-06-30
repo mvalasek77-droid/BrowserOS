@@ -7,8 +7,9 @@ struct ReaderModeView: View {
     let content: ReaderContent
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+        // No ScrollView here — the parent BrowserPageView already wraps us in one.
+        // Nested ScrollViews fight over Digital Crown/touch gestures on watchOS.
+        VStack(alignment: .leading, spacing: 12) {
                 // Article Title — hero card
                 VStack(alignment: .leading, spacing: 4) {
                     Text(content.title)
@@ -44,7 +45,6 @@ struct ReaderModeView: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 8)
-        }
     }
     
     @ViewBuilder

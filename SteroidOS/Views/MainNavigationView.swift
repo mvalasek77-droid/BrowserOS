@@ -9,6 +9,7 @@ struct MainNavigationView: View {
             // Tab 1: Browser
             NavigationStack {
                 BrowserPageView(tabId: browserState.activeTab.id)
+                    .id(browserState.activeTab.id)
             }
             .tabItem {
                 Label("Browse", systemImage: "globe")
@@ -44,7 +45,15 @@ struct MainNavigationView: View {
         }
         .onChange(of: browserState.activeTab.url) { _, newURL in
             // Auto-switch to browser tab when navigating
-            if !newURL.isEmpty && !newURL.contains("duckduckgo.com") {
+            // Only switch for real navigations, not DuckDuckGo search results
+            if !newURL.isEmpty && !newURL.contains("duckduckgo.com/?q=") {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    selectedTab = 0
+                }
+            }
+        }
+        .onChange(of: browserState.activeTabId) { _, _ in
+            withAnimation(.easeInOut(duration: 0.18)) {
                 selectedTab = 0
             }
         }

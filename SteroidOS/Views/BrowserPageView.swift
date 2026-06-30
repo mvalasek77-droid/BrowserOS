@@ -4,17 +4,34 @@ struct BrowserPageView: View {
     let tabId: UUID
     @EnvironmentObject var browserState: BrowserState
     @StateObject private var viewModel = BrowserViewModel()
+    @ObservedObject private var sessionManager = WatchSessionManager.shared
     @State private var selectedMediaItem: MediaItem? = nil
     @State private var showMediaPlayer = false
     @State private var showHomePage = true
-    @State private var contentTransition: Namespace.ID? = nil
+    @State private var hasLoadedOnce = false
+
+    private var displayedPageElements: [NativeWebElement] {
+        viewModel.pageElements.isEmpty ? browserState.pageElements : viewModel.pageElements
+    }
+
+    private var displayedReaderContent: ReaderContent? {
+        viewModel.readerContent ?? browserState.readerContent
+    }
+
+    private var displayedMedia: [MediaItem] {
+        viewModel.detectedMedia.isEmpty ? browserState.detectedMedia : viewModel.detectedMedia
+    }
+
+    private var hasDisplayedContent: Bool {
+        viewModel.isPageLocked || displayedReaderContent != nil || !displayedPageElements.isEmpty
+    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
                 // Address Bar — floating capsule style
                 AddressBarView(viewModel: viewModel)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 2)
 
                 // Loading Progress — animated gradient bar
                 if viewModel.isLoading {
@@ -37,7 +54,7 @@ struct BrowserPageView: View {
                 }
 
                 // Home page or content
-                if showHomePage && (browserState.activeTab.url.isEmpty || browserState.activeTab.url.contains("duckduckgo.com")) {
+                if showHomePage && (browserState.activeTab.url.isEmpty || browserState.activeTab.url == "https://duckduckgo.com/" || browserState.activeTab.url == "https://duckduckgo.com") {
                     WatchHomePage()
                         .transition(.asymmetric(insertion: .opacity.combined(with: .scale(scale: 0.96)), removal: .opacity))
                 } else {
@@ -48,7 +65,6 @@ struct BrowserPageView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             bottomBar
         }
-        .focusable()
         .navigationTitle {
             Text(viewModel.pageTitle.count > 15 ? String(viewModel.pageTitle.prefix(15)) + "…" : viewModel.pageTitle)
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
@@ -61,10 +77,11 @@ struct BrowserPageView: View {
         }
         .onAppear {
             viewModel.activate(tabId: tabId)
-            viewModel.isPhoneReachable = WatchSessionManager.shared.isPhoneReachable
+            viewModel.isPhoneReachable = sessionManager.isPhoneReachable
             let url = browserState.activeTab.url
-            showHomePage = url.isEmpty || url.contains("duckduckgo.com")
-            if viewModel.pageElements.isEmpty && viewModel.readerContent == nil {
+            showHomePage = url.isEmpty || url == "https://duckduckgo.com/" || url == "https://duckduckgo.com"
+            if !hasLoadedOnce {
+                hasLoadedOnce = true
                 viewModel.addressBarText = url
                 if !showHomePage && !url.isEmpty {
                     viewModel.loadPage(url: url, readerMode: browserState.activeTab.isReaderMode)
@@ -73,13 +90,13 @@ struct BrowserPageView: View {
         }
         .onChange(of: browserState.activeTab.url) { _, newURL in
             withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                showHomePage = newURL.isEmpty || newURL.contains("duckduckgo.com")
+                showHomePage = newURL.isEmpty || newURL == "https://duckduckgo.com/" || newURL == "https://duckduckgo.com"
             }
             if !showHomePage && !newURL.isEmpty {
                 viewModel.loadPage(url: newURL, readerMode: browserState.activeTab.isReaderMode)
             }
         }
-        .onChange(of: WatchSessionManager.shared.isPhoneReachable) { _, reachable in
+        .onChange(of: sessionManager.isPhoneReachable) { _, reachable in
             viewModel.isPhoneReachable = reachable
         }
     }
@@ -154,7 +171,7 @@ struct BrowserPageView: View {
                 .padding(.top, 24)
             }
             // Loading placeholder
-            else if viewModel.isLoading && viewModel.pageElements.isEmpty && viewModel.readerContent == nil && !showHomePage {
+            else if viewModel.isLoading && !hasDisplayedContent && !showHomePage {
                 VStack(spacing: 12) {
                     ProgressView()
                         .scaleEffect(1.2)
@@ -167,23 +184,25 @@ struct BrowserPageView: View {
             }
 
             // Media detected
-            if !viewModel.detectedMedia.isEmpty {
-                MediaDetectedBanner(count: viewModel.detectedMedia.count, onTap: {
-                    selectedMediaItem = viewModel.detectedMedia.first
+            if !displayedMedia.isEmpty {
+                MediaDetectedBanner(count: displayedMedia.count, onTap: {
+                    selectedMediaItem = displayedMedia.first
                     showMediaPlayer = true
                 })
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
             }
 
-            // Reader mode
-            if browserState.activeTab.isReaderMode, let reader = viewModel.readerContent {
+            // Reader content is also a fallback when DOM extraction yields no
+            // native elements, so the watch does not show a blank mirrored page.
+            if let reader = displayedReaderContent,
+               browserState.activeTab.isReaderMode || displayedPageElements.isEmpty {
                 ReaderModeView(content: reader)
                     .padding(.horizontal, 8)
                     .transition(.opacity)
-            } else if !viewModel.pageElements.isEmpty {
+            } else if !displayedPageElements.isEmpty {
                 NativeWebContentRenderer(
-                    elements: viewModel.pageElements,
+                    elements: displayedPageElements,
                     onLinkTap: { url in
                         viewModel.addressBarText = url
                         browserState.navigate(to: url)
@@ -191,6 +210,23 @@ struct BrowserPageView: View {
                     }
                 )
                 .padding(.horizontal, 4)
+            } else {
+                // Empty state — content failed to load silently
+                VStack(spacing: 8) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.secondary)
+                    Text("Couldn't load this page")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Button("Retry") {
+                        viewModel.loadPage(url: browserState.activeTab.url, readerMode: browserState.activeTab.isReaderMode)
+                    }
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .buttonStyle(.bordered)
+                }
+                .frame(maxWidth: .infinity, minHeight: 100)
+                .padding(.top, 20)
             }
         }
     }
@@ -199,8 +235,8 @@ struct BrowserPageView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 0) {
-            barButton(icon: "chevron.left", enabled: WatchSessionManager.shared.canGoBack, action: { viewModel.goBackOnPhone() })
-            barButton(icon: "chevron.right", enabled: WatchSessionManager.shared.canGoForward, action: { viewModel.goForwardOnPhone() })
+            barButton(icon: "chevron.left", enabled: sessionManager.canGoBack, action: { viewModel.goBackOnPhone() })
+            barButton(icon: "chevron.right", enabled: sessionManager.canGoForward, action: { viewModel.goForwardOnPhone() })
             barButton(icon: browserState.activeTab.isReaderMode ? "doc.text.fill" : "doc.text", enabled: true, action: { viewModel.toggleReaderMode(state: browserState) })
             barButton(icon: "arrow.clockwise", enabled: true, action: {
                 viewModel.loadPage(url: browserState.activeTab.url, readerMode: browserState.activeTab.isReaderMode)

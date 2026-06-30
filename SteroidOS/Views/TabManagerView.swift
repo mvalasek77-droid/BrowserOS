@@ -1,62 +1,118 @@
 import SwiftUI
+#if os(watchOS)
+import WatchKit
+#endif
 
 struct TabManagerView: View {
     @EnvironmentObject var browserState: BrowserState
 
     var body: some View {
         List {
-            ForEach(browserState.tabs) { tab in
+            Section {
                 Button {
-                    browserState.switchToTab(tab.id)
+                    haptic(.success)
+                    browserState.addTab()
                 } label: {
-                    HStack(spacing: 10) {
-                        ZStack {
-                            Circle()
-                                .fill(tab.id == browserState.activeTabId ? Color.blue.opacity(0.15) : Color.gray.opacity(0.08))
-                                .frame(width: 30, height: 30)
-                            Image(systemName: tab.id == browserState.activeTabId ? "globe" : "doc")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(tab.id == browserState.activeTabId ? .blue : .secondary)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(tab.title.isEmpty ? "New Tab" : tab.title)
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            if !tab.url.isEmpty {
-                                Text(tab.url)
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        Spacer()
-                        if tab.id == browserState.activeTabId {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 14))
-                                .foregroundStyle(.blue)
-                        }
-                    }
+                    Label("New Tab", systemImage: "plus.circle.fill")
+                        .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                        .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
                 }
-                .buttonStyle(.plain)
-                .swipeActions(edge: .trailing) {
-                    if browserState.tabs.count > 1 {
-                        Button(role: .destructive) {
-                            browserState.closeTab(tab.id)
-                        } label: {
-                            Label("Close", systemImage: "xmark")
-                        }
-                    }
-                }
+                .buttonStyle(.borderedProminent)
             }
 
-            Button {
-                browserState.addTab()
-            } label: {
-                Label("New Tab", systemImage: "plus")
-                    .font(.system(.subheadline, design: .rounded).weight(.medium))
+            Section("Open Tabs") {
+                ForEach(browserState.tabs) { tab in
+                    tabRow(tab)
+                        .listRowInsets(EdgeInsets(top: 5, leading: 6, bottom: 5, trailing: 6))
+                }
             }
         }
         .navigationTitle("Tabs")
+    }
+
+    private func tabRow(_ tab: BrowserTab) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                haptic(.click)
+                browserState.switchToTab(tab.id)
+            } label: {
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(tab.id == browserState.activeTabId ? Color.blue.opacity(0.2) : Color.gray.opacity(0.1))
+                            .frame(width: 34, height: 34)
+                        Image(systemName: tab.id == browserState.activeTabId ? "globe" : "doc")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(tab.id == browserState.activeTabId ? .blue : .secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(tab.title.isEmpty ? "New Tab" : tab.title)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Text(tab.url.isEmpty ? "Ready to browse" : tab.url)
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 0)
+
+                    if tab.id == browserState.activeTabId {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.blue)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open tab \(tab.title.isEmpty ? "New Tab" : tab.title)")
+
+            if browserState.tabs.count > 1 {
+                Button(role: .destructive) {
+                    haptic(.notification)
+                    browserState.closeTab(tab.id)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.red)
+                        .frame(width: 36, height: 52)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Close tab")
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(tab.id == browserState.activeTabId ? Color.blue.opacity(0.12) : Color.secondary.opacity(0.08))
+        )
+    }
+
+    private func haptic(_ type: HapticType) {
+        #if os(watchOS)
+        switch type {
+        case .click:
+            WKInterfaceDevice.current().play(.click)
+        case .success:
+            WKInterfaceDevice.current().play(.success)
+        case .notification:
+            WKInterfaceDevice.current().play(.notification)
+        }
+        #endif
+    }
+
+    private enum HapticType {
+        case click
+        case success
+        case notification
     }
 }

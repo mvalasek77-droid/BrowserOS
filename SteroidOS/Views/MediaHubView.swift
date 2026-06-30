@@ -102,7 +102,8 @@ struct MediaHubView: View {
     private func searchMedia() {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return }
-        let url = selectedPlatform.searchURL + query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)!
+        let encoded = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? query
+        let url = selectedPlatform.searchURL + encoded
         browserState.navigate(to: url)
     }
 }

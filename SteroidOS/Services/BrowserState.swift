@@ -4,6 +4,7 @@ import Combine
 // MARK: - Core Browser State
 // Supports dual-mode: direct HTML fetch (standalone) and remote data from iPhone via WatchConnectivity
 
+@MainActor
 class BrowserState: ObservableObject {
     @Published var tabs: [BrowserTab] = []
     @Published var activeTabId: UUID = UUID()
@@ -109,17 +110,14 @@ class BrowserState: ObservableObject {
         NotificationCenter.default.publisher(for: .pageLoaded)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
-                if let elements = notification.userInfo?["elements"] as? [NativeWebElement] {
-                    self?.pageElements = elements
-                    self?.isLoading = false
-                }
-                if let reader = notification.userInfo?["readerContent"] as? ReaderContent {
-                    self?.readerContent = reader
-                    self?.isLoading = false
-                }
+                guard let self else { return }
+                self.pageElements = notification.userInfo?["elements"] as? [NativeWebElement] ?? []
+                self.readerContent = notification.userInfo?["readerContent"] as? ReaderContent
+                self.isLoading = false
+
                 if let urlString = notification.userInfo?["url"] as? String,
                    let title = notification.userInfo?["title"] as? String {
-                    self?.updateActiveTab(title: title, url: urlString)
+                    self.updateActiveTab(title: title, url: urlString)
                 }
             }
             .store(in: &cancellables)
@@ -232,10 +230,13 @@ class BrowserState: ObservableObject {
         let tab = BrowserTab(url: url, title: title)
         tabs.append(tab)
         activeTabId = tab.id
+        resetTransientPageState(showLoading: shouldShowLoading(for: tab.url))
     }
     
     func switchToTab(_ tabId: UUID) {
+        guard tabs.contains(where: { $0.id == tabId }) else { return }
         activeTabId = tabId
+        resetTransientPageState(showLoading: shouldShowLoading(for: activeTab.url))
     }
     
     func closeTab(_ tabId: UUID) {
@@ -244,6 +245,7 @@ class BrowserState: ObservableObject {
         if activeTabId == tabId {
             // tabs is guaranteed non-empty because count was > 1 before removal
             activeTabId = tabs.first!.id
+            resetTransientPageState(showLoading: shouldShowLoading(for: activeTab.url))
         }
     }
     
@@ -267,9 +269,20 @@ class BrowserState: ObservableObject {
             tab.forwardStack = []
             tab.canGoForward = false
         }
-        isLoading = true
-        errorMessage = nil
+        resetTransientPageState(showLoading: shouldShowLoading(for: finalURL))
 
+    }
+
+    func resetTransientPageState(showLoading: Bool = false) {
+        pageElements = []
+        readerContent = nil
+        detectedMedia = []
+        isLoading = showLoading
+        errorMessage = nil
+    }
+
+    private func shouldShowLoading(for url: String) -> Bool {
+        !url.isEmpty && !url.contains("duckduckgo.com")
     }
 
     /// Drain any AppIntent that fired before the app was foregrounded and

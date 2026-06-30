@@ -196,11 +196,16 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     /// Send fully loaded page data (elements + reader content) to Watch.
     /// Uses sendMessage when reachable for real-time delivery,
     /// falls back to transferUserInfo for background delivery.
+    /// All chunks use the SAME transport to avoid reassembly failures.
     func sendPageToWatch(tabId: UUID, url: String, title: String, elements: [NativeWebElement], readerContent: ReaderContent?) {
         let chunks = Self.chunkElements(elements, maxPayloadBytes: 45_000)
         let payloadChunks = chunks.isEmpty ? [[]] : chunks
         let totalChunks = payloadChunks.count
         let encoder = JSONEncoder()
+
+        // Decide transport ONCE for all chunks to avoid mixed delivery
+        // (mixing sendMessage + transferUserInfo causes unrecoverable reassembly)
+        let useInteractive = session?.isReachable ?? false
 
         for (idx, chunk) in payloadChunks.enumerated() {
             var payload: [String: Any] = [
@@ -217,14 +222,15 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                 payload[WCKey.elements.rawValue] = json
             }
 
-            // Reader content only ships on the last chunk
-            if idx == chunks.count - 1, let reader = readerContent,
+            // Reader content only ships on the final payload, including the
+            // single empty-elements payload used for reader-only pages.
+            if idx == totalChunks - 1, let reader = readerContent,
                let data = try? encoder.encode(reader),
                let json = String(data: data, encoding: .utf8) {
                 payload[WCKey.readerContent.rawValue] = json
             }
 
-            sendPayload(payload)
+            sendPayloadUnified(payload, useInteractive: useInteractive)
         }
 
         DispatchQueue.main.async { [weak self] in
@@ -338,6 +344,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     
     /// Send current browser settings to Watch (Pro only)
+    @MainActor
     func sendSettingsToWatch(_ settings: BrowserSettings) {
         guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(settings),
@@ -353,6 +360,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     
     /// Send current bookmarks to Watch (Pro only)
+    @MainActor
     func sendBookmarksToWatch(_ bookmarks: [Bookmark]) {
         guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(bookmarks),
@@ -368,6 +376,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     
     /// Send current history to Watch (Pro only)
+    @MainActor
     func sendHistoryToWatch(_ history: [HistoryEntry]) {
         guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(history),
@@ -393,6 +402,21 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         if session.isReachable {
             session.sendMessage(payload, replyHandler: nil, errorHandler: { _ in
                 // sendMessage failed — fall back to queued delivery
+                session.transferUserInfo(payload)
+            })
+        } else {
+            session.transferUserInfo(payload)
+        }
+    }
+    
+    /// Unified transport for multi-chunk pages — all chunks use the same
+    /// transport (decided once by the caller) to prevent reassembly failures.
+    private func sendPayloadUnified(_ payload: [String: Any], useInteractive: Bool) {
+        guard let session else { return }
+        
+        if useInteractive && session.isReachable {
+            session.sendMessage(payload, replyHandler: nil, errorHandler: { _ in
+                // If interactive fails mid-stream, fall back to queued delivery
                 session.transferUserInfo(payload)
             })
         } else {

@@ -2,9 +2,6 @@ import SwiftUI
 
 struct BookmarksView: View {
     @EnvironmentObject var browserState: BrowserState
-    @State private var showAddBookmark = false
-    @State private var newBookmarkTitle = ""
-    @State private var newBookmarkURL = ""
 
     var body: some View {
         List {
@@ -24,8 +21,8 @@ struct BookmarksView: View {
                 .padding(.vertical, 24)
             } else {
                 ForEach(browserState.bookmarks) { bookmark in
-                    Button {
-                        browserState.navigate(to: bookmark.url)
+                    NavigationLink {
+                        BookmarkDetailView(bookmark: bookmark)
                     } label: {
                         HStack(spacing: 10) {
                             ZStack {
@@ -48,42 +45,93 @@ struct BookmarksView: View {
                             }
                         }
                     }
-                    .buttonStyle(.plain)
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            browserState.removeBookmark(bookmark)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
                 }
             }
         }
         .navigationTitle("Bookmarks")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showAddBookmark = true
+                NavigationLink {
+                    AddBookmarkView()
                 } label: {
                     Image(systemName: "plus")
                 }
             }
         }
-        .alert("Add Bookmark", isPresented: $showAddBookmark) {
-            TextField("Title", text: $newBookmarkTitle)
-            TextField("URL", text: $newBookmarkURL)
-                .textInputAutocapitalization(.never)
-            Button("Save") {
-                guard !newBookmarkURL.isEmpty else { return }
-                let title = newBookmarkTitle.isEmpty ? newBookmarkURL : newBookmarkTitle
-                browserState.addBookmark(title: title, url: newBookmarkURL)
-                newBookmarkTitle = ""
-                newBookmarkURL = ""
+    }
+}
+
+// MARK: - Add Bookmark View (replaces unsupported alert with TextField)
+
+struct AddBookmarkView: View {
+    @EnvironmentObject var browserState: BrowserState
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
+    @State private var url = ""
+
+    var body: some View {
+        Form {
+            Section("Title") {
+                TextField("Bookmark name", text: $title)
+                    .textInputAutocapitalization(.never)
             }
-            Button("Cancel", role: .cancel) {
-                newBookmarkTitle = ""
-                newBookmarkURL = ""
+            Section("URL") {
+                TextField("https://...", text: $url)
+                    .textInputAutocapitalization(.never)
+            }
+            Section {
+                Button {
+                    let finalTitle = title.isEmpty ? url : title
+                    browserState.addBookmark(title: finalTitle, url: url)
+                    dismiss()
+                } label: {
+                    Text("Save")
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
+        .navigationTitle("Add Bookmark")
+    }
+}
+
+// MARK: - Bookmark Detail (delete from here — swipeActions unsupported on watchOS)
+
+struct BookmarkDetailView: View {
+    @EnvironmentObject var browserState: BrowserState
+    @Environment(\.dismiss) private var dismiss
+    let bookmark: Bookmark
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                Text(bookmark.title)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                Text(bookmark.url)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    browserState.navigate(to: bookmark.url)
+                    dismiss()
+                } label: {
+                    Text("Open")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button(role: .destructive) {
+                    browserState.removeBookmark(bookmark)
+                    dismiss()
+                } label: {
+                    Text("Delete")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 12)
+        }
+        .navigationTitle("Bookmark")
     }
 }

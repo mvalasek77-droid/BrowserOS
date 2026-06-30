@@ -14,6 +14,9 @@ struct iPhoneBrowserView: View {
     @State private var tabs: [BrowserTab] = [BrowserTab(url: "", title: "New Tab")]
     @State private var activeTabIndex: Int = 0
     @State private var handoffFeedbackToken = 0
+#if DEBUG
+    @State private var didLoadAutomationURL = false
+#endif
     @StateObject private var entitlement = EntitlementManager.shared
 
     private let quickLinks: [QuickLink] = [
@@ -80,6 +83,9 @@ struct iPhoneBrowserView: View {
         .onAppear {
             viewModel.setupWatchCallbacks(sessionManager: sessionManager)
             syncActiveTabMetadata()
+#if DEBUG
+            loadAutomationURLIfNeeded()
+#endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .steroidOSPresentPaywall)) { _ in
             showPaywall = true
@@ -145,6 +151,20 @@ struct iPhoneBrowserView: View {
     private var urlTextHasSecureScheme: Bool {
         viewModel.urlText.lowercased().hasPrefix("https://")
     }
+
+#if DEBUG
+    private func loadAutomationURLIfNeeded() {
+        guard !didLoadAutomationURL else { return }
+        guard let url = ProcessInfo.processInfo.environment["STEROIDOS_AUTOMATION_URL"],
+              !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        didLoadAutomationURL = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            viewModel.loadPage(url: url)
+        }
+    }
+#endif
 
     // MARK: - Loading Progress (animated gradient)
 
@@ -336,7 +356,7 @@ struct iPhoneBrowserView: View {
             toolbarButton(icon: "applewatch", enabled: sessionManager.isWatchReachable && !viewModel.urlText.isEmpty, accessibilityLabel: "Open on Apple Watch") {
                 openOnWatch()
             }
-            toolbarButton(icon: "plus.on.square", enabled: true, accessibilityLabel: "New Tab") {
+            toolbarButton(icon: "plus.square", enabled: true, accessibilityLabel: "New Tab") {
                 addNewTab()
             }
             toolbarButton(icon: "list.bullet.rectangle", enabled: true, accessibilityLabel: "Show tabs") {

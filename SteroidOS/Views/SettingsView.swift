@@ -122,6 +122,13 @@ struct SettingsView: View {
             // Diagnostics
             Section("Diagnostics") {
                 NavigationLink {
+                    BugReportView()
+                } label: {
+                    Label("Report Crash or Bug", systemImage: "ladybug")
+                }
+                .accessibilityLabel("Report crash or bug")
+
+                NavigationLink {
                     SupportAndPrivacyView()
                 } label: {
                     Label("Support and Privacy", systemImage: "questionmark.circle")
@@ -194,7 +201,7 @@ struct SettingsView: View {
 
     private func engineIcon(_ engine: SearchEngine) -> String {
         switch engine {
-        case .duckduckgo: return "duck"
+        case .duckduckgo: return "magnifyingglass"
         case .google: return "magnifyingglass"
         case .ecosia: return "leaf"
         case .brave: return "shield"

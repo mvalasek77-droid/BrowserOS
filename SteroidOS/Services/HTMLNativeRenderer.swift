@@ -275,7 +275,11 @@ actor HTMLNativeRenderer {
                 
                 let tagStr = String(current[range])
                 let isClosing = tagStr.hasPrefix("</")
-                let tagNameRange = tagStr.range(of: #"[a-zA-Z][a-zA-Z0-9]*"#, options: .regularExpression, range: tagStr.startIndex..<tagStr.endIndex)!
+                guard let tagNameRange = tagStr.range(of: #"[a-zA-Z][a-zA-Z0-9]*"#, options: .regularExpression, range: tagStr.startIndex..<tagStr.endIndex) else {
+                    // Malformed tag — skip it to avoid crash
+                    current = String(current[range.upperBound...])
+                    continue
+                }
                 let tagName = String(tagStr[tagNameRange]).lowercased()
                 
                 if isClosing {
@@ -324,8 +328,14 @@ actor HTMLNativeRenderer {
             switch tokens[j] {
             case .openTag: depth += 1
             case .closeTag:
-                if depth > 0 { depth -= 1 }
-                else { break }
+                if depth > 0 {
+                    depth -= 1
+                } else {
+                    // Found the matching close tag — return immediately
+                    // (previous code used `break` which only broke the switch,
+                    // causing it to collect ALL remaining text → massive duplication)
+                    return text.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
             case .text(let t): text += t + " "
             }
             j += 1
@@ -335,10 +345,20 @@ actor HTMLNativeRenderer {
     
     private func collectTextFromTokens(_ tokens: [HTMLToken], from start: Int) -> String {
         var text = ""
+        var depth = 0
         var j = start + 1
         while j < tokens.count {
-            if case .closeTag = tokens[j] { break }
-            if case .text(let t) = tokens[j] { text += t }
+            switch tokens[j] {
+            case .openTag: depth += 1
+            case .closeTag:
+                if depth > 0 {
+                    depth -= 1
+                } else {
+                    // Found matching close tag — return
+                    return text.trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            case .text(let t): text += t
+            }
             j += 1
         }
         return text.trimmingCharacters(in: .whitespacesAndNewlines)

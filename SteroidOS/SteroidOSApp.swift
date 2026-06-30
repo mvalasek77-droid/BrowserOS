@@ -29,6 +29,21 @@ struct SteroidOSApp: App {
                     }
                 }
             }
+            .onAppear {
+                CrashMonitor.beginSession(source: "watchOS")
+            }
+            .onChange(of: scenePhase) { _, phase in
+                switch phase {
+                case .active:
+                    CrashMonitor.beginSession(source: "watchOS")
+                case .background:
+                    CrashMonitor.markCleanShutdown()
+                case .inactive:
+                    break
+                @unknown default:
+                    break
+                }
+            }
         }
     }
 

@@ -27,7 +27,7 @@ struct NativeWebContentRenderer: View {
         
         for element in elements {
             switch element {
-            case .listItem(let text, let ordered):
+            case .listItem(_, let ordered):
                 if ordered {
                     orderedListIndex += 1
                     items.append(RenderableItem(element: element, listIndex: orderedListIndex))
@@ -202,6 +202,7 @@ struct WebImageView: View {
     let alt: String
     @State private var imageData: Data? = nil
     @State private var isLoading = false
+    @State private var loadTask: Task<Void, Never>?
     
     var body: some View {
         Group {
@@ -247,23 +248,57 @@ struct WebImageView: View {
         .onAppear {
             loadImage()
         }
+        .onDisappear {
+            // Cancel in-flight image fetch when view scrolls off-screen
+            loadTask?.cancel()
+            loadTask = nil
+        }
     }
     
     private func loadImage() {
         guard imageData == nil, !isLoading else { return }
         isLoading = true
-        Task {
+        loadTask = Task {
             do {
                 let fetcher = WebFetcher()
                 let data = try await fetcher.fetchImageData(url: url)
+                // Downscale for watchOS memory constraints
+                let compressed = Self.downscaleForWatch(data: data, maxDimension: 200)
                 await MainActor.run {
-                    imageData = data
+                    imageData = compressed
                     isLoading = false
                 }
             } catch {
                 await MainActor.run { isLoading = false }
             }
         }
+    }
+    
+    /// Downscale images on watchOS to prevent OOM crashes with full-res images
+    static func downscaleForWatch(data: Data, maxDimension: CGFloat) -> Data {
+        #if os(watchOS)
+        guard let image = UIImage(data: data), let cgImage = image.cgImage else { return data }
+        let scale = min(maxDimension / image.size.width, maxDimension / image.size.height, 1.0)
+        if scale >= 1.0 { return data }  // Already small enough
+        let newWidth = Int(image.size.width * scale)
+        let newHeight = Int(image.size.height * scale)
+        let bitsPerComponent = 8
+        let bytesPerRow = newWidth * 4
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(data: nil, width: newWidth, height: newHeight,
+                                       bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow,
+                                       space: colorSpace,
+                                       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            return data
+        }
+        context.interpolationQuality = .high
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: newWidth, height: newHeight))
+        guard let resizedCG = context.makeImage() else { return data }
+        let resized = UIImage(cgImage: resizedCG)
+        return resized.jpegData(compressionQuality: 0.7) ?? data
+        #else
+        return data
+        #endif
     }
 }
 

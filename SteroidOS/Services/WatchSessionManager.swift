@@ -2,6 +2,7 @@ import Foundation
 import WatchConnectivity
 import SwiftUI
 
+@MainActor
 class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     
     static let shared = WatchSessionManager()
@@ -42,7 +43,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     
     // MARK: - WCSessionDelegate
     
-    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+    nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.isActivated = (activationState == .activated)
@@ -62,7 +63,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         }
     }
 
-    func sessionReachabilityDidChange(_ session: WCSession) {
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             self.isReachable = session.isReachable
@@ -71,14 +72,14 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             print("[\(SteroidBrand.name)] WC reachability changed: reachable=\(session.isReachable)")
         }
     }
-    
+
     // MARK: - Receiving Messages from iPhone
     
-    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         handleMessage(message)
     }
     
-    func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         // Reply immediately for pings before any other processing
         if (message[WCKey.messageType.rawValue] as? String) == WCMessageType.ping.rawValue {
             replyHandler(["pong": true, "receivedAt": Date().timeIntervalSince1970])
@@ -88,16 +89,16 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         replyHandler(["ack": true])
     }
     
-    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         handleMessage(userInfo)
     }
     
     /// Receive application context updates (used for lightweight progress updates)
-    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
         handleMessage(applicationContext)
     }
     
-    private func handleMessage(_ message: [String: Any]) {
+    nonisolated private func handleMessage(_ message: [String: Any]) {
         // Use WCKey enum for consistent key names (matches PhoneSessionManager)
         guard let messageTypeRaw = message[WCKey.messageType.rawValue] as? String,
               let messageType = WCMessageType(rawValue: messageTypeRaw) else {
@@ -348,13 +349,16 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     
     private func evictStaleChunks() {
         let now = Date()
-        let staleTimeout: TimeInterval = 10.0
+        // Increased from 10s to 120s — transferUserInfo (background delivery)
+        // can take seconds to minutes, and 10s was far too short, causing
+        // pages to be lost whenever reachability flickered during a multi-chunk transfer.
+        let staleTimeout: TimeInterval = 120.0
         let staleIds = pendingChunkTimestamps.filter { now.timeIntervalSince($0.value) > staleTimeout }.map(\.key)
         for id in staleIds {
             pendingChunks.removeValue(forKey: id)
             pendingChunkTimestamps.removeValue(forKey: id)
             ErrorLog.log("Evicted stale chunks for tabId=\(id) after \(staleTimeout)s timeout")
-            NotificationCenter.default.post(name: .pageError, object: nil, userInfo: ["error": "Page chunks timed out and were evicted"])
+            NotificationCenter.default.post(name: .pageError, object: nil, userInfo: ["error": "Page chunks timed out and were evicted", "tabId": id])
         }
         if pendingChunks.isEmpty {
             chunkEvictionTimer?.invalidate()

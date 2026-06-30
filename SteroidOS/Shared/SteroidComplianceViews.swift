@@ -11,6 +11,14 @@ struct TermsAgreementView: View {
     @Environment(\.openURL) private var openURL
 
     var body: some View {
+        #if os(watchOS)
+        watchBody
+        #else
+        fullScreenBody
+        #endif
+    }
+
+    private var fullScreenBody: some View {
         VStack(spacing: 18) {
             Spacer(minLength: 12)
 
@@ -67,6 +75,72 @@ struct TermsAgreementView: View {
         .padding()
         .background(.background)
     }
+
+    #if os(watchOS)
+    private var watchBody: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 10) {
+                    Image(systemName: "applewatch.radiowaves.left.and.right")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(.blue)
+                        .accessibilityHidden(true)
+
+                    VStack(spacing: 2) {
+                        Text(SteroidBrand.name)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                        Text("Terms and Privacy")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("iPhone renders web pages for the Watch.", systemImage: "iphone.and.arrow.forward")
+                        Label("Bug reports can include recent diagnostic logs.", systemImage: "ladybug")
+                        Label("Some services may hand off to iPhone.", systemImage: "safari")
+                    }
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .steroidGlassRounded(cornerRadius: 8)
+                }
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
+                .padding(.bottom, 6)
+            }
+
+            VStack(spacing: 7) {
+                Toggle(isOn: $accepted) {
+                    Text("I agree to the Terms and Privacy Policy.")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                }
+                .toggleStyle(.switch)
+
+                Button {
+                    onAgree()
+                } label: {
+                    Label("Continue", systemImage: "checkmark")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!accepted)
+
+                HStack(spacing: 10) {
+                    Button("Terms") { openURL(SteroidBrand.termsOfUseURL) }
+                    Button("Privacy") { openURL(SteroidBrand.privacyPolicyURL) }
+                }
+                .font(.caption2)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 6)
+            .background(.ultraThinMaterial)
+        }
+        .background(.background)
+    }
+    #endif
 }
 
 struct SupportAndPrivacyView: View {
@@ -250,6 +324,17 @@ struct BugReportView: View {
 
     var body: some View {
         Form {
+            Section("Quick") {
+                Button {
+                    title = "Watch app crashed"
+                    details = "The watch companion crashed or stopped responding while I was using it."
+                    includeLogs = true
+                    prepareReport()
+                } label: {
+                    Label("Use Crash Template", systemImage: "bolt.trianglebadge.exclamationmark")
+                }
+            }
+
             Section("Bug") {
                 TextField("Short title", text: $title)
                     .textInputAutocapitalization(.sentences)
@@ -263,8 +348,7 @@ struct BugReportView: View {
                 } label: {
                     Label("Prepare Report", systemImage: "square.and.pencil")
                 }
-                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                          details.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                 if let preparedReport {
                     Button {
@@ -369,7 +453,10 @@ enum SteroidDiagnostics {
             "Platform: \(platformSummary)",
             "",
             "## Details",
-            details
+            details.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "No additional details provided." : details,
+            "",
+            "## App Session",
+            CrashMonitor.diagnosticSummary
         ]
 
         if includeLogs {

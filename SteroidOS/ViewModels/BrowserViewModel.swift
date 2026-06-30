@@ -54,16 +54,18 @@ class BrowserViewModel: ObservableObject {
                     return
                 }
                 self.isPageLocked = false
-                if let elements = notification.userInfo?["elements"] as? [NativeWebElement] {
-                    self.pageElements = elements
-                }
+                let elements = notification.userInfo?["elements"] as? [NativeWebElement] ?? []
+                self.pageElements = elements
+
                 if let reader = notification.userInfo?["readerContent"] as? ReaderContent {
                     self.readerContent = reader
                     self.pageTitle = reader.title
-                } else if !self.pageElements.isEmpty {
+                } else {
                     self.readerContent = nil
-                    self.pageTitle = notification.userInfo?["title"] as? String ?? self.extractTitle(from: self.pageElements)
+                    let fallbackTitle = notification.userInfo?["title"] as? String
+                    self.pageTitle = fallbackTitle ?? (!elements.isEmpty ? self.extractTitle(from: elements) : SteroidBrand.name)
                 }
+
                 let url = notification.userInfo?["url"] as? String ?? ""
                 if !url.isEmpty {
                     self.currentURL = url
@@ -145,13 +147,18 @@ class BrowserViewModel: ObservableObject {
     func loadPage(url: String, readerMode: Bool = false) {
         // Cancel any in-flight page load
         currentLoadTask?.cancel()
+        pageElements = []
+        readerContent = nil
+        detectedMedia = []
+        isPageLocked = false
+        errorMessage = nil
+        pageTitle = URL(string: url)?.host ?? SteroidBrand.name
         
         currentLoadTask = Task { [weak self] in
             guard let self else { return }
             // On watchOS, pages load through the iPhone via WatchConnectivity
             self.isLoading = true
             self.loadingProgress = 0.1
-            self.errorMessage = nil
             self.currentURL = url
             self.addressBarText = url
             
@@ -183,11 +190,14 @@ class BrowserViewModel: ObservableObject {
         state.updateActiveTab { tab in
             tab.isReaderMode.toggle()
         }
+        let url = currentURL.isEmpty ? state.activeTab.url : currentURL
+        guard !url.isEmpty else { return }
+
         // Re-request page from iPhone with reader mode
         if sessionManager.isPhoneReachable {
-            sessionManager.loadURL(currentURL)
+            sessionManager.loadURL(url)
         } else {
-            loadPageLocally(url: currentURL, readerMode: state.activeTab.isReaderMode)
+            loadPageLocally(url: url, readerMode: state.activeTab.isReaderMode)
         }
     }
     
@@ -236,12 +246,17 @@ class BrowserViewModel: ObservableObject {
     }
 
     private func shouldHandle(_ notification: Notification) -> Bool {
-        guard let activeTabId else { return true }
         guard let rawTabId = notification.userInfo?["tabId"] as? String,
               !rawTabId.isEmpty,
               let incomingTabId = UUID(uuidString: rawTabId) else {
             return true
         }
-        return incomingTabId == activeTabId
+
+        // The current protocol identifies page payloads with the iPhone-side
+        // tab UUID. Watch-originated loadURL messages do not send a watch tab
+        // UUID for the phone to echo back, so rejecting mismatched IDs causes
+        // valid mirrored pages to be ignored. Adopt the remote ID instead.
+        activeTabId = incomingTabId
+        return true
     }
 }

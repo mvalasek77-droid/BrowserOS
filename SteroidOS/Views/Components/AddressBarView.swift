@@ -29,6 +29,8 @@ struct AddressBarView: View {
 
                 TextField("Search or enter URL", text: $viewModel.addressBarText)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .textFieldStyle(.plain)
+                    .lineLimit(1)
                     .focused($isFocused)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
@@ -70,8 +72,8 @@ struct AddressBarView: View {
                 .accessibilityLabel(voice.isRecording ? "Stop voice input" : "Speak URL or search")
                 #endif
             }
-            .padding(.horizontal, isFocused ? 12 : 10)
-            .padding(.vertical, isFocused ? 10 : 8)
+            .padding(.horizontal, isFocused ? 10 : 8)
+            .padding(.vertical, isFocused ? 7 : 5)
             .background(
                 Capsule()
                     .fill(.ultraThinMaterial)
@@ -96,7 +98,7 @@ struct AddressBarView: View {
                 y: isFocused ? 4 : 2
             )
             .padding(.horizontal, 6)
-            .padding(.vertical, 4)
+            .padding(.vertical, 1)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
 
             // Suggestions dropdown with glass effect

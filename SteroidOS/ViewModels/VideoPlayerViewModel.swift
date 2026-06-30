@@ -20,6 +20,9 @@ class VideoPlayerViewModel: ObservableObject {
     private var timeObserver: Any?
     private var cancellables = Set<AnyCancellable>()
     
+    // Nonisolated reference for safe cleanup in deinit
+    private var playerForCleanup: AVPlayer?
+
     func play(url: URL) {
         removeTimeObserver()
         player?.pause()
@@ -27,6 +30,7 @@ class VideoPlayerViewModel: ObservableObject {
         
         let item = AVPlayerItem(url: url)
         let newPlayer = AVPlayer(playerItem: item)
+        playerForCleanup = newPlayer
         
         // Observe item status
         item.publisher(for: \.status)
@@ -133,9 +137,9 @@ class VideoPlayerViewModel: ObservableObject {
         let currentPos = currentTime
         play(url: stream.url)
         if currentPos > 0 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.seek(to: currentPos)
-                if wasPlaying { self.player?.play() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.seek(to: currentPos)
+                if wasPlaying { self?.player?.play() }
             }
         }
     }
@@ -153,7 +157,10 @@ class VideoPlayerViewModel: ObservableObject {
     }
     
     deinit {
-        // @MainActor properties can't be accessed in deinit.
-        // Time observer will be cleaned up when the player is deallocated.
+        // Clean up time observer and pause player using nonisolated reference
+        if let observer = timeObserver {
+            playerForCleanup?.removeTimeObserver(observer)
+        }
+        playerForCleanup?.pause()
     }
 }
