@@ -138,6 +138,12 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             case .pageChunk:
                 self.handlePageChunk(message)
                 
+            case .pagePreview:
+                self.handlePagePreview(message)
+                
+            case .loginRequired:
+                self.handleLoginRequired(message)
+                
             case .pageLoadProgress:
                 if let progress = message[WCKey.loadProgress.rawValue] as? Double {
                     self.loadProgress = progress
@@ -336,6 +342,64 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         )
     }
 
+    // MARK: - Fast Preview Handling
+
+    /// Handle a fast preview message (title + first few elements). Post a
+    /// pageLoaded with `isPreview: true` so the watch VM can render the preview
+    /// immediately but keep the loading indicator active until the full
+    /// pageChunk stream arrives.
+    private func handlePagePreview(_ message: [String: Any]) {
+        guard let tabId = message[WCKey.tabId.rawValue] as? String else { return }
+        let url = (message[WCKey.url.rawValue] as? String) ?? ""
+        let title = (message[WCKey.title.rawValue] as? String) ?? ""
+
+        var elements: [NativeWebElement] = []
+        if let elementsJSON = message[WCKey.elements.rawValue] as? String,
+           let data = elementsJSON.data(using: .utf8) {
+            elements = deserializeNativeWebElements(from: data)
+        }
+
+        NotificationCenter.default.post(
+            name: .pageLoaded,
+            object: nil,
+            userInfo: [
+                "tabId": tabId,
+                "elements": elements,
+                "readerContent": Optional<ReaderContent>.none as Any,
+                "url": url,
+                "title": title,
+                "isPreview": true
+            ]
+        )
+    }
+
+    // MARK: - Login Required Handling
+
+    /// Handle a login-required message. Post a `loginRequired` notification so
+    /// the watch VM can show the "Open on iPhone to sign in" prompt with a
+    /// handoff button instead of rendering the login form.
+    private func handleLoginRequired(_ message: [String: Any]) {
+        guard let tabId = message[WCKey.tabId.rawValue] as? String else { return }
+        let url = (message[WCKey.url.rawValue] as? String) ?? ""
+        let title = (message[WCKey.title.rawValue] as? String) ?? ""
+        let reason = (message[WCKey.loginReason.rawValue] as? String) ?? "Login required"
+
+        // Clear any pending chunks — this page won't send content chunks.
+        pendingChunks[tabId] = nil
+        pendingChunkTimestamps.removeValue(forKey: tabId)
+
+        NotificationCenter.default.post(
+            name: .loginRequired,
+            object: nil,
+            userInfo: [
+                "tabId": tabId,
+                "url": url,
+                "title": title,
+                "reason": reason
+            ]
+        )
+    }
+
     // MARK: - Chunk Eviction Timer
     
     private func scheduleChunkEvictionTimer() {
@@ -430,6 +494,59 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         activity.webpageURL = URL(string: url)
         activity.becomeCurrent()
     }
+
+    /// Ask the iPhone to open the current page so the user can complete an
+    /// interactive sign-in (Claude, Facebook, etc.). Cookies set during the
+    /// login persist in the iPhone's WKWebView data store, so once the user
+    /// signs in, subsequent watch loads will be authenticated.
+    func openOnIPhoneLogin(url: String) {
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.openOnIPhoneLogin.rawValue,
+            WCKey.url.rawValue: url
+        ]
+        sendMessage(message)
+    }
+    
+    // MARK: - Media Playback Relay (Watch → iPhone)
+    
+    /// Ask the iPhone to extract a playable direct stream URL for a media
+    /// item (currently YouTube). Uses interactive `sendMessage` with a reply
+    /// handler so the watch gets the extracted URL back synchronously-ish.
+    /// `completion` is called on the main thread with the iPhone's reply
+    /// dictionary, or nil if the request failed/timed out.
+    func requestMediaPlayback(message: [String: Any], completion: @escaping @MainActor ([String: Any]?) -> Void) {
+        guard let session else {
+            completion(nil)
+            return
+        }
+        
+        guard session.isReachable else {
+            completion(nil)
+            return
+        }
+        
+        // Wrap the send in a timeout: if the iPhone doesn't reply within
+        // 20 seconds, resume with nil so the caller can fall back to the
+        // on-watch Invidious path rather than hanging forever.
+        let timeoutItem = DispatchWorkItem { @MainActor in
+            completion(nil)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20, execute: timeoutItem)
+        
+        session.sendMessage(message, replyHandler: { reply in
+            timeoutItem.cancel()
+            DispatchQueue.main.async { @MainActor in
+                completion(reply)
+            }
+        }, errorHandler: { [weak self] error in
+            timeoutItem.cancel()
+            ErrorLog.log("Media relay send failed: \(error.localizedDescription)")
+            DispatchQueue.main.async { @MainActor in
+                self?.lastError = error.localizedDescription
+                completion(nil)
+            }
+        })
+    }
     
     // MARK: - Transport Helpers
     
@@ -508,6 +625,7 @@ extension Notification.Name {
     static let pageLoaded = Notification.Name("pageLoaded")
     static let pageLoadProgress = Notification.Name("pageLoadProgress")
     static let pageError = Notification.Name("pageError")
+    static let loginRequired = Notification.Name("loginRequired")
     static let mediaDetected = Notification.Name("mediaDetected")
     static let navigationStateChanged = Notification.Name("navigationStateChanged")
     static let settingsSynced = Notification.Name("settingsSynced")

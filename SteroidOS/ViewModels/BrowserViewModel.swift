@@ -15,6 +15,14 @@ class BrowserViewModel: ObservableObject {
     /// True when the current page is locked behind Pro. The watch shows a
     /// "Subscribe to see full content" message instead of blank content.
     @Published var isPageLocked: Bool = false
+    /// True when the current page is only showing a fast preview. The watch
+    /// renders the preview elements but keeps the loading indicator active
+    /// until the full pageChunk stream arrives and replaces the preview.
+    @Published var isShowingPreview: Bool = false
+    /// Info about a page that requires interactive login (Claude, Facebook).
+    /// When non-nil, the watch shows an "Open on iPhone to sign in" prompt
+    /// with a handoff button instead of rendering the login form.
+    @Published var loginRequiredInfo: LoginRequiredInfo? = nil
     
     private var currentURL: String = ""
     private var activeTabId: UUID?
@@ -51,9 +59,12 @@ class BrowserViewModel: ObservableObject {
                     }
                     self.isLoading = false
                     self.loadingProgress = 1.0
+                    self.isShowingPreview = false
+                    self.loginRequiredInfo = nil
                     return
                 }
                 self.isPageLocked = false
+                let isPreview = notification.userInfo?["isPreview"] as? Bool ?? false
                 let elements = notification.userInfo?["elements"] as? [NativeWebElement] ?? []
                 self.pageElements = elements
 
@@ -67,6 +78,43 @@ class BrowserViewModel: ObservableObject {
                 }
 
                 let url = notification.userInfo?["url"] as? String ?? ""
+                if !url.isEmpty {
+                    self.currentURL = url
+                    self.addressBarText = url
+                }
+                // Preview: keep loading state active so the full content can
+                // replace the preview. Only the final pageChunk stream clears
+                // the loading indicator.
+                if isPreview {
+                    self.isShowingPreview = true
+                    // Keep isLoading true so the skeleton/spinner stays visible
+                    // while the full content is on its way.
+                } else {
+                    self.isShowingPreview = false
+                    self.isLoading = false
+                    self.loadingProgress = 1.0
+                    self.loginRequiredInfo = nil
+                }
+            }
+        })
+
+        observerTokens.append(NotificationCenter.default.addObserver(
+            forName: .loginRequired,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor in
+                guard let self else { return }
+                guard self.shouldHandle(notification) else { return }
+                let url = notification.userInfo?["url"] as? String ?? ""
+                let title = notification.userInfo?["title"] as? String ?? ""
+                let reason = notification.userInfo?["reason"] as? String ?? "Login required"
+                self.loginRequiredInfo = LoginRequiredInfo(url: url, title: title, reason: reason)
+                self.isPageLocked = false
+                self.isShowingPreview = false
+                self.pageElements = []
+                self.readerContent = nil
+                self.pageTitle = title.isEmpty ? (URL(string: url)?.host ?? SteroidBrand.name) : title
                 if !url.isEmpty {
                     self.currentURL = url
                     self.addressBarText = url
@@ -151,6 +199,8 @@ class BrowserViewModel: ObservableObject {
         readerContent = nil
         detectedMedia = []
         isPageLocked = false
+        isShowingPreview = false
+        loginRequiredInfo = nil
         errorMessage = nil
         pageTitle = URL(string: url)?.host ?? SteroidBrand.name
         
@@ -177,6 +227,15 @@ class BrowserViewModel: ObservableObject {
     
     func goForwardOnPhone() {
         sessionManager.goForward()
+    }
+
+    /// Ask the iPhone to open the current page so the user can complete an
+    /// interactive sign-in. After login, cookies persist in the iPhone's
+    /// WKWebView and subsequent watch loads will be authenticated.
+    func openOnIPhoneToLogin() {
+        let url = loginRequiredInfo?.url ?? currentURL
+        guard !url.isEmpty else { return }
+        sessionManager.openOnIPhoneLogin(url: url)
     }
     
     func submitAddress(@ObservedObject state: BrowserState) {

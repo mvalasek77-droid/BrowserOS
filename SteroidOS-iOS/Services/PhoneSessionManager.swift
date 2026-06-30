@@ -139,6 +139,12 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     }
     
     func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
+        // playMedia needs an async reply with the extracted stream URL, so
+        // handle it specially before the generic ack path.
+        if (message[WCKey.messageType.rawValue] as? String) == WCMessageType.playMedia.rawValue {
+            handlePlayMedia(message: message, replyHandler: replyHandler)
+            return
+        }
         handleMessage(message)
         replyHandler(["acknowledged": true])
     }
@@ -181,12 +187,74 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                 }
             case .clearHistory:
                 self.onClearHistory?()
+            case .openOnIPhoneLogin:
+                // Watch asked to open the current page on iPhone for login.
+                // Bring the iPhone browser to the foreground so the user can
+                // complete the interactive sign-in. Cookies persist in the
+                // WKWebView data store, so subsequent watch loads will be
+                // authenticated.
+                if let url = message[WCKey.url.rawValue] as? String, !url.isEmpty {
+                    self.onLoadURL?(url)
+                }
             case .handshake:
                 // Watch announced itself — log so we know the watch is alive.
                 ErrorLog.log("Watch handshake received")
+            case .playMedia:
+                // Handled via the reply-handler path in
+                // didReceiveMessage(_:replyHandler:). If it arrives here it
+                // means it came through transferUserInfo (no reply channel),
+                // so there's nothing to do — extraction results can only go
+                // back over an interactive sendMessage reply.
+                ErrorLog.log("playMedia received without reply handler; ignoring")
             default:
                 ErrorLog.log("Phone unhandled message type: \(messageType.rawValue)")
                 break
+            }
+        }
+    }
+    
+    // MARK: - Media Playback Relay (iPhone → Watch)
+    
+    /// Handle a `playMedia` request from the watch: extract a playable direct
+    /// stream URL for the given YouTube video and reply with it. Runs the
+    /// extraction off the main thread, then invokes `replyHandler` on main.
+    private func handlePlayMedia(message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
+        guard let videoID = message[WCKey.videoId.rawValue] as? String, !videoID.isEmpty else {
+            replyHandler([WCKey.error.rawValue: "Missing videoId"])
+            return
+        }
+        let requestedQuality = message[WCKey.quality.rawValue] as? String ?? "360p"
+        
+        Task {
+            let streams = await YouTubeStreamExtractor.shared.extractStreams(videoID: videoID)
+            
+            // Pick the best stream for the requested quality (watch-friendly).
+            let chosen = YouTubeStreamExtractor.pickBestStream(
+                from: streams,
+                preferredQuality: requestedQuality
+            )
+            
+            let encoder = JSONEncoder()
+            var reply: [String: Any] = [
+                WCKey.videoId.rawValue: videoID,
+                WCKey.quality.rawValue: chosen?.quality ?? requestedQuality
+            ]
+            
+            if let chosen = chosen {
+                reply[WCKey.streamUrl.rawValue] = chosen.url.absoluteString
+            }
+            
+            if let data = try? encoder.encode(streams),
+               let json = String(data: data, encoding: .utf8) {
+                reply[WCKey.streams.rawValue] = json
+            }
+            
+            if chosen == nil {
+                reply[WCKey.error.rawValue] = "No playable stream found for video \(videoID)"
+            }
+            
+            DispatchQueue.main.async {
+                replyHandler(reply)
             }
         }
     }
@@ -391,6 +459,45 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         sendPayload(payload)
     }
     
+    /// Send a fast preview (title + first few elements) to the Watch so it
+    /// can show content immediately while the full extraction pipeline runs.
+    /// The Watch renders this preview but keeps the loading indicator active
+    /// until the full pageChunk stream arrives and replaces it.
+    func sendPreviewToWatch(tabId: UUID, url: String, title: String, elements: [NativeWebElement]) {
+        guard !elements.isEmpty || !title.isEmpty else { return }
+        let previewElements = Array(elements.prefix(5))
+        let payload: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.pagePreview.rawValue,
+            WCKey.tabId.rawValue: tabId.uuidString,
+            WCKey.url.rawValue: url,
+            WCKey.title.rawValue: title,
+            WCKey.isPreview.rawValue: true
+        ]
+
+        var payloadWithElements = payload
+        if let data = try? JSONEncoder().encode(previewElements),
+           let json = String(data: data, encoding: .utf8) {
+            payloadWithElements[WCKey.elements.rawValue] = json
+        }
+
+        sendPayload(payloadWithElements)
+    }
+
+    /// Notify the Watch that the current page requires interactive login
+    /// (e.g. Claude, Facebook). The watch shows an "Open on iPhone to sign in"
+    /// prompt with a handoff button instead of rendering the login form.
+    func sendLoginRequiredToWatch(tabId: UUID, info: LoginRequiredInfo) {
+        let payload: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.loginRequired.rawValue,
+            WCKey.tabId.rawValue: tabId.uuidString,
+            WCKey.url.rawValue: info.url,
+            WCKey.title.rawValue: info.title,
+            WCKey.loginReason.rawValue: info.reason,
+            WCKey.isLoginPage.rawValue: true
+        ]
+        sendPayload(payload)
+    }
+
     // MARK: - Transport
     
     /// Send a payload dict to the watch using the best available transport.

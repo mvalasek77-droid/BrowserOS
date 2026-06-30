@@ -29,8 +29,9 @@ struct HistoryView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
             } else {
-                ForEach(filteredHistory) { entry in
+                ForEach(filteredHistory.prefix(200)) { entry in
                     Button {
+                        SteroidHaptics.tap()
                         browserState.navigate(to: entry.url)
                     } label: {
                         HStack(spacing: 10) {
@@ -55,6 +56,8 @@ struct HistoryView: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Open \(entry.title.isEmpty ? entry.url : entry.title)")
+                    .accessibilityHint("Navigate to this page from your history")
                 }
             }
         }

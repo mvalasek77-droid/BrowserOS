@@ -43,17 +43,21 @@ struct MainNavigationView: View {
             }
             .tag(3)
         }
+        .onChange(of: selectedTab) { _, _ in
+            // Subtle selection haptic on tab switch
+            SteroidHaptics.selection()
+        }
         .onChange(of: browserState.activeTab.url) { _, newURL in
-            // Auto-switch to browser tab when navigating
-            // Only switch for real navigations, not DuckDuckGo search results
+            // Auto-switch to browser tab when navigating.
+            // Only switch for real navigations, not DuckDuckGo search results.
             if !newURL.isEmpty && !newURL.contains("duckduckgo.com/?q=") {
-                withAnimation(.easeInOut(duration: 0.18)) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                     selectedTab = 0
                 }
             }
         }
         .onChange(of: browserState.activeTabId) { _, _ in
-            withAnimation(.easeInOut(duration: 0.18)) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 selectedTab = 0
             }
         }

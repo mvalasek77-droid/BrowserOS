@@ -81,6 +81,7 @@ struct AddBookmarkView: View {
             }
             Section {
                 Button {
+                    SteroidHaptics.success()
                     let finalTitle = title.isEmpty ? url : title
                     browserState.addBookmark(title: finalTitle, url: url)
                     dismiss()
@@ -112,6 +113,7 @@ struct BookmarkDetailView: View {
                     .foregroundStyle(.secondary)
 
                 Button {
+                    SteroidHaptics.tap()
                     browserState.navigate(to: bookmark.url)
                     dismiss()
                 } label: {
@@ -121,6 +123,7 @@ struct BookmarkDetailView: View {
                 .buttonStyle(.borderedProminent)
 
                 Button(role: .destructive) {
+                    SteroidHaptics.warning()
                     browserState.removeBookmark(bookmark)
                     dismiss()
                 } label: {

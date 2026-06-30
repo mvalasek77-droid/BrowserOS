@@ -9,14 +9,14 @@ struct NativeWebContentRenderer: View {
     let onLinkTap: (String) -> Void
     
     var body: some View {
-        LazyVStack(spacing: 8, pinnedViews: []) {
+        LazyVStack(spacing: 12, pinnedViews: []) {
             ForEach(Array(renderableElements.enumerated()), id: \.offset) { _, item in
                 renderElement(item.element, listIndex: item.listIndex)
                     .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)), removal: .opacity))
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 10)
     }
     
     /// Flattens elements into renderable items, tracking list position for
@@ -79,49 +79,74 @@ private struct RenderableItem {
     let listIndex: Int?
 }
 
-// MARK: - Heading (card-style)
+// MARK: - Heading (card-style, color-coded)
 
 struct HeadingView: View {
     let text: String
     let level: Int
     
+    /// Color-coded accent per heading level for visual hierarchy on the watch.
+    private var accentColor: Color {
+        switch level {
+        case 1: return .blue
+        case 2: return .purple
+        case 3: return .orange
+        case 4: return .teal
+        default: return .indigo
+        }
+    }
+    
     var body: some View {
-        Text(text)
-            .font(level == 1 ? .title2.bold() :
-                  level == 2 ? .title3.bold() :
-                  level == 3 ? .headline :
-                  .subheadline.bold())
-            .foregroundStyle(.primary)
-            .multilineTextAlignment(.leading)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 10)
-            .padding(.vertical, level <= 2 ? 8 : 4)
-            .if(level <= 2) { view in
-                view.background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.08))
-                )
-            }
+        HStack(spacing: 8) {
+            // Color-coded accent bar — gives each section a visual anchor.
+            RoundedRectangle(cornerRadius: 2)
+                .fill(accentColor)
+                .frame(width: 3)
+            Text(text)
+                .font(level == 1 ? .system(size: 17, weight: .bold, design: .rounded) :
+                      level == 2 ? .system(size: 15, weight: .bold, design: .rounded) :
+                      level == 3 ? .system(size: 14, weight: .semibold, design: .rounded) :
+                      .system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, level <= 2 ? 10 : 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(accentColor.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(accentColor.opacity(0.2), lineWidth: 0.5)
+        )
     }
 }
 
-// MARK: - Paragraph (clean typography)
+// MARK: - Paragraph (card-based, large readable text)
 
 struct ParagraphView: View {
     let text: String
     
     var body: some View {
         Text(text)
-            .font(.body)
+            .font(.system(size: 13, weight: .regular, design: .rounded))
             .foregroundStyle(.primary)
             .multilineTextAlignment(.leading)
+            .lineSpacing(2)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.vertical, 2)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.gray.opacity(0.06))
+            )
     }
 }
 
-// MARK: - List Item (card pill)
+// MARK: - List Item (card pill, large text)
 
 struct ListItemView: View {
     let text: String
@@ -131,21 +156,25 @@ struct ListItemView: View {
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             Text(ordered ? "\(index)." : "\u{2022}")
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.blue)
-                .frame(width: 18, alignment: .trailing)
+                .frame(width: 20, alignment: .trailing)
             
             Text(text)
-                .font(.body)
+                .font(.system(size: 13, weight: .regular, design: .rounded))
                 .foregroundStyle(.primary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 2)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.gray.opacity(0.05))
+        )
     }
 }
 
-// MARK: - Link (glass pill button)
+// MARK: - Link (glass pill button, 44pt tap target)
 
 struct LinkView: View {
     let text: String
@@ -157,29 +186,30 @@ struct LinkView: View {
             onTap(url)
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: "link")
-                    .font(.system(size: 10, weight: .semibold))
+                Image(systemName: "chevron.right.circle.fill")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white)
                 
                 Text(text)
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(.white)
-                    .lineLimit(2)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
             .background(
                 LinearGradient(
-                    colors: [Color.blue.opacity(0.85), Color.blue.opacity(0.65)],
+                    colors: [Color.blue.opacity(0.9), Color.blue.opacity(0.7)],
                     startPoint: .leading,
                     endPoint: .trailing
                 ),
-                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
             )
         }
         .buttonStyle(LinkButtonStyle())
@@ -190,8 +220,8 @@ struct LinkView: View {
 struct LinkButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
-            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 
@@ -203,7 +233,7 @@ struct WebImageView: View {
     @State private var imageData: Data? = nil
     @State private var isLoading = false
     @State private var loadTask: Task<Void, Never>?
-    
+
     var body: some View {
         Group {
             if let data = imageData, let uiImage = UIImage(data: data) {
@@ -216,29 +246,36 @@ struct WebImageView: View {
                             .stroke(Color.white.opacity(0.1), lineWidth: 0.5)
                     )
                     .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+                    .accessibilityLabel(alt.isEmpty ? "Web image" : alt)
             } else if isLoading {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.gray.opacity(0.12))
-                    .frame(height: 90)
+                    .frame(height: 100)
                     .overlay {
-                        ProgressView()
-                            .tint(.blue)
+                        VStack(spacing: 6) {
+                            ProgressView()
+                                .tint(.blue)
+                            Text("Loading image…")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                     .shimmering()
             } else {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.gray.opacity(0.08))
-                    .frame(height: 70)
+                    .frame(height: 80)
                     .overlay {
                         VStack(spacing: 4) {
                             Image(systemName: "photo")
-                                .font(.system(size: 16, weight: .medium))
+                                .font(.system(size: 18, weight: .medium))
                                 .foregroundStyle(.secondary)
                             if !alt.isEmpty {
                                 Text(alt.prefix(30))
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 11))
                                     .foregroundStyle(.tertiary)
-                                    .lineLimit(1)
+                                    .lineLimit(2)
+                                    .multilineTextAlignment(.center)
                             }
                         }
                     }
@@ -320,16 +357,16 @@ struct BlockquoteView: View {
                 .frame(width: 3)
             
             Text(text)
-                .font(.body.italic())
+                .font(.system(size: 13, weight: .regular, design: .rounded).italic())
                 .foregroundStyle(.secondary)
                 .padding(.leading, 10)
-                .padding(.vertical, 6)
+                .padding(.vertical, 8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.trailing, 8)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.blue.opacity(0.05))
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.blue.opacity(0.06))
         )
     }
 }
@@ -341,9 +378,9 @@ struct CodeBlockView: View {
     
     var body: some View {
         Text(code)
-            .font(.system(.caption, design: .monospaced))
+            .font(.system(size: 12, weight: .regular, design: .monospaced))
             .foregroundStyle(.green)
-            .padding(10)
+            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -363,17 +400,17 @@ struct TableView: View {
     let rows: [[String]]
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 3) {
             if !headers.isEmpty {
                 HStack(spacing: 4) {
                     ForEach(headers, id: \.self) { header in
-                        Text(header.prefix(10))
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                        Text(header.prefix(12))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.accentColor.opacity(0.1))
@@ -383,14 +420,14 @@ struct TableView: View {
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 HStack(spacing: 4) {
                     ForEach(row, id: \.self) { cell in
-                        Text(cell.prefix(14))
-                            .font(.system(size: 11))
+                        Text(cell.prefix(16))
+                            .font(.system(size: 12, weight: .regular, design: .rounded))
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.gray.opacity(0.04))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.gray.opacity(0.05))
             }
         }
         .background(
@@ -444,7 +481,7 @@ struct FormView: View {
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                 }
                 .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 44)
                 .padding(.vertical, 10)
                 .background(
                     LinearGradient(
@@ -452,7 +489,7 @@ struct FormView: View {
                         startPoint: .leading,
                         endPoint: .trailing
                     ),
-                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
                 )
             }
             .buttonStyle(LinkButtonStyle())
@@ -485,7 +522,7 @@ struct FormView: View {
         VStack(alignment: .leading, spacing: 3) {
             if let label = field.label, !label.isEmpty {
                 Text(label)
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
 
@@ -536,12 +573,14 @@ struct FormView: View {
     }
 
     private func submit() {
+        SteroidHaptics.tap()
         isSubmitting = true
         let payload = values.filter { !$0.value.isEmpty }
         WatchSessionManager.shared.submitForm(formIndex: formIndex, values: payload)
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             isSubmitting = false
+            SteroidHaptics.success()
         }
     }
 }

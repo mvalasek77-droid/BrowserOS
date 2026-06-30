@@ -119,9 +119,11 @@ struct WatchHomePage: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(SteroidBrand.name). \(SteroidBrand.tagline)")
     }
 
-    // MARK: - Section Card (TikTok-style vertical card)
+    // MARK: - Section Card (TikTok-style vertical card with Liquid Glass)
 
     private func sectionCard(_ section: CardSection) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -141,6 +143,7 @@ struct WatchHomePage: View {
                 Capsule()
                     .fill(section.accentColor.opacity(0.12))
             )
+            .accessibilityLabel("Section: \(section.title)")
 
             // Tiles in 2-column grid
             LazyVGrid(columns: [
@@ -153,19 +156,11 @@ struct WatchHomePage: View {
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.3))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-        )
+        .steroidGlassCard(cornerRadius: 16)
         .padding(.horizontal, 8)
     }
 
-    // MARK: - Hero Tile (TikTok-style full-bleed card)
+    // MARK: - Hero Tile (TikTok-style full-bleed card with Liquid Glass)
 
     private func heroTile(_ tile: QuickTile, accentColor: Color) -> some View {
         Button {
@@ -188,11 +183,11 @@ struct WatchHomePage: View {
                         )
                         .frame(height: 52)
 
-                    // Glass overlay
+                    // Glass overlay — uses Liquid Glass on iOS 26 / watchOS 26
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(.ultraThinMaterial.opacity(0.15))
 
-                    // Subtle inner border
+                    // Subtle inner border (frosted edge light)
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
 
@@ -225,6 +220,7 @@ struct WatchHomePage: View {
         }
         .buttonStyle(HeroTileButtonStyle())
         .accessibilityLabel(tile.preferExternalApp ? "\(tile.name), opens with Handoff" : "\(tile.name), opens in browser")
+        .accessibilityHint("Double tap to open \(tile.name)")
     }
 
     // MARK: - Recent History
@@ -246,6 +242,7 @@ struct WatchHomePage: View {
                 Capsule()
                     .fill(Color.secondary.opacity(0.12))
             )
+            .accessibilityLabel("Recent history")
 
             ForEach(Array(browserState.history.prefix(5))) { entry in
                 Button {
@@ -283,18 +280,12 @@ struct WatchHomePage: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Open \(entry.title.isEmpty ? entry.url : entry.title)")
+                .accessibilityHint("Double tap to navigate to this page")
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.black.opacity(0.3))
-                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-        )
+        .steroidGlassCard(cornerRadius: 16)
         .padding(.horizontal, 8)
     }
 
@@ -328,9 +319,7 @@ struct WatchHomePage: View {
     // MARK: - Haptics
 
     private func hapticTap() {
-        #if os(watchOS)
-        WKInterfaceDevice.current().play(.click)
-        #endif
+        SteroidHaptics.tap()
     }
 }
 
@@ -339,8 +328,8 @@ struct WatchHomePage: View {
 struct HeroTileButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
     }
 }
 

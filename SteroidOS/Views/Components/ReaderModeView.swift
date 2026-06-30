@@ -10,13 +10,13 @@ struct ReaderModeView: View {
         // No ScrollView here — the parent BrowserPageView already wraps us in one.
         // Nested ScrollViews fight over Digital Crown/touch gestures on watchOS.
         VStack(alignment: .leading, spacing: 12) {
-                // Article Title — hero card
+                // Article Title — hero card with glass effect
                 VStack(alignment: .leading, spacing: 4) {
                     Text(content.title)
                         .font(.system(.title3, design: .rounded).bold())
                         .foregroundStyle(.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    
+
                     if let byline = content.byline {
                         HStack(spacing: 4) {
                             Image(systemName: "person.fill")
@@ -29,14 +29,7 @@ struct ReaderModeView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.accentColor.opacity(0.06))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.accentColor.opacity(0.1), lineWidth: 0.5)
-                )
+                .steroidGlassCard(cornerRadius: 12)
 
                 // Article Content
                 ForEach(content.content) { block in

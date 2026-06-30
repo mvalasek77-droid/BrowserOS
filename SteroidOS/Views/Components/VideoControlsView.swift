@@ -48,8 +48,12 @@ struct VideoScrubberView: View {
 struct QualityPickerSheet: View {
     let qualities: [VideoStream]
     let current: String
+    let preferredQuality: String
     let onSelect: (VideoStream) -> Void
+    let onSelectPreferred: (String) -> Void
     let onDismiss: () -> Void
+    
+    private let preferredOptions = ["240p", "360p"]
     
     var body: some View {
         ZStack {
@@ -62,39 +66,88 @@ struct QualityPickerSheet: View {
                     .foregroundStyle(.white)
                 
                 ScrollView {
-                    ForEach(qualities) { stream in
-                        Button {
-                            onSelect(stream)
-                        } label: {
-                            HStack {
-                                Image(systemName: stream.quality == current ? "checkmark.circle.fill" : "circle")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(stream.quality == current ? .blue : .white.opacity(0.5))
-                                
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(stream.quality)
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundStyle(.white)
-                                    Text(stream.format.uppercased())
-                                        .font(.system(size: 9))
-                                        .foregroundStyle(.white.opacity(0.5))
+                    // Preferred quality selector (drives the next extraction
+                    // request). Always shown so the user can pick before any
+                    // stream has been resolved.
+                    if !preferredOptions.isEmpty {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Preferred (for next video)")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.5))
+                                .padding(.horizontal, 10)
+                                .padding(.top, 4)
+                            
+                            ForEach(preferredOptions, id: \.self) { quality in
+                                Button {
+                                    onSelectPreferred(quality)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: quality == preferredQuality ? "checkmark.circle.fill" : "circle")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(quality == preferredQuality ? .blue : .white.opacity(0.5))
+                                        Text(quality)
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundStyle(.white)
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
+                                    .background(
+                                        quality == preferredQuality
+                                            ? Color.blue.opacity(0.2)
+                                            : Color.white.opacity(0.05)
+                                    )
+                                    .cornerRadius(8)
                                 }
-                                
-                                Spacer()
+                                .buttonStyle(.plain)
                             }
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 10)
-                            .background(
-                                stream.quality == current
-                                    ? Color.blue.opacity(0.2)
-                                    : Color.white.opacity(0.05)
-                            )
-                            .cornerRadius(8)
                         }
-                        .buttonStyle(.plain)
+                    }
+                    
+                    // Available streams (after extraction completes).
+                    if !qualities.isEmpty {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Available now")
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.5))
+                                .padding(.horizontal, 10)
+                                .padding(.top, 4)
+                            
+                            ForEach(qualities) { stream in
+                                Button {
+                                    onSelect(stream)
+                                } label: {
+                                    HStack {
+                                        Image(systemName: stream.quality == current ? "checkmark.circle.fill" : "circle")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(stream.quality == current ? .blue : .white.opacity(0.5))
+                                        
+                                        VStack(alignment: .leading, spacing: 1) {
+                                            Text(stream.quality)
+                                                .font(.system(size: 13, weight: .medium))
+                                                .foregroundStyle(.white)
+                                            Text(stream.format.uppercased())
+                                                .font(.system(size: 9))
+                                                .foregroundStyle(.white.opacity(0.5))
+                                        }
+                                        
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 10)
+                                    .background(
+                                        stream.quality == current
+                                            ? Color.blue.opacity(0.2)
+                                            : Color.white.opacity(0.05)
+                                    )
+                                    .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                     }
                 }
-                .frame(maxHeight: 140)
+                .frame(maxHeight: 160)
             }
             .padding(12)
             .background(Color(white: 0.15))

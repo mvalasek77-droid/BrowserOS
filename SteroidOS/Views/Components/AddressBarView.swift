@@ -35,16 +35,18 @@ struct AddressBarView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .onSubmit {
-                        withAnimation(.spring(response: 0.3)) {
+                        SteroidHaptics.tap()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                             showSuggestions = false
                         }
                         viewModel.submitAddress(state: browserState)
                     }
                     .onChange(of: viewModel.addressBarText) { _, newValue in
-                        withAnimation(.spring(response: 0.2)) {
+                        withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
                             showSuggestions = isFocused && !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                         }
                     }
+                    .accessibilityLabel("Search or enter URL")
 
                 if !viewModel.addressBarText.isEmpty {
                     #if canImport(Speech)
@@ -58,6 +60,7 @@ struct AddressBarView: View {
 
                 #if canImport(Speech)
                 Button {
+                    SteroidHaptics.tap()
                     if voice.isRecording {
                         voice.stop()
                     } else {
@@ -70,14 +73,12 @@ struct AddressBarView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(voice.isRecording ? "Stop voice input" : "Speak URL or search")
+                .accessibilityHint(voice.isRecording ? "Double tap to stop recording" : "Double tap to start voice input")
                 #endif
             }
             .padding(.horizontal, isFocused ? 10 : 8)
             .padding(.vertical, isFocused ? 7 : 5)
-            .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-            )
+            .steroidGlassCapsule()
             .overlay(
                 Capsule()
                     .stroke(
@@ -99,7 +100,7 @@ struct AddressBarView: View {
             )
             .padding(.horizontal, 6)
             .padding(.vertical, 1)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isFocused)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isFocused)
 
             // Suggestions dropdown with glass effect
             if showSuggestions && !currentSuggestions.isEmpty {
@@ -107,7 +108,8 @@ struct AddressBarView: View {
                     VStack(spacing: 2) {
                         ForEach(currentSuggestions, id: \.self) { suggestion in
                             Button {
-                                withAnimation(.spring(response: 0.25)) {
+                                SteroidHaptics.selection()
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
                                     viewModel.addressBarText = suggestion
                                     showSuggestions = false
                                     viewModel.submitAddress(state: browserState)
@@ -129,15 +131,13 @@ struct AddressBarView: View {
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Suggestion: \(suggestion)")
+                            .accessibilityHint("Double tap to search for this")
                         }
                     }
                 }
                 .frame(maxHeight: 120)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-                )
+                .steroidGlassRounded(cornerRadius: 12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
@@ -171,7 +171,8 @@ struct AddressBarView: View {
 
     private var clearButton: some View {
         Button {
-            withAnimation(.spring(response: 0.2)) {
+            SteroidHaptics.tap()
+            withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
                 viewModel.addressBarText = ""
                 showSuggestions = false
             }
@@ -181,5 +182,7 @@ struct AddressBarView: View {
                 .foregroundStyle(.secondary)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Clear address bar")
+        .accessibilityHint("Double tap to clear the text")
     }
 }

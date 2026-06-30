@@ -85,32 +85,143 @@ class VideoPlayerViewModel: ObservableObject {
     }
     
     func playYouTube(videoID: String) async {
-        // Default path: hand off to the official YouTube app on iPhone.
-        // Stream extraction is opt-in via Settings → Experimental (legal/operational risk).
-        guard UserDefaults.standard.bool(forKey: "steroidos_invidious_enabled") else {
-            errorMessage = "Open in the YouTube app on your iPhone to play this video."
-            return
+        await playYouTube(videoID: videoID, preferredQuality: "360p")
+    }
+    
+    func playYouTube(videoID: String, preferredQuality: String) async {
+        // Show a clear loading state immediately so the user sees something
+        // is happening while streams are being resolved.
+        isBuffering = true
+        errorMessage = nil
+        availableQualities = []
+        currentQuality = preferredQuality
+        
+        // Preferred path: ask the iPhone to extract a direct stream URL.
+        // The iPhone has a full network stack and can run yt-dlp-style
+        // extraction that the watch cannot. This is the most reliable route.
+        if let relayed = await requestStreamFromiPhone(videoID: videoID, quality: preferredQuality) {
+            // The iPhone may return either a single resolved URL or a list
+            // of streams. Prefer the single URL; otherwise pick from the list.
+            if let urlStr = relayed.streamURL, let url = URL(string: urlStr) {
+                availableQualities = relayed.streams
+                currentQuality = relayed.chosenQuality ?? preferredQuality
+                play(url: url)
+                return
+            } else if !relayed.streams.isEmpty {
+                availableQualities = relayed.streams
+                if let chosen = pickBestStream(from: relayed.streams, preferredQuality: preferredQuality) {
+                    currentQuality = chosen.quality
+                    play(url: chosen.url)
+                    return
+                }
+            }
+            // iPhone relay responded but with nothing usable — fall through to
+            // the on-watch Invidious path as a backup.
         }
-
+        
+        // Fallback path: on-watch Invidious extraction. Opt-in via Settings,
+        // because public Invidious instances are frequently rate-limited or
+        // down. Even when "disabled" we still try it as a last resort for
+        // on-watch playback, since the alternative is no playback at all.
+        let invidiousEnabled = UserDefaults.standard.bool(forKey: "steroidos_invidious_enabled")
+        
         let detector = MediaDetector()
         let streams = await detector.extractYouTubeStreams(videoID: videoID)
-
+        
         if streams.isEmpty {
-            errorMessage = "Could not extract video stream. Disable YouTube Stream Extraction in Settings to use the YouTube app instead."
+            if invidiousEnabled {
+                errorMessage = "Could not extract video stream. The iPhone relay and all Invidious instances failed. Try again, or open in the YouTube app on your iPhone."
+            } else {
+                errorMessage = "Could not extract a playable stream. Make sure your iPhone is reachable (it performs the extraction), or enable YouTube Stream Extraction in Settings."
+            }
+            isBuffering = false
             return
         }
-
+        
         availableQualities = streams
-
-        // Pick 480p for watch performance, fallback to first available
-        let bestStream = streams.first(where: { $0.quality.contains("480") })
-            ?? streams.first(where: { $0.quality.contains("360") })
-            ?? streams.first
-
-        if let stream = bestStream {
-            currentQuality = stream.quality
-            play(url: stream.url)
+        
+        // For watch performance, prefer 240p then 360p, then whatever is
+        // closest below 360p, then any available stream.
+        guard let bestStream = pickBestStream(from: streams, preferredQuality: preferredQuality) else {
+            errorMessage = "No compatible video stream found for this video."
+            isBuffering = false
+            return
         }
+        
+        currentQuality = bestStream.quality
+        play(url: bestStream.url)
+    }
+    
+    // MARK: - iPhone Stream Relay (WatchConnectivity)
+    
+    /// Result of an iPhone stream-extraction relay request.
+    private struct RelayResult {
+        var streamURL: String?
+        var streams: [VideoStream]
+        var chosenQuality: String?
+    }
+    
+    /// Ask the iPhone to extract a playable direct stream URL for a YouTube
+    /// video. Uses WatchConnectivity interactive messaging (which supports a
+    /// reply). Returns nil if the iPhone is unreachable or doesn't respond in
+    /// time, so the caller can fall back to on-watch Invidious extraction.
+    private func requestStreamFromiPhone(videoID: String, quality: String) async -> RelayResult? {
+        guard WatchSessionManager.shared.isPhoneReachable else { return nil }
+        
+        let message: [String: Any] = [
+            WCKey.messageType.rawValue: WCMessageType.playMedia.rawValue,
+            WCKey.videoId.rawValue: videoID,
+            WCKey.quality.rawValue: quality,
+            WCKey.timestamp.rawValue: Date().timeIntervalSince1970
+        ]
+        
+        return await withCheckedContinuation { continuation in
+            WatchSessionManager.shared.requestMediaPlayback(message: message) { reply in
+                guard let reply = reply else {
+                    // No response / error — the relay failed.
+                    continuation.resume(returning: nil)
+                    return
+                }
+                
+                var result = RelayResult(streamURL: nil, streams: [], chosenQuality: nil)
+                result.streamURL = reply[WCKey.streamUrl.rawValue] as? String
+                result.chosenQuality = reply[WCKey.quality.rawValue] as? String
+                
+                if let streamsJSON = reply[WCKey.streams.rawValue] as? String,
+                   let data = streamsJSON.data(using: .utf8) {
+                    result.streams = (try? JSONDecoder().decode([VideoStream].self, from: data)) ?? []
+                }
+                
+                continuation.resume(returning: result)
+            }
+        }
+    }
+    
+    /// Pick the best stream for watch playback, preferring low resolutions
+    /// for smooth performance on the small watch screen. `preferredQuality`
+    /// is honoured first, then we fall back to the cheapest acceptable stream.
+    private func pickBestStream(from streams: [VideoStream], preferredQuality: String) -> VideoStream? {
+        // Exact preferred-quality match.
+        if preferredQuality != "auto",
+           let exact = streams.first(where: { $0.quality == preferredQuality }) {
+            return exact
+        }
+        // Watch-friendly ladder: 240p → 360p → anything ≤ 360p → first available.
+        let ladder = ["240p", "360p", "144p", "270p"]
+        for q in ladder {
+            if let s = streams.first(where: { $0.quality.contains(q) }) {
+                return s
+            }
+        }
+        // Anything with a numeric height ≤ 360.
+        if let low = streams.first(where: {
+            let digits = $0.quality.filter("0123456789".contains)
+            if let h = Int(digits) { return h <= 360 }
+            return false
+        }) {
+            return low
+        }
+        return streams.first
     }
     
     func togglePlayback() {

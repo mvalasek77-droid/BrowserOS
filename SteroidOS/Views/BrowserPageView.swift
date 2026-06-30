@@ -23,7 +23,7 @@ struct BrowserPageView: View {
     }
 
     private var hasDisplayedContent: Bool {
-        viewModel.isPageLocked || displayedReaderContent != nil || !displayedPageElements.isEmpty
+        viewModel.isPageLocked || viewModel.loginRequiredInfo != nil || displayedReaderContent != nil || !displayedPageElements.isEmpty
     }
 
     var body: some View {
@@ -99,6 +99,17 @@ struct BrowserPageView: View {
         .onChange(of: sessionManager.isPhoneReachable) { _, reachable in
             viewModel.isPhoneReachable = reachable
         }
+        // Adaptive haptics: success when a page finishes loading, warning on error.
+        .onChange(of: viewModel.isLoading) { _, loading in
+            if !loading && viewModel.errorMessage == nil {
+                SteroidHaptics.success()
+            }
+        }
+        .onChange(of: viewModel.errorMessage) { _, message in
+            if message != nil {
+                SteroidHaptics.warning()
+            }
+        }
     }
 
     // MARK: - Loading Bar (animated gradient)
@@ -118,13 +129,13 @@ struct BrowserPageView: View {
                         )
                     )
                     .frame(width: max(geo.size.width * viewModel.loadingProgress, 4))
-                    .animation(.spring(response: 0.3), value: viewModel.loadingProgress)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.loadingProgress)
             }
         }
         .frame(height: 3)
         .padding(.horizontal, 8)
         .transition(.opacity.combined(with: .move(edge: .top)))
-        .animation(.spring(response: 0.3), value: viewModel.isLoading)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.isLoading)
     }
 
     // MARK: - Standalone Mode Banner
@@ -170,17 +181,41 @@ struct BrowserPageView: View {
                 .frame(maxWidth: .infinity, minHeight: 140)
                 .padding(.top, 24)
             }
-            // Loading placeholder
-            else if viewModel.isLoading && !hasDisplayedContent && !showHomePage {
-                VStack(spacing: 12) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text("Loading…")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 120)
+            // LOGIN REQUIRED: show "Open on iPhone to sign in" prompt
+            else if let loginInfo = viewModel.loginRequiredInfo {
+                LoginRequiredView(info: loginInfo, onOpenOnIPhone: {
+                    viewModel.openOnIPhoneToLogin()
+                })
+                .padding(.horizontal, 8)
                 .padding(.top, 24)
+            }
+            // Loading placeholder — skeleton state
+            else if viewModel.isLoading && !hasDisplayedContent && !showHomePage {
+                SkeletonLoadingView()
+                    .padding(.horizontal, 8)
+                    .padding(.top, 16)
+            }
+            // Preview indicator — content is showing but more is loading
+            else if viewModel.isShowingPreview && viewModel.isLoading {
+                VStack(spacing: 4) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.blue)
+                        Text("Loading full page…")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(.blue)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(Color.blue.opacity(0.1))
+                    )
+                }
+                .padding(.horizontal, 8)
+
+                // Render the preview content below the indicator
+                renderContentElements()
             }
 
             // Media detected
@@ -193,41 +228,57 @@ struct BrowserPageView: View {
                 .padding(.vertical, 4)
             }
 
-            // Reader content is also a fallback when DOM extraction yields no
-            // native elements, so the watch does not show a blank mirrored page.
-            if let reader = displayedReaderContent,
-               browserState.activeTab.isReaderMode || displayedPageElements.isEmpty {
-                ReaderModeView(content: reader)
-                    .padding(.horizontal, 8)
-                    .transition(.opacity)
-            } else if !displayedPageElements.isEmpty {
-                NativeWebContentRenderer(
-                    elements: displayedPageElements,
-                    onLinkTap: { url in
-                        viewModel.addressBarText = url
-                        browserState.navigate(to: url)
-                        showHomePage = false
-                    }
-                )
-                .padding(.horizontal, 4)
-            } else {
-                // Empty state — content failed to load silently
-                VStack(spacing: 8) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.secondary)
-                    Text("Couldn't load this page")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                    Button("Retry") {
-                        viewModel.loadPage(url: browserState.activeTab.url, readerMode: browserState.activeTab.isReaderMode)
-                    }
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .buttonStyle(.bordered)
-                }
-                .frame(maxWidth: .infinity, minHeight: 100)
-                .padding(.top, 20)
+            // Render content (reader mode or native elements), but skip when
+            // showing a loading preview (already rendered above) or when
+            // showing the login/locked prompt.
+            if viewModel.loginRequiredInfo == nil && !viewModel.isPageLocked &&
+                !(viewModel.isShowingPreview && viewModel.isLoading) {
+                renderContentElements()
             }
+        }
+    }
+
+    /// Renders the reader-mode content or the native web element list.
+    /// Extracted so the preview path can reuse it.
+    @ViewBuilder
+    private func renderContentElements() -> some View {
+        // Reader content is also a fallback when DOM extraction yields no
+        // native elements, so the watch does not show a blank mirrored page.
+        if let reader = displayedReaderContent,
+           browserState.activeTab.isReaderMode || displayedPageElements.isEmpty {
+            ReaderModeView(content: reader)
+                .padding(.horizontal, 8)
+                .transition(.opacity)
+        } else if !displayedPageElements.isEmpty {
+            NativeWebContentRenderer(
+                elements: displayedPageElements,
+                onLinkTap: { url in
+                    viewModel.addressBarText = url
+                    browserState.navigate(to: url)
+                    showHomePage = false
+                }
+            )
+            .padding(.horizontal, 4)
+        } else {
+            // Empty state — content failed to load silently
+            VStack(spacing: 8) {
+                Image(systemName: "questionmark.circle")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.secondary)
+                Text("Couldn't load this page")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Button {
+                    viewModel.loadPage(url: browserState.activeTab.url, readerMode: browserState.activeTab.isReaderMode)
+                } label: {
+                    Text("Retry")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            .frame(maxWidth: .infinity, minHeight: 100)
+            .padding(.top, 20)
         }
     }
 
@@ -249,6 +300,7 @@ struct BrowserPageView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Bookmarks")
+            .accessibilityHint("View saved bookmarks")
             NavigationLink { HistoryView() } label: {
                 Image(systemName: "clock")
                     .font(.system(size: 16, weight: .semibold))
@@ -257,31 +309,29 @@ struct BrowserPageView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("History")
+            .accessibilityHint("View browsing history")
         }
         .padding(.horizontal, 4)
         .padding(.top, 4)
         .padding(.bottom, 2)
-        .background(.ultraThinMaterial)
+        .steroidGlassCapsule()
+        .padding(.horizontal, 4)
     }
 
     private func barButton(icon: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: {
-            hapticTap()
+            SteroidHaptics.tap()
             action()
         }) {
             Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(enabled ? .blue : .gray.opacity(0.35))
                 .frame(maxWidth: .infinity, minHeight: 44)
+                .scaleEffect(enabled ? 1.0 : 0.95)
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
         .accessibilityLabel(icon == "chevron.left" ? "Go back" : icon == "chevron.right" ? "Go forward" : icon == "arrow.clockwise" ? "Reload" : "Reader mode")
-    }
-
-    private func hapticTap() {
-        #if os(watchOS)
-        WKInterfaceDevice.current().play(.click)
-        #endif
+        .accessibilityHint(enabled ? "Double tap to activate" : "Currently unavailable")
     }
 }

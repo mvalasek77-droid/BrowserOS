@@ -202,33 +202,72 @@ actor MediaDetector {
     }
     
     // MARK: - YouTube Stream URL Extractor
-    // Uses noembed oEmbed API to get video info, then Invidious/yt-dlp proxies for streams
+    // Uses noembed oEmbed API to get video info, then Invidious/yt-dlp proxies for streams.
+    // Multiple instances are tried in order; successful results are cached so a
+    // replay within the cache TTL doesn't re-hit the network.
+    
+    /// In-memory cache of extracted streams keyed by videoID. Entries expire
+    /// after `cacheTTL` seconds so stale Invidious URLs (which are signed and
+    /// time-limited) don't get reused indefinitely.
+    private static var streamCache: [String: (streams: [VideoStream], fetchedAt: Date)] = [:]
+    private static let cacheTTL: TimeInterval = 60 * 10  // 10 minutes
+    
+    /// Public test seam + convenience: clear the cache (used when the user
+    /// explicitly retries a failed extraction).
+    static func clearCache() {
+        streamCache.removeAll()
+    }
     
     func extractYouTubeStreams(videoID: String) async -> [VideoStream] {
+        // Cache hit?
+        if let entry = Self.streamCache[videoID],
+           Date().timeIntervalSince(entry.fetchedAt) < Self.cacheTTL,
+           !entry.streams.isEmpty {
+            return entry.streams
+        }
+        
         var streams: [VideoStream] = []
         
-        // Try Invidious instances for direct stream URLs
+        // A broader, currently-reachable list of public Invidious instances.
+        // Order matters: the first one that returns usable streams wins.
         let instances = [
             "https://inv.nadeko.net",
             "https://invidious.nerdvpn.de",
-            "https://vid.puffyan.us"
+            "https://vid.puffyan.us",
+            "https://invidious.private.coffee",
+            "https://invidious.einfachzocken.eu",
+            "https://invidious.slusd.eu",
+            "https://invidious.f5.si"
         ]
         
         for instance in instances {
-            if let streams2 = try? await fetchInvidiousStreams(instance: instance, videoID: videoID) {
-                streams.append(contentsOf: streams2)
-                if !streams.isEmpty { break }
+            do {
+                let result = try await fetchInvidiousStreams(instance: instance, videoID: videoID)
+                if !result.isEmpty {
+                    streams = result
+                    break
+                }
+            } catch {
+                // Instance down/rate-limited — try the next one.
+                continue
             }
         }
+        
+        // Cache the result (even if empty, to avoid hammering dead instances
+        // for a video that genuinely has no extractable streams).
+        Self.streamCache[videoID] = (streams, Date())
         
         return streams
     }
     
     private func fetchInvidiousStreams(instance: String, videoID: String) async throws -> [VideoStream] {
-        let urlString = "\(instance)/api/v1/videos/\(videoID)"
+        let urlString = "\(instance)/api/v1/videos/\(videoID)?fields=formatStreams,adaptiveFormats"
         guard let url = URL(string: urlString) else { return [] }
         
-        let request = URLRequest(url: url, timeoutInterval: 10)
+        var request = URLRequest(url: url, timeoutInterval: 12)
+        request.setValue("SteroidOS/1.0 (watchOS)", forHTTPHeaderField: "User-Agent")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        
         let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse,
@@ -237,32 +276,46 @@ actor MediaDetector {
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
         
         var streams: [VideoStream] = []
+        var seen: Set<String> = []
         
-        // Parse formatStreams (adaptive) and formatStreams (progressive)
+        // Progressive (combined audio+video) streams — preferred for the watch
+        // because AVPlayer on watchOS handles a single muxed stream more
+        // reliably than separate adaptive tracks.
         if let formatStreams = json["formatStreams"] as? [[String: Any]] {
             for format in formatStreams {
                 guard let urlStr = format["url"] as? String,
-                      let url = URL(string: urlStr) else { continue }
+                      let url = URL(string: urlStr),
+                      !seen.contains(urlStr) else { continue }
+                seen.insert(urlStr)
                 let quality = format["qualityLabel"] as? String ?? format["quality"] as? String ?? "?"
                 let type = format["type"] as? String ?? "video/mp4"
                 let formatStr = type.contains("webm") ? "webm" : "mp4"
+                // Invidious returns bitrate as Int (or omits it); tolerate both.
+                let bitrate: Int? = {
+                    if let i = format["bitrate"] as? Int { return i }
+                    if let s = format["bitrate"] as? String, let i = Int(s) { return i }
+                    return nil
+                }()
                 
                 streams.append(VideoStream(
                     quality: quality,
                     url: url,
                     format: formatStr,
-                    bitrate: Int(format["bitrate"] as? String ?? "0")
+                    bitrate: bitrate
                 ))
             }
         }
         
-        // Also check adaptiveFormats for HLS
-        if let adaptiveFormats = json["adaptiveFormats"] as? [[String: Any]] {
+        // Adaptive formats — video-only tracks. Only use these as a fallback
+        // because the watch will have no audio on a video-only track.
+        if streams.isEmpty, let adaptiveFormats = json["adaptiveFormats"] as? [[String: Any]] {
             for format in adaptiveFormats {
                 guard let urlStr = format["url"] as? String,
                       let url = URL(string: urlStr),
                       let type = format["type"] as? String,
-                      type.hasPrefix("video/") else { continue }
+                      type.hasPrefix("video/"),
+                      !seen.contains(urlStr) else { continue }
+                seen.insert(urlStr)
                 let quality = format["qualityLabel"] as? String ?? format["quality"] as? String ?? "?"
                 let formatStr = type.contains("webm") ? "webm" : "mp4"
                 

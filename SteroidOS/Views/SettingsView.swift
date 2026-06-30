@@ -46,15 +46,25 @@ struct SettingsView: View {
                             .tag(engine.rawValue)
                     }
                 }
-                .onChange(of: searchEngineRaw) { _, _ in pushSettingsToState() }
+                .onChange(of: searchEngineRaw) { _, _ in
+                    SteroidHaptics.selection()
+                    pushSettingsToState()
+                }
+                .accessibilityHint("Choose your default search engine")
             }
 
             // Display
             Section("Display") {
                 Toggle("Default to Reader Mode", isOn: $readerModeDefault)
-                    .onChange(of: readerModeDefault) { _, _ in pushSettingsToState() }
+                    .onChange(of: readerModeDefault) { _, _ in
+                        SteroidHaptics.selection()
+                        pushSettingsToState()
+                    }
                 Toggle("Compress Images", isOn: $compressImages)
-                    .onChange(of: compressImages) { _, _ in pushSettingsToState() }
+                    .onChange(of: compressImages) { _, _ in
+                        SteroidHaptics.selection()
+                        pushSettingsToState()
+                    }
 
                 VStack(alignment: .leading) {
                     Text("Font Size: \(Int(fontSize))")
@@ -62,24 +72,31 @@ struct SettingsView: View {
                     Slider(value: $fontSize, in: 10...22, step: 1) {
                         Text("Font Size")
                     }
-                    .onChange(of: fontSize) { _, _ in pushSettingsToState() }
+                    .onChange(of: fontSize) { _, _ in
+                        SteroidHaptics.selection()
+                        pushSettingsToState()
+                    }
+                    .accessibilityLabel("Font size")
+                    .accessibilityValue("\(Int(fontSize)) points")
                 }
             }
 
             // Privacy
             Section("Privacy") {
                 Toggle("Block Ads", isOn: $blockAds)
-                    .onChange(of: blockAds) { _, _ in pushSettingsToState() }
+                    .onChange(of: blockAds) { _, _ in
+                        SteroidHaptics.selection()
+                        pushSettingsToState()
+                    }
 
                 Button(role: .destructive) {
-                    #if os(watchOS)
-                    WKInterfaceDevice.current().play(.notification)
-                    #endif
+                    SteroidHaptics.warning()
                     browserState.clearHistory()
                 } label: {
                     Label("Clear History", systemImage: "clock")
                 }
                 .accessibilityLabel("Clear browsing history")
+                .accessibilityHint("Removes all visited page entries")
 
                 Button(role: .destructive) {
                     browserState.showClearAllDataAlert = true
@@ -87,12 +104,11 @@ struct SettingsView: View {
                     Label("Clear All Data", systemImage: "trash")
                 }
                 .accessibilityLabel("Clear all browsing data")
+                .accessibilityHint("Removes history and bookmarks — cannot be undone")
                 .alert("Clear All Data?", isPresented: $browserState.showClearAllDataAlert) {
                     Button("Cancel", role: .cancel) {}
                     Button("Clear Everything", role: .destructive) {
-                        #if os(watchOS)
-                        WKInterfaceDevice.current().play(.notification)
-                        #endif
+                        SteroidHaptics.warning()
                         browserState.clearAllData()
                     }
                 } message: {
@@ -103,7 +119,10 @@ struct SettingsView: View {
             // Experimental
             Section {
                 Toggle("YouTube Stream Extraction", isOn: $invidiousEnabled)
-                    .onChange(of: invidiousEnabled) { _, _ in pushSettingsToState() }
+                    .onChange(of: invidiousEnabled) { _, _ in
+                        SteroidHaptics.selection()
+                        pushSettingsToState()
+                    }
 
                 if invidiousEnabled {
                     Text("Uses third-party Invidious instances. May break without warning or violate YouTube's terms of service. Disable to deep-link the official YouTube app instead.")

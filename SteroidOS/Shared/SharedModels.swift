@@ -75,6 +75,114 @@ struct FormField: Identifiable, Codable {
     }
 }
 
+// MARK: - Login Detection
+
+/// Information about a page that requires interactive login (e.g. Claude,
+/// Facebook). The watch uses this to show an "Open on iPhone to sign in"
+/// prompt instead of attempting to render the login form.
+struct LoginRequiredInfo: Codable, Equatable {
+    let url: String
+    let title: String
+    /// Human-readable reason the page was flagged as a login page.
+    let reason: String
+    /// True when the page is a known auth-provider login (Google, Apple, etc.)
+    /// rather than the destination site's own login screen.
+    let isOAuthProvider: Bool
+
+    init(url: String, title: String, reason: String, isOAuthProvider: Bool = false) {
+        self.url = url
+        self.title = title
+        self.reason = reason
+        self.isOAuthProvider = isOAuthProvider
+    }
+}
+
+/// Heuristics for deciding whether a loaded page is an interactive login
+/// screen that the watch cannot meaningfully render. Shared between the
+/// iPhone (DOMParser) and watch (WebFetcher) so both paths agree.
+enum LoginDetector {
+    /// URL substrings that strongly indicate a login/auth screen.
+    private static let loginURLPatterns: [String] = [
+        "/login", "/signin", "/sign_in", "/sign-in", "/account/login",
+        "/auth", "/oauth", "/authenticate", "/session/new",
+        "accounts.google.com", "appleid.apple.com", "auth.openai.com",
+        "/login.php", "/login.html"
+    ]
+
+    /// Hostnames whose root pages are login walls (the whole site gates behind auth).
+    private static let loginGatedHosts: [String] = [
+        "claude.ai", "facebook.com", "www.facebook.com", "m.facebook.com",
+        "mbasic.facebook.com", "instagram.com", "www.instagram.com",
+        "linkedin.com", "www.linkedin.com", "twitter.com", "x.com",
+        "tinder.com", "chatgpt.com"
+    ]
+
+    /// OAuth provider hostnames — these are login pages but not the destination
+    /// site itself (e.g. logging into Claude via Google).
+    private static let oauthProviderHosts: [String] = [
+        "accounts.google.com", "appleid.apple.com", "auth.openai.com",
+        "github.com/login", "login.microsoftonline.com"
+    ]
+
+    /// Detect a login page from URL + extracted elements.
+    /// Returns info when the page looks like a login screen, nil otherwise.
+    static func detect(url: String, title: String, elements: [NativeWebElement]) -> LoginRequiredInfo? {
+        let lowerURL = url.lowercased()
+        let host = URL(string: url)?.host?.lowercased() ?? ""
+
+        // 1. Known OAuth provider in URL → always a login page.
+        for provider in oauthProviderHosts where lowerURL.contains(provider) {
+            return LoginRequiredInfo(url: url, title: title, reason: "Sign-in screen detected", isOAuthProvider: true)
+        }
+
+        // 2. Login-gated site with no content and a login URL pattern.
+        var isLoginGatedHost = false
+        for gated in loginGatedHosts where host == gated || host.hasSuffix("." + gated) {
+            isLoginGatedHost = true
+            break
+        }
+
+        var urlMatchesLogin = false
+        for pattern in loginURLPatterns where lowerURL.contains(pattern) {
+            urlMatchesLogin = true
+            break
+        }
+
+        // 3. Form with a password field present → login form.
+        var hasPasswordField = false
+        var hasEmailField = false
+        var formCount = 0
+        for element in elements {
+            if case .form(_, _, _, let inputs) = element {
+                formCount += 1
+                for field in inputs {
+                    let type = field.type.lowercased()
+                    if type == "password" { hasPasswordField = true }
+                    if type == "email" || field.name.lowercased().contains("email") { hasEmailField = true }
+                }
+            }
+        }
+
+        // Decision logic:
+        // - Password field anywhere → login form (high confidence).
+        // - Login-gated host AND (url matches login OR no real content) → login wall.
+        // - URL matches login pattern AND (form present OR elements are sparse) → login page.
+        if hasPasswordField {
+            return LoginRequiredInfo(url: url, title: title, reason: "Password field detected")
+        }
+
+        if isLoginGatedHost && (urlMatchesLogin || elements.count < 3) {
+            return LoginRequiredInfo(url: url, title: title, reason: "Login required for this site")
+        }
+
+        if urlMatchesLogin && (formCount > 0 || hasEmailField || elements.count < 6) {
+            return LoginRequiredInfo(url: url, title: title, reason: "Login screen detected")
+        }
+
+        return nil
+    }
+}
+
 // MARK: - Reader Content
 struct ReaderContent: Identifiable, Codable {
     let id: UUID

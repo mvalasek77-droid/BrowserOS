@@ -8,6 +8,7 @@ struct WatchVideoPlayerView: View {
     @StateObject private var viewModel = VideoPlayerViewModel()
     @State private var showControls = true
     @State private var showQualityPicker = false
+    @State private var preferredQuality: String = "360p"
     @Environment(\.dismiss) var dismiss
     
     let mediaItem: MediaItem
@@ -50,9 +51,16 @@ struct WatchVideoPlayerView: View {
                 QualityPickerSheet(
                     qualities: viewModel.availableQualities,
                     current: viewModel.currentQuality,
+                    preferredQuality: preferredQuality,
                     onSelect: { stream in
                         viewModel.changeQuality(stream)
                         showQualityPicker = false
+                    },
+                    onSelectPreferred: { quality in
+                        preferredQuality = quality
+                        showQualityPicker = false
+                        // Re-trigger extraction with the new preferred quality.
+                        loadMedia()
                     },
                     onDismiss: { showQualityPicker = false }
                 )
@@ -149,6 +157,20 @@ struct WatchVideoPlayerView: View {
                     }.buttonStyle(.plain)
                 }
                 Spacer()
+                // Quality preference selector (240p/360p) — drives the next
+                // extraction request to the iPhone relay. watchOS doesn't
+                // support Menu, so we toggle a small inline picker.
+                Button {
+                    showQualityPicker = true
+                } label: {
+                    HStack(spacing: 2) {
+                        Image(systemName: "speedometer").font(.system(size: 9))
+                        Text(preferredQuality).font(.system(size: 9))
+                    }
+                    .foregroundStyle(.white.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                Spacer()
                 Button { viewModel.toggleMute() } label: {
                     Image(systemName: viewModel.volume > 0 ? "speaker.wave.2.fill" : "speaker.slash.fill")
                         .font(.system(size: 12))
@@ -187,7 +209,7 @@ struct WatchVideoPlayerView: View {
             ProgressView()
                 .progressViewStyle(.circular)
                 .tint(.white)
-            Text("Loading…")
+            Text(viewModel.errorMessage == nil ? "Extracting stream…" : "Loading…")
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.7))
         }
@@ -201,17 +223,20 @@ struct WatchVideoPlayerView: View {
         case .youtube:
             if let streamURL = mediaItem.streamURL,
                let videoID = extractYouTubeID(from: streamURL) {
-                let invidiousEnabled = UserDefaults.standard.bool(forKey: "steroidos_invidious_enabled")
-                if invidiousEnabled {
-                    Task { await viewModel.playYouTube(videoID: videoID) }
-                } else {
-                    handOffToExternalApp(
-                        scheme: "youtube://watch?v=\(videoID)",
-                        webURL: "https://www.youtube.com/watch?v=\(videoID)",
-                        appName: "YouTube",
-                        activityType: "com.steroidos.youtube"
+                // Always attempt on-watch playback. The ViewModel first tries
+                // the iPhone relay (WatchConnectivity), then falls back to
+                // on-watch Invidious extraction. Only if both fail does it show
+                // an error prompting the user to open the YouTube app.
+                Task {
+                    await viewModel.playYouTube(
+                        videoID: videoID,
+                        preferredQuality: preferredQuality
                     )
                 }
+            } else if let streamURL = mediaItem.streamURL,
+                      let url = URL(string: streamURL) {
+                // A direct stream URL was already provided (rare for YouTube).
+                viewModel.play(url: url)
             }
         case .direct, .vimeo, .dailymotion, .other:
             if let streamURL = mediaItem.streamURL,

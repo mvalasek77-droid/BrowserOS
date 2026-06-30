@@ -461,10 +461,14 @@ struct DOMParser {
             
             // Forms
             var forms = document.querySelectorAll('form');
+            // Track which input elements are already captured inside a <form>
+            // so the orphan-password fallback below doesn't duplicate them.
+            var capturedInputs = new Set();
             forms.forEach(function(form, formIdx) {
                 var inputs = [];
                 var fields = form.querySelectorAll('input, select, textarea');
                 fields.forEach(function(field) {
+                    capturedInputs.add(field);
                     var type = (field.getAttribute('type') || field.tagName.toLowerCase()).toLowerCase();
                     if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'image' || type === 'reset') {
                         if (type === 'submit') {
@@ -496,6 +500,34 @@ struct DOMParser {
                     });
                 }
             });
+
+            // Orphan password/email inputs (SPA login screens like Claude,
+            // Facebook, Google that render inputs outside a <form> element).
+            // Synthesize a virtual form so the watch's LoginDetector can flag it.
+            var orphanPwd = document.querySelector('input[type="password"]');
+            if (orphanPwd && !capturedInputs.has(orphanPwd)) {
+                var orphanInputs = [];
+                document.querySelectorAll('input[type="password"], input[type="email"], input[type="text"]').forEach(function(field) {
+                    if (capturedInputs.has(field)) return;
+                    var type = (field.getAttribute('type') || 'text').toLowerCase();
+                    orphanInputs.push({
+                        name: field.getAttribute('name') || '',
+                        type: type,
+                        placeholder: field.getAttribute('placeholder') || null,
+                        value: null,
+                        label: findLabel(field)
+                    });
+                });
+                if (orphanInputs.length > 0) {
+                    addElement({
+                        type: 'form',
+                        formIndex: forms.length,
+                        action: baseURL,
+                        method: 'POST',
+                        inputs: orphanInputs
+                    });
+                }
+            }
             
             function findLabel(field) {
                 var id = field.getAttribute('id');

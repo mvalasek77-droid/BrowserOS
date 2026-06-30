@@ -145,11 +145,61 @@ class iPhoneBrowserViewModel: ObservableObject {
             addToHistory(url: urlText, title: pageTitle)
         }
 
+        // FAST PREVIEW: immediately extract a quick snapshot (title + first
+        // elements) and send it to the watch so the user sees content while
+        // the full extraction pipeline runs. This runs in the background and
+        // does not block the heavier extractAndSendPageData() call that the
+        // iPhoneWebView coordinator triggers after content stability.
+        sendFastPreviewToWatch()
+
         // NOTE: extractAndSendPageData() is NOT called here for SPA support.
         // The iPhoneWebView coordinator waits for JS content to render before
         // extracting, then calls extractAndSendPageData() via the stability observer.
         // For simple (non-SPA) pages, the content is already in the DOM at didFinish
         // so the observer fires quickly.
+    }
+
+    /// Quickly extract the page title + first few visible elements and send a
+    /// lightweight preview to the Watch. This gives the watch something to show
+    /// within ~100ms of page load, before the full extraction pipeline runs.
+    private func sendFastPreviewToWatch() {
+        guard let webView = webView else { return }
+        // Lightweight JS: grab headings + first paragraphs + links only.
+        let previewJS = """
+        (function() {
+            var result = [];
+            function getText(el) { return (el.innerText || el.textContent || '').trim(); }
+            function addElement(el) { if (result.length >= 5) return; result.push(el); }
+            var h1 = document.querySelector('h1');
+            if (h1) { var t = getText(h1); if (t) addElement({type:'heading', text:t, level:1}); }
+            var h2s = document.querySelectorAll('h2');
+            for (var i = 0; i < h2s.length && result.length < 3; i++) {
+                var t = getText(h2s[i]); if (t) addElement({type:'heading', text:t, level:2});
+            }
+            var paras = document.querySelectorAll('p');
+            for (var i = 0; i < paras.length && result.length < 5; i++) {
+                var t = getText(paras[i]);
+                if (t && t.length > 20) addElement({type:'paragraph', text:t.substring(0, 300)});
+            }
+            return JSON.stringify(result);
+        })();
+        """
+        webView.evaluateJavaScript(previewJS) { [weak self] result, _ in
+            guard let self else { return }
+            let jsonString = (result as? String) ?? "[]"
+            let elements = DOMParser.parseElements(from: jsonString)
+            // Check for login page on the preview elements.
+            if let loginInfo = LoginDetector.detect(url: self.urlText, title: self.pageTitle, elements: elements) {
+                self.sessionManager?.sendLoginRequiredToWatch(tabId: self.currentTabId, info: loginInfo)
+                return
+            }
+            self.sessionManager?.sendPreviewToWatch(
+                tabId: self.currentTabId,
+                url: self.urlText,
+                title: self.pageTitle,
+                elements: elements
+            )
+        }
     }
 
     func onPageLoadFailed(_ error: Error) {
@@ -202,6 +252,26 @@ class iPhoneBrowserViewModel: ObservableObject {
             guard let self else { return }
 
             let elements = DOMParser.parseElements(from: elementsJSON)
+
+            // LOGIN DETECTION: if the full page looks like a login screen,
+            // tell the watch to show "Open on iPhone to sign in" instead of
+            // rendering the (useless on watch) login form. After the user
+            // signs in on the iPhone, cookies persist in the WKWebView and
+            // subsequent navigations will include authenticated content.
+            if let loginInfo = LoginDetector.detect(url: self.urlText, title: self.pageTitle, elements: elements) {
+                self.sessionManager?.sendLoginRequiredToWatch(tabId: self.currentTabId, info: loginInfo)
+                // Still stash the snapshot so a manual "open on watch" after
+                // login can resend the (now authenticated) page.
+                let snapshot = PageSnapshot(
+                    tabId: self.currentTabId,
+                    url: self.urlText,
+                    title: self.pageTitle,
+                    elements: elements,
+                    readerContent: nil
+                )
+                self.lastPageSnapshot = snapshot
+                return
+            }
 
             self.extractReaderMode { [weak self] readerJSON in
                 guard let self else { return }
