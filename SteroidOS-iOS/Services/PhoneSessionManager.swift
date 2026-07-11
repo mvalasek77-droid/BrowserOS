@@ -167,14 +167,21 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         pingTimeoutWorkItem = timeoutItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: timeoutItem)
 
-        session.sendMessage(msg, replyHandler: { [weak self] _ in
+        session.sendMessage(msg, replyHandler: { [weak self] reply in
             DispatchQueue.main.async {
                 timeoutItem.cancel()
                 self?.pingTimeoutWorkItem = nil
                 self?.lastPingRoundTrip = Date().timeIntervalSince(sent)
-                self?.pingStatusMessage = nil
+                self?.pingStatusMessage = "Connected \(String(format: "%.0f", (self?.lastPingRoundTrip ?? 0) * 1000)) ms"
                 self?.isPinging = false
                 self?.pingRetryCount = 0
+                // Clear the "Connected" text after a moment so stale success
+                // doesn't sit next to a fresh failed ping later.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                    if self?.pingStatusMessage?.hasPrefix("Connected") == true {
+                        self?.pingStatusMessage = nil
+                    }
+                }
             }
         }, errorHandler: { [weak self] error in
             DispatchQueue.main.async {

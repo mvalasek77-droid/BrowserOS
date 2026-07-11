@@ -110,7 +110,7 @@ struct WatchConnectionView: View {
             Button {
                 sessionManager.ping()
             } label: {
-                Label("Test Connection", systemImage: "arrow.trianglehead.2.clockwise")
+                Label(sessionManager.isPinging ? "Testing…" : "Test Connection", systemImage: "arrow.trianglehead.2.clockwise")
                     .foregroundStyle(.blue)
             }
             .disabled(sessionManager.isPinging)
@@ -156,14 +156,15 @@ struct WatchConnectionView: View {
     private func openWatchApp() {
         isOpeningWatchApp = true
 
-        // Real schemes to open the Watch app / App Store Watch section.
-        // iOS 26: itms-watch:// and itms-watchs:// route to the Watch app;
-        // itms-apps:// is the App Store fallback. Try them in order.
+        // Schemes to open the native iOS Watch companion app.
+        // `watch://` is handled by the system Watch app on iOS.
+        // `itms-watch://` / `itms-watchs://` fall back to Watch-related
+        // sections if `watch://` is unavailable.
         let candidateURLs = [
+            "watch://",
             "itms-watch://",
             "itms-watchs://",
-            "itms-apps://apps.apple.com/us/app/watch/id1064636943",
-            "watch://"
+            "itms-apps://apps.apple.com/us/app/watch/id1064636943"
         ]
 
         var opened = false
