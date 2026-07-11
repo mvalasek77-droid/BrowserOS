@@ -24,10 +24,16 @@ struct WatchConnectionView: View {
                     Button("Done") { dismiss() }
                 }
             }
-            .alert("Install SteroidOS on Apple Watch", isPresented: $showManualInstructions) {
+            .alert("Open the iOS Watch App", isPresented: $showManualInstructions) {
+                Button("Open Watch App") {
+                    if let url = URL(string: "itms-watch://"),
+                       UIApplication.shared.canOpenURL(url) {
+                        UIApplication.shared.open(url)
+                    }
+                }
                 Button("OK") {}
             } message: {
-                Text("Open the Watch app → My Watch → scroll to SteroidOS under \"Available Apps\" → tap Install.")
+                Text("Tap below to open the Watch app. Once it opens, go to the \"My Watch\" tab, scroll to SteroidOS under \"Available Apps\", and tap Install.")
             }
         }
         .onAppear {
@@ -156,14 +162,16 @@ struct WatchConnectionView: View {
     private func openWatchApp() {
         isOpeningWatchApp = true
 
-        // Schemes to open the native iOS Watch companion app.
-        // `watch://` is handled by the system Watch app on iOS.
-        // `itms-watch://` / `itms-watchs://` fall back to Watch-related
-        // sections if `watch://` is unavailable.
+        // iOS 26 note: Apple has largely folded the Watch companion app and the
+        // Watch App Store together. The public schemes below open the Watch app
+        // if possible; if iOS routes them to the store section, we show a hint
+        // telling the user to switch to the "My Watch" tab.
+        let watchBundle = "com.steroidos.ios.watchapp"
         let candidateURLs = [
-            "watch://",
+            "itms-watch://watch/\(watchBundle)",
+            "itms-watch://mywatch",
             "itms-watch://",
-            "itms-watchs://",
+            "watch://",
             "itms-apps://apps.apple.com/us/app/watch/id1064636943"
         ]
 
