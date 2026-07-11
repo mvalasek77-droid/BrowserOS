@@ -54,12 +54,23 @@ enum WCKey: String {
     case streams
     case streamUrl
     case timestamp
+    /// Mirror mode: `snapshotData` carries a JPEG slice of the iPhone-rendered
+    /// page image; `snapshotWidth`/`snapshotHeight` are the full image pixel
+    /// size; `linkRects` carries the JSON-encoded `[MirrorLink]` tap regions
+    /// (rides on the last chunk only).
+    case snapshotData
+    case snapshotWidth
+    case snapshotHeight
+    case linkRects
 }
 
 enum WCMessageType: String, Codable {
     case pageLoaded
     case pageChunk
     case pagePreview
+    /// A rendered full-page snapshot of the iPhone's page (mirror mode),
+    /// chunked like pageChunk but carrying binary JPEG data.
+    case pageSnapshot
     case pageLoadProgress
     case pageError
     case loginRequired

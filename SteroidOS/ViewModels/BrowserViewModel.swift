@@ -23,6 +23,11 @@ class BrowserViewModel: ObservableObject {
     /// When non-nil, the watch shows an "Open on iPhone to sign in" prompt
     /// with a handoff button instead of rendering the login form.
     @Published var loginRequiredInfo: LoginRequiredInfo? = nil
+    /// Mirror mode: a JPEG of the page as the iPhone rendered it (at watch
+    /// width), plus its tappable link regions. When present, the watch shows
+    /// this image instead of extracted elements.
+    @Published var mirrorImageData: Data? = nil
+    @Published var mirrorLinks: [MirrorLink] = []
     
     /// URL of the page currently loaded or being loaded. Exposed read-only so
     /// BrowserPageView can tell a user navigation apart from the phone echoing
@@ -54,6 +59,8 @@ class BrowserViewModel: ObservableObject {
                     self.isPageLocked = true
                     self.pageElements = []
                     self.readerContent = nil
+                    self.mirrorImageData = nil
+                    self.mirrorLinks = []
                     self.pageTitle = notification.userInfo?["title"] as? String ?? SteroidBrand.name
                     let url = notification.userInfo?["url"] as? String ?? ""
                     if !url.isEmpty {
@@ -103,6 +110,33 @@ class BrowserViewModel: ObservableObject {
             }
         })
 
+        // Mirror snapshot: the page as the iPhone rendered it. Takes display
+        // priority over extracted elements; arrival means the page is done.
+        observerTokens.append(NotificationCenter.default.addObserver(
+            forName: .snapshotLoaded,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            Task { @MainActor in
+                guard let self else { return }
+                guard let imageData = notification.userInfo?["imageData"] as? Data else { return }
+                self.mirrorImageData = imageData
+                self.mirrorLinks = notification.userInfo?["links"] as? [MirrorLink] ?? []
+                self.isLoading = false
+                self.loadingProgress = 1.0
+                self.isShowingPreview = false
+                self.errorMessage = nil
+                self.isPageLocked = false
+                if let title = notification.userInfo?["title"] as? String, !title.isEmpty {
+                    self.pageTitle = title
+                }
+                if let url = notification.userInfo?["url"] as? String, !url.isEmpty {
+                    self.currentURL = url
+                    self.addressBarText = url
+                }
+            }
+        })
+
         observerTokens.append(NotificationCenter.default.addObserver(
             forName: .loginRequired,
             object: nil,
@@ -119,6 +153,8 @@ class BrowserViewModel: ObservableObject {
                 self.isShowingPreview = false
                 self.pageElements = []
                 self.readerContent = nil
+                self.mirrorImageData = nil
+                self.mirrorLinks = []
                 self.pageTitle = title.isEmpty ? (URL(string: url)?.host ?? SteroidBrand.name) : title
                 if !url.isEmpty {
                     self.currentURL = url
@@ -212,6 +248,8 @@ class BrowserViewModel: ObservableObject {
         currentLoadTask?.cancel()
         pageElements = []
         readerContent = nil
+        mirrorImageData = nil
+        mirrorLinks = []
         detectedMedia = []
         isPageLocked = false
         isShowingPreview = false
@@ -264,6 +302,11 @@ class BrowserViewModel: ObservableObject {
         state.updateActiveTab { tab in
             tab.isReaderMode.toggle()
         }
+        // Content is already on the watch — switching between mirror, element,
+        // and reader views is purely local. Only re-request when we have
+        // nothing to show.
+        guard readerContent == nil && pageElements.isEmpty && mirrorImageData == nil else { return }
+
         let url = currentURL.isEmpty ? state.activeTab.url : currentURL
         guard !url.isEmpty else { return }
 

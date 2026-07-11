@@ -24,7 +24,7 @@ struct BrowserPageView: View {
     }
 
     private var hasDisplayedContent: Bool {
-        viewModel.isPageLocked || viewModel.loginRequiredInfo != nil || displayedReaderContent != nil || !displayedPageElements.isEmpty
+        viewModel.isPageLocked || viewModel.loginRequiredInfo != nil || viewModel.mirrorImageData != nil || displayedReaderContent != nil || !displayedPageElements.isEmpty
     }
 
     var body: some View {
@@ -247,9 +247,18 @@ struct BrowserPageView: View {
     /// Extracted so the preview path can reuse it.
     @ViewBuilder
     private func renderContentElements() -> some View {
+        // MIRROR MODE: show the page exactly as the iPhone rendered it, with
+        // tappable link regions. Reader mode switches to the extracted view.
+        if let mirrorData = viewModel.mirrorImageData, !browserState.activeTab.isReaderMode {
+            MirrorPageView(imageData: mirrorData, links: viewModel.mirrorLinks) { url in
+                viewModel.addressBarText = url
+                browserState.navigate(to: url)
+                showHomePage = false
+            }
+        }
         // Reader content is also a fallback when DOM extraction yields no
         // native elements, so the watch does not show a blank mirrored page.
-        if let reader = displayedReaderContent,
+        else if let reader = displayedReaderContent,
            browserState.activeTab.isReaderMode || displayedPageElements.isEmpty {
             ReaderModeView(content: reader)
                 .padding(.horizontal, 8)
@@ -337,6 +346,50 @@ struct BrowserPageView: View {
         .padding(.bottom, 2)
         .steroidGlassCapsule()
         .padding(.horizontal, 4)
+    }
+
+    // MARK: - Mirror Page View
+
+    /// Displays the iPhone-rendered page snapshot with tappable link regions —
+    /// the watch shows exactly what the phone rendered at watch width.
+    struct MirrorPageView: View {
+        let imageData: Data
+        let links: [MirrorLink]
+        let onLinkTap: (String) -> Void
+
+        var body: some View {
+            if let uiImage = UIImage(data: imageData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .overlay(
+                        GeometryReader { geo in
+                            ForEach(Array(links.enumerated()), id: \.offset) { _, link in
+                                Rectangle()
+                                    .fill(Color.clear)
+                                    .contentShape(Rectangle())
+                                    .frame(
+                                        width: max(geo.size.width * link.w, 22),
+                                        height: max(geo.size.height * link.h, 16)
+                                    )
+                                    .position(
+                                        x: geo.size.width * (link.x + link.w / 2),
+                                        y: geo.size.height * (link.y + link.h / 2)
+                                    )
+                                    .onTapGesture {
+                                        SteroidHaptics.tap()
+                                        onLinkTap(link.url)
+                                    }
+                            }
+                        }
+                    )
+            } else {
+                Text("Couldn't decode page snapshot")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 20)
+            }
+        }
     }
 
     private func barButton(icon: String, enabled: Bool, action: @escaping () -> Void) -> some View {

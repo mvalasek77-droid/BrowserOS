@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import WebKit
 import WatchConnectivity
 
@@ -151,6 +152,11 @@ class iPhoneBrowserViewModel: ObservableObject {
         // does not block the heavier extractAndSendPageData() call that the
         // iPhoneWebView coordinator triggers after content stability.
         sendFastPreviewToWatch()
+
+        // MIRROR MODE: render the final URL at watch width and send a
+        // full-page snapshot. Resources are already warm in the shared cache
+        // from the main load, so the mirror render is fast.
+        sendMirrorSnapshotToWatch()
 
         // NOTE: extractAndSendPageData() is NOT called here for SPA support.
         // The iPhoneWebView coordinator waits for JS content to render before
@@ -501,6 +507,32 @@ class iPhoneBrowserViewModel: ObservableObject {
         sessionManager?.sendHistoryToWatch([])
     }
 
+    // MARK: - Mirror Mode
+
+    private let mirrorRenderer = MirrorRenderer()
+
+    /// Render the current page at watch width in the hidden mirror webview and
+    /// ship a full-page snapshot (with tappable link regions) to the watch, so
+    /// the watch shows the page exactly as rendered instead of extracted text.
+    func sendMirrorSnapshotToWatch() {
+        let pageURL = urlText
+        guard !pageURL.isEmpty, sessionManager != nil else { return }
+        mirrorRenderer.render(urlString: pageURL) { [weak self] imageData, pixelWidth, pixelHeight, links in
+            guard let self, let imageData else { return }
+            // The user may have navigated on while the mirror rendered.
+            guard self.urlText == pageURL else { return }
+            self.sessionManager?.sendSnapshotToWatch(
+                tabId: self.currentTabId,
+                url: pageURL,
+                title: self.pageTitle,
+                imageData: imageData,
+                pixelWidth: pixelWidth,
+                pixelHeight: pixelHeight,
+                links: links
+            )
+        }
+    }
+
     private func normalizedURL(from input: String) -> URL? {
         var value = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty else { return nil }
@@ -520,5 +552,179 @@ class iPhoneBrowserViewModel: ObservableObject {
         }
 
         return URL(string: value)
+    }
+}
+
+// MARK: - Mirror Renderer
+
+/// Renders pages in a hidden, watch-width WKWebView and captures a full-page
+/// snapshot so the watch can display the page exactly as the phone renders it.
+/// The webview shares WKWebsiteDataStore.default() with the main browser, so
+/// logins and cookies carry over. Snapshotting needs an active render server,
+/// so this only produces images while the app is foregrounded — the watch
+/// falls back to extracted elements otherwise.
+@MainActor
+final class MirrorRenderer: NSObject, WKNavigationDelegate {
+    /// Watch-friendly viewport width in points. Pages reflow responsively to
+    /// this width, so text on the watch is readable at roughly 1:1 scale.
+    static let viewportWidth: CGFloat = 200
+    /// Cap on captured page height (points) — keeps snapshot size and watch
+    /// memory bounded on very long pages.
+    private let maxCaptureHeight: CGFloat = 2600
+    /// Pixel width of the JPEG sent to the watch (~2x watch point width).
+    private let targetPixelWidth: CGFloat = 400
+
+    private var webView: WKWebView?
+    private var completion: (@MainActor (Data?, Int, Int, [MirrorLink]) -> Void)?
+    private var settleWorkItem: DispatchWorkItem?
+    private var isAttachedToWindow = false
+
+    func render(urlString: String, completion: @escaping @MainActor (Data?, Int, Int, [MirrorLink]) -> Void) {
+        guard let url = URL(string: urlString) else {
+            completion(nil, 0, 0, [])
+            return
+        }
+        let wv = makeWebViewIfNeeded()
+        attachToWindowIfNeeded(wv)
+        settleWorkItem?.cancel()
+        // A newer render supersedes any in-flight one; the old caller's page
+        // is stale anyway.
+        self.completion = completion
+        wv.stopLoading()
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 30
+        wv.load(request)
+    }
+
+    private func makeWebViewIfNeeded() -> WKWebView {
+        if let webView { return webView }
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = WKWebsiteDataStore.default()
+        config.defaultWebpagePreferences.allowsContentJavaScript = true
+        config.allowsInlineMediaPlayback = true
+        let wv = WKWebView(frame: CGRect(x: 0, y: 0, width: Self.viewportWidth, height: 700), configuration: config)
+        wv.navigationDelegate = self
+        wv.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+        wv.isUserInteractionEnabled = false
+        webView = wv
+        return wv
+    }
+
+    /// The webview must live in a window to render; keep it behind the app UI
+    /// (inserted at index 0 so the SwiftUI hierarchy fully covers it).
+    private func attachToWindowIfNeeded(_ wv: WKWebView) {
+        guard !isAttachedToWindow else { return }
+        let window = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }
+        guard let window else { return }
+        window.insertSubview(wv, at: 0)
+        isAttachedToWindow = true
+    }
+
+    // MARK: WKNavigationDelegate
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        // Give SPAs a moment to paint before capturing.
+        settleWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            Task { @MainActor in self?.capture() }
+        }
+        settleWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: item)
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        finish(nil, 0, 0, [])
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        finish(nil, 0, 0, [])
+    }
+
+    private func finish(_ data: Data?, _ width: Int, _ height: Int, _ links: [MirrorLink]) {
+        let callback = completion
+        completion = nil
+        callback?(data, width, height, links)
+    }
+
+    // MARK: Capture
+
+    private func capture() {
+        guard let wv = webView, completion != nil else { return }
+        let contentHeight = max(wv.scrollView.contentSize.height, wv.bounds.height)
+        let captureHeight = min(contentHeight, maxCaptureHeight)
+
+        let linkJS = """
+        (function() {
+            var out = [];
+            var W = \(Self.viewportWidth);
+            var H = \(captureHeight);
+            var anchors = document.querySelectorAll('a[href]');
+            for (var i = 0; i < anchors.length && out.length < 120; i++) {
+                var a = anchors[i];
+                var r = a.getBoundingClientRect();
+                if (r.width < 4 || r.height < 4) continue;
+                var x = r.left + window.scrollX;
+                var y = r.top + window.scrollY;
+                if (y >= H) continue;
+                var href = a.href || '';
+                if (!/^https?:/.test(href)) continue;
+                out.push({
+                    x: Math.max(x / W, 0),
+                    y: Math.max(y / H, 0),
+                    w: Math.min(r.width / W, 1),
+                    h: (Math.min(y + r.height, H) - y) / H,
+                    url: href
+                });
+            }
+            return JSON.stringify(out);
+        })();
+        """
+
+        wv.evaluateJavaScript(linkJS) { [weak self] result, _ in
+            guard let self else { return }
+            var links: [MirrorLink] = []
+            if let json = result as? String, let data = json.data(using: .utf8) {
+                links = (try? JSONDecoder().decode([MirrorLink].self, from: data)) ?? []
+            }
+
+            let config = WKSnapshotConfiguration()
+            config.rect = CGRect(x: 0, y: 0, width: Self.viewportWidth, height: captureHeight)
+            wv.takeSnapshot(with: config) { [weak self] image, error in
+                guard let self else { return }
+                if let error {
+                    ErrorLog.log("Mirror snapshot failed: \(error.localizedDescription)")
+                    self.finish(nil, 0, 0, [])
+                    return
+                }
+                guard let image else {
+                    self.finish(nil, 0, 0, [])
+                    return
+                }
+                let scaled = Self.downscale(image, toPixelWidth: self.targetPixelWidth)
+                guard let jpeg = scaled.jpegData(compressionQuality: 0.55) else {
+                    self.finish(nil, 0, 0, [])
+                    return
+                }
+                let pixelWidth = Int(scaled.size.width * scaled.scale)
+                let pixelHeight = Int(scaled.size.height * scaled.scale)
+                self.finish(jpeg, pixelWidth, pixelHeight, links)
+            }
+        }
+    }
+
+    private static func downscale(_ image: UIImage, toPixelWidth target: CGFloat) -> UIImage {
+        let pixelWidth = image.size.width * image.scale
+        guard pixelWidth > target else { return image }
+        let ratio = target / pixelWidth
+        let newSize = CGSize(width: pixelWidth * ratio, height: image.size.height * image.scale * ratio)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
     }
 }

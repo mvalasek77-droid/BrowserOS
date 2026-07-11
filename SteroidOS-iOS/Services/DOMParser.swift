@@ -357,105 +357,93 @@ struct DOMParser {
             }
             
             // ========== GENERIC EXTRACTOR ==========
-            // Fallback for all other sites — extract semantic HTML elements
-            
-            // Headings h1-h6
-            var headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
-            headings.forEach(function(h) {
-                var level = parseInt(h.tagName.charAt(1));
-                var text = getText(h);
-                if (text) addElement({type: 'heading', text: text, level: level});
-            });
-            
-            // Paragraphs
-            var paras = document.querySelectorAll('p');
-            paras.forEach(function(p) {
-                var text = getText(p);
-                if (text && text.length > 10) {
-                    addElement({type: 'paragraph', text: text});
+            // Fallback for all other sites. Walk matching elements in DOCUMENT
+            // ORDER so the page reads top-to-bottom — the old per-type passes
+            // emitted all headings, then all paragraphs, then all links,
+            // scrambling the page beyond readability. Navigation chrome and
+            // hidden elements are skipped.
+            var seenTexts = {};
+            function isJunk(el) {
+                if (el.closest('nav, footer, aside, [role="navigation"], [role="banner"], [aria-hidden="true"], script, style, noscript')) return true;
+                // Hidden elements (display:none subtrees have a null offsetParent;
+                // position:fixed also does, so allow those through).
+                if (el.offsetParent === null) {
+                    try {
+                        if (getComputedStyle(el).position !== 'fixed') return true;
+                    } catch (e) { return true; }
                 }
-            });
-            
-            // Links
-            var links = document.querySelectorAll('a[href]');
-            links.forEach(function(a) {
-                var text = getText(a);
-                var href = a.getAttribute('href');
-                if (text && href && !href.startsWith('#') && !href.startsWith('javascript:')) {
+                return false;
+            }
+
+            var nodes = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, img[src], a[href], hr, table');
+            nodes.forEach(function(el) {
+                if (result.length >= 200) return;
+                if (isJunk(el)) return;
+                var tag = el.tagName.toLowerCase();
+
+                if (/^h[1-6]$/.test(tag)) {
+                    var text = getText(el);
+                    if (text && !seenTexts['h:' + text]) {
+                        seenTexts['h:' + text] = 1;
+                        addElement({type: 'heading', text: text, level: parseInt(tag.charAt(1))});
+                    }
+                } else if (tag === 'p') {
+                    if (el.closest('blockquote, li')) return; // parent captures the text
+                    var text = getText(el);
+                    if (text && text.length > 10 && !seenTexts['p:' + text]) {
+                        seenTexts['p:' + text] = 1;
+                        addElement({type: 'paragraph', text: text});
+                    }
+                } else if (tag === 'li') {
+                    // Nested list items are already captured in the outer li's text.
+                    if (el.parentElement && el.parentElement.closest('li')) return;
+                    var text = getText(el);
+                    if (text && !seenTexts['li:' + text]) {
+                        seenTexts['li:' + text] = 1;
+                        addElement({type: 'listItem', text: text, ordered: !!el.closest('ol')});
+                    }
+                } else if (tag === 'a') {
+                    // Links whose text already appears inside a captured block
+                    // (paragraph, heading, list item…) would duplicate it.
+                    if (el.closest('p, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, figcaption')) return;
+                    var text = getText(el);
+                    var href = el.getAttribute('href');
+                    if (!text || text.length < 3 || !href || href.startsWith('#') || href.startsWith('javascript:')) return;
+                    if (seenTexts['a:' + text]) return;
+                    seenTexts['a:' + text] = 1;
                     addElement({type: 'link', text: text, url: resolveURL(href)});
-                }
-            });
-            
-            // Images (filter out tiny/decorative ones)
-            var imgs = document.querySelectorAll('img[src]');
-            imgs.forEach(function(img) {
-                var src = img.getAttribute('src');
-                var alt = img.getAttribute('alt') || '';
-                var w = img.naturalWidth || img.width;
-                var h = img.naturalHeight || img.height;
-                // Skip tiny/decorative images (likely icons/spacers)
-                if (src && src.length > 5 && (w > 50 || h > 50 || w === 0)) {
-                    addElement({type: 'image', url: resolveURL(src), alt: alt.substring(0, 200)});
-                }
-            });
-            
-            // List items
-            var lists = document.querySelectorAll('ul, ol');
-            lists.forEach(function(list) {
-                var ordered = list.tagName === 'OL';
-                var items = list.querySelectorAll(':scope > li');
-                var index = 0;
-                items.forEach(function(li) {
-                    var text = getText(li);
-                    if (text) {
-                        addElement({type: 'listItem', text: text, ordered: ordered, index: index});
-                        index++;
+                } else if (tag === 'img') {
+                    var src = el.getAttribute('src');
+                    var alt = el.getAttribute('alt') || '';
+                    var w = el.naturalWidth || el.width;
+                    var h = el.naturalHeight || el.height;
+                    // Only content-sized images — icons/spacers/trackers are noise.
+                    if (src && src.length > 5 && w > 80 && h > 60) {
+                        addElement({type: 'image', url: resolveURL(src), alt: alt.substring(0, 200)});
                     }
-                });
-            });
-            
-            // Blockquotes
-            var quotes = document.querySelectorAll('blockquote');
-            quotes.forEach(function(bq) {
-                var text = getText(bq);
-                if (text) addElement({type: 'blockquote', text: text});
-            });
-            
-            // Code blocks
-            var pres = document.querySelectorAll('pre');
-            pres.forEach(function(pre) {
-                var text = getText(pre);
-                if (text) addElement({type: 'codeBlock', text: text});
-            });
-            
-            // Horizontal rules
-            var hrs = document.querySelectorAll('hr');
-            hrs.forEach(function() {
-                addElement({type: 'divider'});
-            });
-            
-            // Tables
-            var tables = document.querySelectorAll('table');
-            tables.forEach(function(table) {
-                var headers = [];
-                var rows = [];
-                var ths = table.querySelectorAll('th');
-                ths.forEach(function(th) {
-                    headers.push(getText(th));
-                });
-                var trs = table.querySelectorAll('tr');
-                trs.forEach(function(tr) {
-                    var cells = [];
-                    var tds = tr.querySelectorAll('td');
-                    if (tds.length > 0) {
-                        tds.forEach(function(td) {
-                            cells.push(getText(td));
-                        });
-                        rows.push(cells);
+                } else if (tag === 'blockquote') {
+                    var text = getText(el);
+                    if (text) addElement({type: 'blockquote', text: text});
+                } else if (tag === 'pre') {
+                    var text = getText(el);
+                    if (text) addElement({type: 'codeBlock', text: text});
+                } else if (tag === 'hr') {
+                    addElement({type: 'divider'});
+                } else if (tag === 'table') {
+                    var headers = [];
+                    var rows = [];
+                    el.querySelectorAll('th').forEach(function(th) { headers.push(getText(th)); });
+                    el.querySelectorAll('tr').forEach(function(tr) {
+                        var cells = [];
+                        var tds = tr.querySelectorAll('td');
+                        if (tds.length > 0) {
+                            tds.forEach(function(td) { cells.push(getText(td)); });
+                            rows.push(cells);
+                        }
+                    });
+                    if (headers.length > 0 || rows.length > 0) {
+                        addElement({type: 'table', headers: headers, rows: rows});
                     }
-                });
-                if (headers.length > 0 || rows.length > 0) {
-                    addElement({type: 'table', headers: headers, rows: rows});
                 }
             });
             

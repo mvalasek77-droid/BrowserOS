@@ -9,7 +9,7 @@ struct NativeWebContentRenderer: View {
     let onLinkTap: (String) -> Void
     
     var body: some View {
-        LazyVStack(spacing: 12, pinnedViews: []) {
+        LazyVStack(spacing: 8, pinnedViews: []) {
             ForEach(Array(renderableElements.enumerated()), id: \.offset) { _, item in
                 renderElement(item.element, listIndex: item.listIndex)
                     .transition(.asymmetric(insertion: .opacity.combined(with: .move(edge: .top)), removal: .opacity))
@@ -129,20 +129,17 @@ struct HeadingView: View {
 
 struct ParagraphView: View {
     let text: String
-    
+
     var body: some View {
+        // Plain flowing text — boxing every paragraph in a card made pages
+        // read as disconnected fragments.
         Text(text)
-            .font(.system(size: 13, weight: .regular, design: .rounded))
+            .font(.system(size: 14, weight: .regular, design: .rounded))
             .foregroundStyle(.primary)
             .multilineTextAlignment(.leading)
-            .lineSpacing(2)
+            .lineSpacing(3)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.gray.opacity(0.06))
-            )
+            .padding(.horizontal, 4)
     }
 }
 
@@ -154,23 +151,19 @@ struct ListItemView: View {
     let index: Int
     
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 6) {
             Text(ordered ? "\(index)." : "\u{2022}")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .font(.system(size: 14, weight: .bold, design: .rounded))
                 .foregroundStyle(.blue)
-                .frame(width: 20, alignment: .trailing)
-            
+                .frame(width: 18, alignment: .trailing)
+
             Text(text)
-                .font(.system(size: 13, weight: .regular, design: .rounded))
+                .font(.system(size: 14, weight: .regular, design: .rounded))
                 .foregroundStyle(.primary)
+                .lineSpacing(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color.gray.opacity(0.05))
-        )
+        .padding(.horizontal, 4)
     }
 }
 
@@ -182,34 +175,29 @@ struct LinkView: View {
     let onTap: (String) -> Void
     
     var body: some View {
+        // Compact text-style link — the old full-width gradient pills
+        // dominated the page and made mixed content unreadable.
         Button {
             onTap(url)
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "chevron.right.circle.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
-                
+            HStack(alignment: .top, spacing: 5) {
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.blue)
+                    .padding(.top, 3)
+
                 Text(text)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(.white)
-                    .lineLimit(3)
+                    .foregroundStyle(.blue)
+                    .lineLimit(2)
                     .multilineTextAlignment(.leading)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
             .background(
-                LinearGradient(
-                    colors: [Color.blue.opacity(0.9), Color.blue.opacity(0.7)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                ),
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color.blue.opacity(0.1))
             )
         }
         .buttonStyle(LinkButtonStyle())

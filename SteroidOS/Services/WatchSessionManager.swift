@@ -24,6 +24,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     private var pendingChunkTimestamps: [String: Date] = [:]
     /// Tracks the chunk group id for each tabId so a new page load can replace stale chunks.
     private var pendingChunkGroupIds: [String: String] = [:]
+    /// Buffer of incoming mirror-snapshot chunks keyed by tabId, with the same
+    /// group-id/timestamp bookkeeping as page chunks.
+    private var pendingSnapshotChunks: [String: [Int: [String: Any]]] = [:]
+    private var pendingSnapshotTimestamps: [String: Date] = [:]
+    private var pendingSnapshotGroupIds: [String: String] = [:]
     /// Timer that periodically evicts chunks that have been pending too long.
     private var chunkEvictionTimer: Timer?
     
@@ -139,7 +144,10 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
 
             case .pageChunk:
                 self.handlePageChunk(message)
-                
+
+            case .pageSnapshot:
+                self.handleSnapshotChunk(message)
+
             case .pagePreview:
                 self.handlePagePreview(message)
                 
@@ -384,6 +392,73 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         }
     }
 
+    // MARK: - Mirror Snapshot Reassembly
+
+    /// Buffer one snapshot chunk and, once all chunks for a tab have arrived,
+    /// concatenate the JPEG data and post snapshotLoaded so the watch renders
+    /// the page exactly as the phone does.
+    private func handleSnapshotChunk(_ message: [String: Any]) {
+        guard let tabId = message[WCKey.tabId.rawValue] as? String,
+              let chunkIndex = message[WCKey.chunkIndex.rawValue] as? Int,
+              let totalChunks = message[WCKey.totalChunks.rawValue] as? Int else { return }
+        let chunkGroupId = message[WCKey.chunkGroupId.rawValue] as? String ?? tabId
+
+        // A new snapshot group replaces any stale partial one for this tab.
+        if let existingGroupId = pendingSnapshotGroupIds[tabId], existingGroupId != chunkGroupId {
+            pendingSnapshotChunks.removeValue(forKey: tabId)
+            pendingSnapshotTimestamps.removeValue(forKey: tabId)
+            pendingSnapshotGroupIds.removeValue(forKey: tabId)
+        }
+
+        if pendingSnapshotChunks[tabId] == nil {
+            pendingSnapshotChunks[tabId] = [:]
+            pendingSnapshotTimestamps[tabId] = Date()
+            pendingSnapshotGroupIds[tabId] = chunkGroupId
+            scheduleChunkEvictionTimer()
+        }
+        pendingSnapshotChunks[tabId]?[chunkIndex] = message
+
+        guard let chunks = pendingSnapshotChunks[tabId], chunks.count == totalChunks else { return }
+        for i in 0..<totalChunks {
+            guard chunks[i] != nil else { return }
+        }
+
+        pendingSnapshotChunks.removeValue(forKey: tabId)
+        pendingSnapshotTimestamps.removeValue(forKey: tabId)
+        pendingSnapshotGroupIds.removeValue(forKey: tabId)
+
+        var imageData = Data()
+        var url = ""
+        var title = ""
+        var links: [MirrorLink] = []
+        for i in 0..<totalChunks {
+            guard let chunk = chunks[i] else { return }
+            if let slice = chunk[WCKey.snapshotData.rawValue] as? Data {
+                imageData.append(slice)
+            }
+            if url.isEmpty, let u = chunk[WCKey.url.rawValue] as? String { url = u }
+            if title.isEmpty, let t = chunk[WCKey.title.rawValue] as? String { title = t }
+            if i == totalChunks - 1,
+               let json = chunk[WCKey.linkRects.rawValue] as? String,
+               let data = json.data(using: .utf8) {
+                links = (try? JSONDecoder().decode([MirrorLink].self, from: data)) ?? []
+            }
+        }
+        guard !imageData.isEmpty else { return }
+
+        NotificationCenter.default.post(
+            name: .snapshotLoaded,
+            object: nil,
+            userInfo: [
+                "tabId": tabId,
+                "imageData": imageData,
+                "links": links,
+                "url": url,
+                "title": title
+            ]
+        )
+    }
+
     // MARK: - Fast Preview Handling
 
     /// Handle a fast preview message (title + first few elements). Post a
@@ -468,7 +543,15 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             ErrorLog.log("Evicted stale chunks for tabId=\(id) after \(staleTimeout)s timeout")
             NotificationCenter.default.post(name: .pageError, object: nil, userInfo: ["error": "Page chunks timed out and were evicted", "tabId": id])
         }
-        if pendingChunks.isEmpty {
+        // Snapshot chunks time out quietly — the element view is already showing.
+        let staleSnapshotIds = pendingSnapshotTimestamps.filter { now.timeIntervalSince($0.value) > staleTimeout }.map(\.key)
+        for id in staleSnapshotIds {
+            pendingSnapshotChunks.removeValue(forKey: id)
+            pendingSnapshotTimestamps.removeValue(forKey: id)
+            pendingSnapshotGroupIds.removeValue(forKey: id)
+            ErrorLog.log("Evicted stale snapshot chunks for tabId=\(id)")
+        }
+        if pendingChunks.isEmpty && pendingSnapshotChunks.isEmpty {
             chunkEvictionTimer?.invalidate()
             chunkEvictionTimer = nil
         }
@@ -667,6 +750,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
 
 extension Notification.Name {
     static let pageLoaded = Notification.Name("pageLoaded")
+    static let snapshotLoaded = Notification.Name("snapshotLoaded")
     static let pageLoadProgress = Notification.Name("pageLoadProgress")
     static let pageError = Notification.Name("pageError")
     static let loginRequired = Notification.Name("loginRequired")

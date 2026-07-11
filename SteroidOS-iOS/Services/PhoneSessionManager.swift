@@ -454,6 +454,50 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         return chunks
     }
     
+    /// Send a rendered page snapshot (mirror mode) to the Watch. The JPEG is
+    /// sliced into chunks under the ~65KB sendMessage limit; link tap regions
+    /// ride on the last chunk. All chunks use one transport, mirroring
+    /// sendPageToWatch.
+    func sendSnapshotToWatch(tabId: UUID, url: String, title: String, imageData: Data, pixelWidth: Int, pixelHeight: Int, links: [MirrorLink]) {
+        guard !imageData.isEmpty else { return }
+        let chunkGroupId = UUID().uuidString
+        let maxChunkBytes = 50_000
+        var slices: [Data] = []
+        var offset = 0
+        while offset < imageData.count {
+            let end = min(offset + maxChunkBytes, imageData.count)
+            slices.append(imageData.subdata(in: offset..<end))
+            offset = end
+        }
+        let totalChunks = slices.count
+        let useInteractive = session?.isReachable ?? false
+
+        for (idx, slice) in slices.enumerated() {
+            var payload: [String: Any] = [
+                WCKey.messageType.rawValue: WCMessageType.pageSnapshot.rawValue,
+                WCKey.tabId.rawValue: tabId.uuidString,
+                WCKey.url.rawValue: url,
+                WCKey.title.rawValue: title,
+                WCKey.chunkIndex.rawValue: idx,
+                WCKey.totalChunks.rawValue: totalChunks,
+                WCKey.chunkGroupId.rawValue: chunkGroupId,
+                WCKey.snapshotData.rawValue: slice,
+                WCKey.snapshotWidth.rawValue: pixelWidth,
+                WCKey.snapshotHeight.rawValue: pixelHeight
+            ]
+            if idx == totalChunks - 1, !links.isEmpty,
+               let data = try? JSONEncoder().encode(links),
+               let json = String(data: data, encoding: .utf8) {
+                payload[WCKey.linkRects.rawValue] = json
+            }
+            sendPayloadUnified(payload, useInteractive: useInteractive)
+        }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.lastSyncDate = Date()
+        }
+    }
+
     private var lastProgressSent: Double = -1
     private var lastProgressSentAt: Date = .distantPast
 

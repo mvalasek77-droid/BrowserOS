@@ -183,6 +183,19 @@ enum LoginDetector {
     }
 }
 
+// MARK: - Mirror Link
+
+/// A tappable link region on a mirrored page snapshot. Coordinates are
+/// normalized (0–1) relative to the captured page rect so they map onto the
+/// snapshot image at any display size on the watch.
+struct MirrorLink: Codable {
+    let x: Double
+    let y: Double
+    let w: Double
+    let h: Double
+    let url: String
+}
+
 // MARK: - Reader Content
 struct ReaderContent: Identifiable, Codable {
     let id: UUID
