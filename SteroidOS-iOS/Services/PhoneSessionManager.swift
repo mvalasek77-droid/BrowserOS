@@ -14,6 +14,11 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var lastSyncDate: Date? = nil
     @Published var lastPingRoundTrip: Double? = nil  // seconds
     @Published var pingStatusMessage: String?
+    @Published var isPinging: Bool = false
+    
+    private var pingRetryCount = 0
+    private let maxPingRetries = 2
+    private var pingTimeoutWorkItem: DispatchWorkItem?
     
     // Callbacks that the browser view model hooks into
     var onLoadURL: ((String) -> Void)?
@@ -97,44 +102,94 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     
     /// Send a timestamped ping to the watch and record the round-trip time.
     /// If the session isn't activated yet, re-activates and retries once.
+    /// Guards against spam-taps via `isPinging`, caps retries, and times out.
     func ping() {
         guard let session else {
             pingStatusMessage = "Session not available"
             return
         }
 
+        guard !isPinging else {
+            pingStatusMessage = "Ping already in progress…"
+            return
+        }
+
+        isPinging = true
+        pingRetryCount = 0
+        performPing(session: session)
+    }
+
+    private func performPing(session: WCSession) {
         // If not yet activated, trigger activation and schedule a retry
         guard session.activationState == .activated else {
             pingStatusMessage = "Activating session…"
             session.activate()
-            // Retry after a short delay to give activation time to complete
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                self?.ping()
+                guard let self else { return }
+                if self.pingRetryCount < self.maxPingRetries {
+                    self.pingRetryCount += 1
+                    self.performPing(session: session)
+                } else {
+                    self.isPinging = false
+                    self.pingStatusMessage = "Could not activate WatchConnectivity session."
+                }
             }
             return
         }
 
         guard session.isReachable else {
             pingStatusMessage = "Watch not reachable — wake your watch and try again."
+            isPinging = false
             return
         }
 
         pingStatusMessage = "Sending ping…"
+        lastPingRoundTrip = nil
         let sent = Date()
         let msg: [String: Any] = [
             WCKey.messageType.rawValue: WCMessageType.ping.rawValue,
             "sentAt": sent.timeIntervalSince1970
         ]
+
+        // Timeout: if the watch doesn't reply within 5 seconds, mark as failed.
+        pingTimeoutWorkItem?.cancel()
+        let timeoutItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            if self.pingRetryCount < self.maxPingRetries {
+                self.pingRetryCount += 1
+                self.performPing(session: session)
+                return
+            }
+            self.pingStatusMessage = "Ping timed out — watch did not respond."
+            self.lastPingRoundTrip = nil
+            self.isPinging = false
+        }
+        pingTimeoutWorkItem = timeoutItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0, execute: timeoutItem)
+
         session.sendMessage(msg, replyHandler: { [weak self] _ in
             DispatchQueue.main.async {
+                timeoutItem.cancel()
+                self?.pingTimeoutWorkItem = nil
                 self?.lastPingRoundTrip = Date().timeIntervalSince(sent)
                 self?.pingStatusMessage = nil
+                self?.isPinging = false
+                self?.pingRetryCount = 0
             }
         }, errorHandler: { [weak self] error in
             DispatchQueue.main.async {
+                timeoutItem.cancel()
+                self?.pingTimeoutWorkItem = nil
+                if let self, self.pingRetryCount < self.maxPingRetries {
+                    self.pingRetryCount += 1
+                    self.performPing(session: session)
+                    return
+                }
                 self?.pingStatusMessage = "Ping failed: \(error.localizedDescription)"
+                self?.lastPingRoundTrip = nil
+                self?.isPinging = false
             }
-                ErrorLog.log("Ping failed: \(error.localizedDescription)")
+            ErrorLog.log("Ping failed: \(error.localizedDescription)")
         })
     }
     
