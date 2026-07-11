@@ -123,8 +123,6 @@ struct WatchHomePage: View {
         .accessibilityLabel("\(SteroidBrand.name). \(SteroidBrand.tagline)")
     }
 
-    // MARK: - Section Card (TikTok-style vertical card with Liquid Glass)
-
     private func sectionCard(_ section: CardSection) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             // Section header with icon pill
@@ -185,11 +183,11 @@ struct WatchHomePage: View {
 
                     // Glass overlay — uses Liquid Glass on iOS 26 / watchOS 26
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(.ultraThinMaterial.opacity(0.15))
+                        .fill(.ultraThinMaterial.opacity(0.25))
 
-                    // Subtle inner border (frosted edge light)
+                    // Subtle inner border (frosted edge light) — adaptive to theme
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 0.5)
 
                     // Icon
                     Image(systemName: tile.icon)
@@ -276,7 +274,7 @@ struct WatchHomePage: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Color.black.opacity(0.2))
+                            .fill(.ultraThinMaterial.opacity(0.3))
                     )
                 }
                 .buttonStyle(.plain)
@@ -307,13 +305,17 @@ struct WatchHomePage: View {
             UIApplication.shared.open(web)
         }
         #else
+        handoffToPhone(scheme: scheme, webURL: webURL, appName: appName, activityType: activityType)
+        #endif
+    }
+
+    private func handoffToPhone(scheme: String, webURL: String, appName: String, activityType: String) {
         let activity = NSUserActivity(activityType: activityType)
         activity.webpageURL = URL(string: webURL)
         activity.title = "Open in \(appName)"
         activity.userInfo = ["url": webURL]
         activity.becomeCurrent()
         browserState.navigate(to: webURL)
-        #endif
     }
 
     // MARK: - Haptics

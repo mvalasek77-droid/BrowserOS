@@ -10,9 +10,9 @@ enum SteroidBrand {
     static let termsAcceptedVersionKey = "steroidos_terms_accepted_version"
     static let currentTermsVersion = 1
 
-    static let privacyPolicyURL = URL(string: "https://mvalasek77-droid.github.io/BrowserOS/apple-connect/privacy-policy.html")!
-    static let termsOfUseURL = URL(string: "https://mvalasek77-droid.github.io/BrowserOS/apple-connect/terms-of-use.html")!
-    static let bugReportURL = URL(string: "https://github.com/mvalasek77-droid/BrowserOS/issues/new")!
+    static let privacyPolicyURL = URL(string: "https://mvalasek77-droid.github.io/BrowserOS/apple-connect/privacy-policy.html") ?? URL(string: "about:blank")!
+    static let termsOfUseURL = URL(string: "https://mvalasek77-droid.github.io/BrowserOS/apple-connect/terms-of-use.html") ?? URL(string: "about:blank")!
+    static let bugReportURL = URL(string: "https://github.com/mvalasek77-droid/BrowserOS/issues/new") ?? URL(string: "about:blank")!
 
     // MARK: - Design Tokens (iOS 26 Liquid Glass ready)
 

@@ -24,6 +24,12 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     var onRemoveBookmark: ((UUID) -> Void)?
     var onClearHistory: (() -> Void)?
     
+    /// Optional extractor that can pull streams from the current webview.
+    /// Set by the browser view model so `playMedia` requests can use the
+    /// loaded YouTube page's own ytInitialPlayerResponse instead of flaky
+    /// third-party Invidious instances.
+    var onExtractYouTubeStreamsFromWebView: ((String, @escaping ([VideoStream]) -> Void) -> Void)?
+    
     private var session: WCSession?
     
     override init() {
@@ -225,10 +231,57 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         }
         let requestedQuality = message[WCKey.quality.rawValue] as? String ?? "360p"
         
+        // Primary path: ask the browser view model to extract streams from the
+        // currently loaded YouTube page. This uses YouTube's own player response
+        // and is far more reliable than public Invidious instances.
+        if let webViewExtractor = onExtractYouTubeStreamsFromWebView {
+            webViewExtractor(videoID) { [weak self] streams in
+                guard let self else { return }
+                if !streams.isEmpty {
+                    self.sendStreamReply(streams: streams, videoID: videoID, requestedQuality: requestedQuality, replyHandler: replyHandler)
+                    return
+                }
+                // Webview extraction failed or isn't on the right page — fall back.
+                self.extractAndReplyWithInvidious(videoID: videoID, requestedQuality: requestedQuality, replyHandler: replyHandler)
+            }
+            return
+        }
+        
+        // Fallback path if no webview extractor is registered.
+        extractAndReplyWithInvidious(videoID: videoID, requestedQuality: requestedQuality, replyHandler: replyHandler)
+    }
+    
+    private func sendStreamReply(streams: [VideoStream], videoID: String, requestedQuality: String, replyHandler: @escaping ([String: Any]) -> Void) {
+        let chosen = YouTubeStreamExtractor.pickBestStream(from: streams, preferredQuality: requestedQuality)
+        
+        let encoder = JSONEncoder()
+        var reply: [String: Any] = [
+            WCKey.videoId.rawValue: videoID,
+            WCKey.quality.rawValue: chosen?.quality ?? requestedQuality
+        ]
+        
+        if let chosen = chosen {
+            reply[WCKey.streamUrl.rawValue] = chosen.url.absoluteString
+        }
+        
+        if let data = try? encoder.encode(streams),
+           let json = String(data: data, encoding: .utf8) {
+            reply[WCKey.streams.rawValue] = json
+        }
+        
+        if chosen == nil {
+            reply[WCKey.error.rawValue] = "Could not pick a suitable stream for video \(videoID)."
+        }
+        
+        DispatchQueue.main.async {
+            replyHandler(reply)
+        }
+    }
+    
+    private func extractAndReplyWithInvidious(videoID: String, requestedQuality: String, replyHandler: @escaping ([String: Any]) -> Void) {
         Task {
             let streams = await YouTubeStreamExtractor.shared.extractStreams(videoID: videoID)
             
-            // Pick the best stream for the requested quality (watch-friendly).
             let chosen = YouTubeStreamExtractor.pickBestStream(
                 from: streams,
                 preferredQuality: requestedQuality
@@ -250,7 +303,8 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
             }
             
             if chosen == nil {
-                reply[WCKey.error.rawValue] = "No playable stream found for video \(videoID)"
+                let tried = YouTubeStreamExtractor.shared.instances.joined(separator: ", ")
+                reply[WCKey.error.rawValue] = "Could not extract a playable stream for video \(videoID). Tried Invidious instances: \(tried). Check network or try again later."
             }
             
             DispatchQueue.main.async {
@@ -266,7 +320,11 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     /// falls back to transferUserInfo for background delivery.
     /// All chunks use the SAME transport to avoid reassembly failures.
     func sendPageToWatch(tabId: UUID, url: String, title: String, elements: [NativeWebElement], readerContent: ReaderContent?) {
-        let chunks = Self.chunkElements(elements, maxPayloadBytes: 45_000)
+        // A unique group id ties every chunk of this page together so the
+        // Watch can reassemble the full payload even if chunks arrive out
+        // of order or interleave with chunks from a different tab.
+        let chunkGroupId = UUID().uuidString
+        let chunks = Self.chunkElements(elements, maxPayloadBytes: 58_000)
         let payloadChunks = chunks.isEmpty ? [[]] : chunks
         let totalChunks = payloadChunks.count
         let encoder = JSONEncoder()
@@ -282,7 +340,8 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                 WCKey.url.rawValue: url,
                 WCKey.title.rawValue: title,
                 WCKey.chunkIndex.rawValue: idx,
-                WCKey.totalChunks.rawValue: totalChunks
+                WCKey.totalChunks.rawValue: totalChunks,
+                WCKey.chunkGroupId.rawValue: chunkGroupId
             ]
 
             if let data = try? encoder.encode(chunk),
@@ -411,10 +470,9 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         sendPayload(payload)
     }
     
-    /// Send current browser settings to Watch (Pro only)
+    /// Send current browser settings to Watch.
     @MainActor
     func sendSettingsToWatch(_ settings: BrowserSettings) {
-        guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(settings),
               let json = String(data: data, encoding: .utf8) else {
             ErrorLog.log("Failed to encode settings for Watch sync")
@@ -426,11 +484,10 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         ]
         sendPayload(payload)
     }
-    
-    /// Send current bookmarks to Watch (Pro only)
+
+    /// Send current bookmarks to Watch.
     @MainActor
     func sendBookmarksToWatch(_ bookmarks: [Bookmark]) {
-        guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(bookmarks),
               let json = String(data: data, encoding: .utf8) else {
             ErrorLog.log("Failed to encode bookmarks for Watch sync")
@@ -442,11 +499,10 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         ]
         sendPayload(payload)
     }
-    
-    /// Send current history to Watch (Pro only)
+
+    /// Send current history to Watch.
     @MainActor
     func sendHistoryToWatch(_ history: [HistoryEntry]) {
-        guard EntitlementManager.shared.isPro else { return }
         guard let data = try? JSONEncoder().encode(history),
               let json = String(data: data, encoding: .utf8) else {
             ErrorLog.log("Failed to encode history for Watch sync")
@@ -458,7 +514,7 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         ]
         sendPayload(payload)
     }
-    
+
     /// Send a fast preview (title + first few elements) to the Watch so it
     /// can show content immediately while the full extraction pipeline runs.
     /// The Watch renders this preview but keeps the loading indicator active

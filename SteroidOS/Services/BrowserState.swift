@@ -243,8 +243,9 @@ class BrowserState: ObservableObject {
         guard tabs.count > 1 else { return }
         tabs.removeAll { $0.id == tabId }
         if activeTabId == tabId {
-            // tabs is guaranteed non-empty because count was > 1 before removal
-            activeTabId = tabs.first!.id
+            // Safe fallback: if tabs becomes empty, generate a new UUID so the
+            // state remains valid. activeTab recomputes the fallback new tab.
+            activeTabId = tabs.first?.id ?? UUID()
             resetTransientPageState(showLoading: shouldShowLoading(for: activeTab.url))
         }
     }

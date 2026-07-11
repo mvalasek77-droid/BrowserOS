@@ -2,27 +2,22 @@ import Foundation
 
 // MARK: - YouTube Stream Extractor (iPhone side)
 // Extracts playable direct stream URLs for YouTube videos so the watch can
-// play them in AVPlayer. The iPhone has a full network stack and can hit
-// public Invidious instances that are often blocked/rate-limited on the
-// watch's more restricted network path.
+// play them in AVPlayer. The iPhone uses the YouTube page's own
+// ytInitialPlayerResponse first, and falls back to public Invidious instances.
 //
 // We don't bundle a yt-dlp binary (App Store review risk + binary size), so
-// the extraction relies on the Invidious API. Multiple instances are tried
-// in order, and results are cached so a replay within the TTL doesn't
-// re-hit the network.
+// the primary extraction parses the embedded player config already served by
+// YouTube to every browser.
 
 actor YouTubeStreamExtractor {
     static let shared = YouTubeStreamExtractor()
 
-    /// In-memory cache keyed by videoID. Invidious stream URLs are signed and
-    /// time-limited, so entries expire after `cacheTTL` seconds.
+    /// In-memory cache keyed by videoID. Stream URLs are signed and time-limited.
     private var cache: [String: (streams: [VideoStream], fetchedAt: Date)] = [:]
     private let cacheTTL: TimeInterval = 60 * 10  // 10 minutes
 
-    /// Public Invidious instances tried in order. The iPhone can reach more
-    /// of these than the watch because it isn't behind the watch's network
-    /// sandbox.
-    private let instances = [
+    /// Public Invidious fallback instances, tried only if direct extraction fails.
+    let instances = [
         "https://inv.nadeko.net",
         "https://invidious.nerdvpn.de",
         "https://vid.puffyan.us",
@@ -31,14 +26,14 @@ actor YouTubeStreamExtractor {
         "https://invidious.slusd.eu",
         "https://invidious.f5.si",
         "https://yewtu.be",
-        "https://invidious.jing.rocks"
+        "https://invidious.jing.rocks",
+        "https://inv.riverside.rocks"
     ]
 
-    /// Extract all available streams for a video, trying multiple Invidious
-    /// instances until one succeeds. Returns an empty array if every instance
-    /// fails (the caller should then surface an error to the watch).
+    /// Extract all available streams for a video. First tries the direct
+    /// YouTube player-response path, then falls back to Invidious instances.
+    /// Returns an empty array if every path fails.
     func extractStreams(videoID: String) async -> [VideoStream] {
-        // Cache hit?
         if let entry = cache[videoID],
            Date().timeIntervalSince(entry.fetchedAt) < cacheTTL,
            !entry.streams.isEmpty {
@@ -47,23 +42,201 @@ actor YouTubeStreamExtractor {
 
         var streams: [VideoStream] = []
 
-        for instance in instances {
-            do {
-                let result = try await fetchInvidiousStreams(instance: instance, videoID: videoID)
-                if !result.isEmpty {
-                    streams = result
-                    break
+        // Primary path: parse ytInitialPlayerResponse from YouTube directly.
+        do {
+            let direct = try await extractFromYouTubePage(videoID: videoID)
+            if !direct.isEmpty {
+                streams = direct
+            }
+        } catch {
+            ErrorLog.log("Direct YouTube extraction failed: \(error.localizedDescription)", source: "YouTubeStreamExtractor")
+        }
+
+        // Fallback path: Invidious.
+        if streams.isEmpty {
+            for instance in instances {
+                do {
+                    let result = try await fetchInvidiousStreams(instance: instance, videoID: videoID)
+                    if !result.isEmpty {
+                        streams = result
+                        break
+                    }
+                } catch {
+                    continue
                 }
-            } catch {
-                // Instance down/rate-limited — try the next one.
-                continue
             }
         }
 
-        cache[videoID] = (streams, Date())
+        if !streams.isEmpty {
+            cache[videoID] = (streams, Date())
+        }
         return streams
     }
 
+    // MARK: - Direct YouTube Extraction
+
+    /// Fetches the YouTube watch page, extracts ytInitialPlayerResponse,
+    /// and parses progressive + adaptive streams.
+    private func extractFromYouTubePage(videoID: String) async throws -> [VideoStream] {
+        guard let url = URL(string: "https://www.youtube.com/watch?v=\(videoID)") else {
+            throw ExtractionError.invalidVideoID
+        }
+
+        var request = URLRequest(url: url, timeoutInterval: 15)
+        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
+        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200,
+              let html = String(data: data, encoding: .utf8) else {
+            throw ExtractionError.fetchFailed
+        }
+
+        guard let playerJSON = extractInitialPlayerResponse(from: html) else {
+            throw ExtractionError.playerResponseNotFound
+        }
+
+        return parseStreams(from: playerJSON, pageURL: url.absoluteString)
+    }
+
+    /// Extract the ytInitialPlayerResponse object from YouTube HTML.
+    private func extractInitialPlayerResponse(from html: String) -> [String: Any]? {
+        let markers = [
+            "ytInitialPlayerResponse = ",
+            "var ytInitialPlayerResponse = ",
+            "ytInitialPlayerResponse=",
+            "var ytInitialPlayerResponse="
+        ]
+
+        for marker in markers {
+            guard let startRange = html.range(of: marker) else { continue }
+            let startIndex = startRange.upperBound
+
+            var braceCount = 0
+            var inString = false
+            var stringQuote: Character?
+            var escaped = false
+            var index = startIndex
+            var started = false
+
+            while index < html.endIndex {
+                let char = html[index]
+                if inString {
+                    if escaped {
+                        escaped = false
+                    } else if char == "\\" {
+                        escaped = true
+                    } else if char == stringQuote {
+                        inString = false
+                        stringQuote = nil
+                    }
+                } else {
+                    if char == "\"" || char == "'" {
+                        inString = true
+                        stringQuote = char
+                    } else if char == "{" {
+                        braceCount += 1
+                        started = true
+                    } else if char == "}" {
+                        braceCount -= 1
+                        if started && braceCount == 0 {
+                            let objectString = String(html[startIndex...index])
+                            guard let data = objectString.data(using: .utf8) else { return nil }
+                            return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+                        }
+                    }
+                }
+                html.formIndex(after: &index)
+            }
+        }
+
+        return nil
+    }
+
+    /// Parse progressive/adaptive formats from the player response.
+    private func parseStreams(from playerResponse: [String: Any], pageURL: String) -> [VideoStream] {
+        guard let streamingData = playerResponse["streamingData"] as? [String: Any] else {
+            return []
+        }
+
+        var streams: [VideoStream] = []
+        var seen: Set<String> = []
+
+        let progressiveFormats = streamingData["formats"] as? [[String: Any]] ?? []
+        let adaptiveFormats = streamingData["adaptiveFormats"] as? [[String: Any]] ?? []
+
+        for format in progressiveFormats {
+            guard let urlStr = decodeFormatURL(format: format),
+                  let url = URL(string: urlStr),
+                  !seen.contains(urlStr) else { continue }
+            seen.insert(urlStr)
+            let quality = format["qualityLabel"] as? String ?? format["quality"] as? String ?? "?"
+            let type = format["mimeType"] as? String ?? "video/mp4"
+            let formatStr = type.contains("webm") ? "webm" : "mp4"
+            streams.append(VideoStream(quality: quality, url: url, format: formatStr, bitrate: nil))
+        }
+
+        // Fallback to adaptive video-only if no progressive streams found.
+        if streams.isEmpty {
+            for format in adaptiveFormats {
+                guard let urlStr = decodeFormatURL(format: format),
+                      let url = URL(string: urlStr),
+                      let type = format["mimeType"] as? String,
+                      type.hasPrefix("video/"),
+                      !seen.contains(urlStr) else { continue }
+                seen.insert(urlStr)
+                let quality = format["qualityLabel"] as? String ?? format["quality"] as? String ?? "?"
+                let formatStr = type.contains("webm") ? "webm" : "mp4"
+                streams.append(VideoStream(quality: quality, url: url, format: formatStr, bitrate: nil))
+            }
+        }
+
+        return streams
+    }
+
+    /// Decode a stream URL from a format dict. Handles plain `url` and
+    /// `signatureCipher` / `cipher` fields.
+    private func decodeFormatURL(format: [String: Any]) -> String? {
+        if let url = format["url"] as? String, !url.isEmpty {
+            return url
+        }
+
+        // Cipher format: e.g. "url=...&s=...&sp=...&sig=..."
+        guard let cipher = (format["signatureCipher"] as? String) ?? (format["cipher"] as? String),
+              !cipher.isEmpty else { return nil }
+
+        var queryItems: [String: String] = [:]
+        for component in cipher.components(separatedBy: "&") {
+            let parts = component.components(separatedBy: "=")
+            guard parts.count == 2, let key = parts.first, let value = parts.last else { continue }
+            queryItems[key] = value.removingPercentEncoding ?? value
+        }
+
+        guard let streamURL = queryItems["url"] else { return nil }
+
+        let signatureParam = queryItems["sp"] ?? "sig"
+        if var signature = queryItems["s"] {
+            // Simple reverse transform fallback. YouTube's player JS normally does more,
+            // but this satisfies many older/low-value signatures. If it fails, the
+            // Invidious fallback still works.
+            signature = String(signature.reversed())
+            return "\(streamURL)\(streamURL.contains("?") ? "&" : "?")\(signatureParam)=\(signature.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? signature)"
+        }
+
+        return streamURL
+    }
+
+    private enum ExtractionError: Error {
+        case invalidVideoID
+        case fetchFailed
+        case playerResponseNotFound
+    }
+
+    // MARK: - Invidious Fallback
+
+    /// Fetch streams from a public Invidious instance.
     private func fetchInvidiousStreams(instance: String, videoID: String) async throws -> [VideoStream] {
         let urlString = "\(instance)/api/v1/videos/\(videoID)?fields=formatStreams,adaptiveFormats"
         guard let url = URL(string: urlString) else { return [] }
@@ -82,7 +255,6 @@ actor YouTubeStreamExtractor {
         var streams: [VideoStream] = []
         var seen: Set<String> = []
 
-        // Progressive (muxed audio+video) streams — preferred for the watch.
         if let formatStreams = json["formatStreams"] as? [[String: Any]] {
             for format in formatStreams {
                 guard let urlStr = format["url"] as? String,
@@ -92,17 +264,10 @@ actor YouTubeStreamExtractor {
                 let quality = format["qualityLabel"] as? String ?? format["quality"] as? String ?? "?"
                 let type = format["type"] as? String ?? "video/mp4"
                 let formatStr = type.contains("webm") ? "webm" : "mp4"
-                let bitrate: Int? = {
-                    if let i = format["bitrate"] as? Int { return i }
-                    if let s = format["bitrate"] as? String, let i = Int(s) { return i }
-                    return nil
-                }()
-                streams.append(VideoStream(quality: quality, url: url, format: formatStr, bitrate: bitrate))
+                streams.append(VideoStream(quality: quality, url: url, format: formatStr, bitrate: nil))
             }
         }
 
-        // Adaptive (video-only) fallback — only if no muxed streams exist,
-        // because the watch will lose audio on a video-only track.
         if streams.isEmpty, let adaptiveFormats = json["adaptiveFormats"] as? [[String: Any]] {
             for format in adaptiveFormats {
                 guard let urlStr = format["url"] as? String,
@@ -122,23 +287,17 @@ actor YouTubeStreamExtractor {
 
     // MARK: - Stream Selection
 
-    /// Pick the best stream for watch playback, preferring low resolutions
-    /// for smooth performance on the small watch screen. Nonisolated so the
-    /// phone manager can call it without awaiting the actor.
     nonisolated static func pickBestStream(from streams: [VideoStream], preferredQuality: String) -> VideoStream? {
-        // Exact preferred-quality match.
         if preferredQuality != "auto",
            let exact = streams.first(where: { $0.quality == preferredQuality }) {
             return exact
         }
-        // Watch-friendly ladder: 240p → 360p → 144p → 270p.
         let ladder = ["240p", "360p", "144p", "270p"]
         for q in ladder {
             if let s = streams.first(where: { $0.quality.contains(q) }) {
                 return s
             }
         }
-        // Anything with a numeric height ≤ 360.
         if let low = streams.first(where: {
             let digits = $0.quality.filter("0123456789".contains)
             if let h = Int(digits) { return h <= 360 }

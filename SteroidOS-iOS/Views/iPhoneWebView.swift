@@ -9,9 +9,11 @@ import WebKit
 struct iPhoneWebView: UIViewRepresentable {
     @ObservedObject var viewModel: iPhoneBrowserViewModel
 
-    /// Desktop Safari UA — forces sites to serve full HTML with semantic content
-    /// instead of mobile SPAs that render everything via JS after page load.
-    private static let desktopUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+    /// Modern iPhone Safari UA. A desktop UA was originally used to force full HTML,
+    /// but it causes many popular sites to serve anti-bot or phone-unfriendly desktop
+    /// layouts inside a small webview. Using a current iPhone UA lets SPAs render
+    /// their mobile layouts and avoids playback/login blocks.
+    private static let iPhoneUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -32,7 +34,7 @@ struct iPhoneWebView: UIViewRepresentable {
         webView.uiDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsLinkPreview = true
-        webView.customUserAgent = Self.desktopUserAgent
+        webView.customUserAgent = Self.iPhoneUserAgent
         webView.isOpaque = false
         webView.backgroundColor = .systemBackground
         webView.scrollView.backgroundColor = .systemBackground

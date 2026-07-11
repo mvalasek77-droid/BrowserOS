@@ -12,8 +12,8 @@ struct BrowserTab: Identifiable, Codable {
     var navigationStack: [String] = []
     var forwardStack: [String] = []
     
-    init(url: String = "", title: String = "New Tab") {
-        self.id = UUID()
+    init(id: UUID? = nil, url: String = "", title: String = "New Tab") {
+        self.id = id ?? UUID()
         self.url = url
         self.title = title
     }

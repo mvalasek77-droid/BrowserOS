@@ -28,6 +28,8 @@ struct HistoryView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("No history. Pages you visit will appear here.")
             } else {
                 ForEach(filteredHistory.prefix(200)) { entry in
                     Button {

@@ -9,7 +9,6 @@ struct MainNavigationView: View {
             // Tab 1: Browser
             NavigationStack {
                 BrowserPageView(tabId: browserState.activeTab.id)
-                    .id(browserState.activeTab.id)
             }
             .tabItem {
                 Label("Browse", systemImage: "globe")

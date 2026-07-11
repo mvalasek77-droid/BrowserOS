@@ -22,6 +22,8 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     private var pendingChunks: [String: [Int: [String: Any]]] = [:]
     /// Tracks when each tabId first started receiving chunks, for stale eviction.
     private var pendingChunkTimestamps: [String: Date] = [:]
+    /// Tracks the chunk group id for each tabId so a new page load can replace stale chunks.
+    private var pendingChunkGroupIds: [String: String] = [:]
     /// Timer that periodically evicts chunks that have been pending too long.
     private var chunkEvictionTimer: Timer?
     
@@ -180,6 +182,14 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                             "media": items
                         ]
                     )
+                    // DEBUG AUTO-PLAY signal: broadcast directly so any
+                    // active BrowserPageView can auto-open the player for
+                    // verification without relying on BrowserViewModel routing.
+                    NotificationCenter.default.post(
+                        name: .mediaDetectedOnActiveTab,
+                        object: nil,
+                        userInfo: ["media": items]
+                    )
                 }
                 
             case .navigationState:
@@ -259,6 +269,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         guard let tabId = message[WCKey.tabId.rawValue] as? String,
               let chunkIndex = message[WCKey.chunkIndex.rawValue] as? Int,
               let totalChunks = message[WCKey.totalChunks.rawValue] as? Int else { return }
+        let chunkGroupId = message[WCKey.chunkGroupId.rawValue] as? String ?? tabId
 
         // Locked page: free-tier users get title + URL only, no elements.
         // Post a locked pageLoaded so the watch UI shows the Pro upsell.
@@ -267,6 +278,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             let title = (message[WCKey.title.rawValue] as? String) ?? ""
             pendingChunks[tabId] = nil
             pendingChunkTimestamps.removeValue(forKey: tabId)
+            pendingChunkGroupIds.removeValue(forKey: tabId)
             NotificationCenter.default.post(
                 name: .pageLoaded,
                 object: nil,
@@ -282,23 +294,28 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             return
         }
 
-        // Stale chunk eviction: if a new tabId arrives, clear all chunks for previous tabIds
-        if !pendingChunks.isEmpty {
-            let otherTabIds = pendingChunks.keys.filter { $0 != tabId }
-            for oldId in otherTabIds {
-                pendingChunks.removeValue(forKey: oldId)
-                pendingChunkTimestamps.removeValue(forKey: oldId)
-            }
+        // Stale chunk eviction: if a different chunk group arrives, clear the
+        // previous group for this tabId so the new page can reassembly cleanly.
+        if let existingGroupId = pendingChunkGroupIds[tabId], existingGroupId != chunkGroupId {
+            pendingChunks.removeValue(forKey: tabId)
+            pendingChunkTimestamps.removeValue(forKey: tabId)
+            pendingChunkGroupIds.removeValue(forKey: tabId)
         }
 
         if pendingChunks[tabId] == nil {
             pendingChunks[tabId] = [:]
             pendingChunkTimestamps[tabId] = Date()
+            pendingChunkGroupIds[tabId] = chunkGroupId
             scheduleChunkEvictionTimer()
         }
         pendingChunks[tabId]?[chunkIndex] = message
 
-        guard let chunks = pendingChunks[tabId], chunks.count >= totalChunks else { return }
+        guard let chunks = pendingChunks[tabId], chunks.count == totalChunks else { return }
+
+        // Verify every index is present before clearing the buffer.
+        for i in 0..<totalChunks {
+            guard chunks[i] != nil else { return }
+        }
 
         // All chunks present — assemble in order.
         // Always clear the buffer first so a partial-decode failure cannot leak it.
@@ -311,7 +328,8 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         var readerContent: ReaderContent? = nil
         for i in 0..<totalChunks {
             guard let chunk = chunks[i] else {
-                // A chunk is registered but its slot is empty — bail gracefully.
+                // Defensive: every index was verified above, but if a chunk
+                // disappeared, bail without posting a broken page.
                 return
             }
             if let elementsJSON = chunk[WCKey.elements.rawValue] as? String,
@@ -627,6 +645,7 @@ extension Notification.Name {
     static let pageError = Notification.Name("pageError")
     static let loginRequired = Notification.Name("loginRequired")
     static let mediaDetected = Notification.Name("mediaDetected")
+    static let mediaDetectedOnActiveTab = Notification.Name("mediaDetectedOnActiveTab")
     static let navigationStateChanged = Notification.Name("navigationStateChanged")
     static let settingsSynced = Notification.Name("settingsSynced")
     static let bookmarksSynced = Notification.Name("bookmarksSynced")

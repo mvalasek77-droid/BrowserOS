@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct BrowserPageView: View {
     let tabId: UUID
@@ -89,7 +90,7 @@ struct BrowserPageView: View {
             }
         }
         .onChange(of: browserState.activeTab.url) { _, newURL in
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            withAnimation(SteroidBrand.AnimationTiming.mediumSpring) {
                 showHomePage = newURL.isEmpty || newURL == "https://duckduckgo.com/" || newURL == "https://duckduckgo.com"
             }
             if !showHomePage && !newURL.isEmpty {
@@ -110,15 +111,15 @@ struct BrowserPageView: View {
                 SteroidHaptics.warning()
             }
         }
+        // DEBUG AUTO-PLAY: open the player automatically when a YouTube video
+        // is detected. Removed before shipping to avoid unwanted media auto-play.
     }
-
-    // MARK: - Loading Bar (animated gradient)
 
     private var loadingBar: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(Color.gray.opacity(0.15))
+                    .fill(Color.secondary.opacity(0.15))
 
                 RoundedRectangle(cornerRadius: 1)
                     .fill(
@@ -129,13 +130,13 @@ struct BrowserPageView: View {
                         )
                     )
                     .frame(width: max(geo.size.width * viewModel.loadingProgress, 4))
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.loadingProgress)
+                    .animation(SteroidBrand.AnimationTiming.mediumSpring, value: viewModel.loadingProgress)
             }
         }
         .frame(height: 3)
         .padding(.horizontal, 8)
         .transition(.opacity.combined(with: .move(edge: .top)))
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: viewModel.isLoading)
+        .animation(SteroidBrand.AnimationTiming.mediumSpring, value: viewModel.isLoading)
     }
 
     // MARK: - Standalone Mode Banner
@@ -144,13 +145,13 @@ struct BrowserPageView: View {
         HStack(spacing: 4) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.caption2)
-                .foregroundStyle(.black)
+                .foregroundStyle(.primary)
             Text("Standalone Mode")
                 .font(.caption2.bold())
             Text("— No JavaScript, limited rendering")
                 .font(.caption2)
         }
-        .foregroundStyle(.black)
+        .foregroundStyle(.primary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(.yellow.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
@@ -259,6 +260,22 @@ struct BrowserPageView: View {
                 }
             )
             .padding(.horizontal, 4)
+        } else if !displayedMedia.isEmpty {
+            // Media is available but no readable text elements. Show a hint so
+            // the user can tap the media banner above instead of seeing an error.
+            VStack(spacing: 8) {
+                Image(systemName: "play.circle")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.blue)
+                Text("Media available")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Text("Tap the banner above to watch.")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 80)
+            .padding(.top, 12)
         } else {
             // Empty state — content failed to load silently
             VStack(spacing: 8) {
@@ -333,5 +350,6 @@ struct BrowserPageView: View {
         .disabled(!enabled)
         .accessibilityLabel(icon == "chevron.left" ? "Go back" : icon == "chevron.right" ? "Go forward" : icon == "arrow.clockwise" ? "Reload" : "Reader mode")
         .accessibilityHint(enabled ? "Double tap to activate" : "Currently unavailable")
+        .scaleEffect(enabled ? 1.0 : 0.95)
     }
 }

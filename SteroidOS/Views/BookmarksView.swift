@@ -19,6 +19,8 @@ struct BookmarksView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("No bookmarks. Browse a page and add it here.")
             } else {
                 ForEach(browserState.bookmarks) { bookmark in
                     NavigationLink {

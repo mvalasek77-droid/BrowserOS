@@ -24,6 +24,11 @@ enum WCKey: String {
     case formValues
     case chunkIndex
     case totalChunks
+    /// Identifies a single logical large payload split into multiple chunks.
+    /// All chunks for one payload share the same `chunkGroupId` so the Watch
+    /// can reassemble them even when chunks from different tabs overlap or
+    /// arrive out of order.
+    case chunkGroupId
     case settingsData
     /// True when the page content is gated behind Pro. The watch shows a
     /// "Subscribe to see full content" message instead of blank space.

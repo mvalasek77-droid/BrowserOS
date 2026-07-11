@@ -280,13 +280,17 @@ struct WatchVideoPlayerView: View {
             viewModel.errorMessage = "Install the \(appName) app to continue."
         }
         #else
+        handoffToPhone(scheme: scheme, webURL: webURL, appName: appName, activityType: activityType)
+        #endif
+    }
+    
+    private func handoffToPhone(scheme: String, webURL: String, appName: String, activityType: String) {
         let activity = NSUserActivity(activityType: activityType)
         activity.webpageURL = URL(string: webURL)
         activity.title = "Open in \(appName)"
         activity.userInfo = ["url": webURL]
         activity.becomeCurrent()
         viewModel.errorMessage = "Continue on your iPhone — open in the \(appName) app via Handoff."
-        #endif
     }
     
     private func formatTime(_ seconds: Double) -> String {

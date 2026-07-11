@@ -162,8 +162,11 @@ class BrowserViewModel: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 guard self.shouldHandle(notification) else { return }
-                if let items = notification.userInfo?["media"] as? [MediaItem] {
+                if let items = notification.userInfo?["media"] as? [MediaItem], !items.isEmpty {
                     self.detectedMedia = items
+                    // Also broadcast a local signal so the UI layer can
+                    // automatically open the player during verification.
+                    NotificationCenter.default.post(name: .mediaDetectedOnActiveTab, object: nil, userInfo: ["media": items])
                 }
             }
         })
@@ -314,8 +317,8 @@ class BrowserViewModel: ObservableObject {
         // The current protocol identifies page payloads with the iPhone-side
         // tab UUID. Watch-originated loadURL messages do not send a watch tab
         // UUID for the phone to echo back, so rejecting mismatched IDs causes
-        // valid mirrored pages to be ignored. Adopt the remote ID instead.
-        activeTabId = incomingTabId
-        return true
+        // valid mirrored pages to be ignored. Verify the incoming ID matches
+        // our active tab instead of mutating it.
+        return activeTabId == incomingTabId || activeTabId == nil
     }
 }

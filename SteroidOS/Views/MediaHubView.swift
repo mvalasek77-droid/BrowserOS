@@ -51,7 +51,11 @@ struct MediaHubView: View {
                     }
                 }
                 .pickerStyle(.automatic)
-                
+                .accessibilityLabel("Choose streaming platform")
+                .onChange(of: selectedPlatform) { _, _ in
+                    SteroidHaptics.selection()
+                }
+
                 // Search bar
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
@@ -62,12 +66,15 @@ struct MediaHubView: View {
                         .font(.system(size: 13))
                         .textInputAutocapitalization(.never)
                         .onSubmit {
+                            SteroidHaptics.tap()
                             searchMedia()
                         }
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
+                .steroidGlassCapsule()
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Search \(selectedPlatform.rawValue)")
                 
                 // Quick links
                 VStack(spacing: 6) {
@@ -128,6 +135,7 @@ struct MediaBrowseItemRow: View {
     
     var body: some View {
         Button {
+            SteroidHaptics.tap()
             browserState.navigate(to: item.mediaURL)
         } label: {
             HStack(spacing: 8) {
@@ -145,7 +153,7 @@ struct MediaBrowseItemRow: View {
                                 .foregroundStyle(item.sourceColor)
                         default:
                             Rectangle()
-                                .fill(Color.gray.opacity(0.2))
+                                .fill(Color.secondary.opacity(0.15))
                                 .overlay { ProgressView().controlSize(.mini) }
                         }
                     }
@@ -186,6 +194,8 @@ struct MediaBrowseItemRow: View {
             .padding(.vertical, 4)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Play \(item.title)")
+        .accessibilityHint("Navigate to this media page")
     }
 }
 
@@ -267,6 +277,7 @@ struct SectionHeader: View {
             .font(.system(size: 11, weight: .bold))
             .foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -277,7 +288,10 @@ struct QuickLinkButton: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            SteroidHaptics.tap()
+            action()
+        }) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 14))
@@ -296,8 +310,10 @@ struct QuickLinkButton: View {
             }
             .padding(.vertical, 6)
             .padding(.horizontal, 8)
-            .background(Color.gray.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+            .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Open \(title)")
+        .accessibilityHint("Navigate to this page")
     }
 }

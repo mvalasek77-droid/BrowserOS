@@ -154,7 +154,11 @@ struct WatchConnectionView: View {
 
     private func openWatchApp() {
         isOpeningWatchApp = true
-        let watchAppURL = URL(string: "watch://")!
+        guard let watchAppURL = URL(string: "watch://") else {
+            isOpeningWatchApp = false
+            showManualInstructions = true
+            return
+        }
         if UIApplication.shared.canOpenURL(watchAppURL) {
             UIApplication.shared.open(watchAppURL) { success in
                 DispatchQueue.main.async {

@@ -234,20 +234,9 @@ class iPhoneBrowserViewModel: ObservableObject {
     /// Extract page data from the webview and send to Watch.
     /// Called by iPhoneWebView coordinator after content stability wait.
     ///
-    /// Pro entitlement gate: free users only get the page title + URL on the
-    /// watch (via `sendLockedPageToWatch`). Pro users get the full content —
-    /// page elements, reader mode, and media detection.
+    /// All users receive the full page content on the Watch. Pro-only
+    /// advanced features are gated elsewhere.
     func extractAndSendPageData() {
-        // Pro gate — free users get a locked notification, not page content.
-        guard EntitlementManager.shared.isPro else {
-            sessionManager?.sendLockedPageToWatch(
-                tabId: currentTabId,
-                url: urlText,
-                title: pageTitle
-            )
-            return
-        }
-
         extractDOM { [weak self] elementsJSON in
             guard let self else { return }
 
@@ -329,10 +318,9 @@ class iPhoneBrowserViewModel: ObservableObject {
     }
 
     /// Detect media elements on the current page.
-    /// Pro only — free users don't get media detection.
+    /// Media detection is available to all users; Pro-only advanced features
+    /// are gated separately.
     func detectMedia() {
-        guard EntitlementManager.shared.isPro else { return }
-
         let js = DOMParser.mediaDetectionJavaScript
 
         webView?.evaluateJavaScript(js) { [weak self] result, error in
@@ -352,16 +340,6 @@ class iPhoneBrowserViewModel: ObservableObject {
 
     @discardableResult
     func resendCurrentPageToWatch() -> Bool {
-        // Pro gate for manual "send to watch" taps.
-        guard EntitlementManager.shared.isPro else {
-            sessionManager?.sendLockedPageToWatch(
-                tabId: currentTabId,
-                url: urlText,
-                title: pageTitle
-            )
-            return false
-        }
-
         guard let snapshot = lastPageSnapshot, snapshot.tabId == currentTabId else {
             extractAndSendPageData()
             return false
@@ -428,6 +406,49 @@ class iPhoneBrowserViewModel: ObservableObject {
 
         // Push current settings/bookmarks/history to the Watch on connect.
         syncAllToWatch()
+
+        // Wire up YouTube stream extraction from the current webview.
+        setupYouTubeStreamExtraction(sessionManager: sessionManager)
+    }
+
+    /// Extract YouTube streams from the currently loaded webview using
+    /// YouTube's own ytInitialPlayerResponse object. This is the primary
+    /// extraction path because public Invidious instances are unreliable.
+    func setupYouTubeStreamExtraction(sessionManager: PhoneSessionManager) {
+        sessionManager.onExtractYouTubeStreamsFromWebView = { [weak self] videoID, completion in
+            guard let self, let webView = self.webView else {
+                completion([])
+                return
+            }
+
+            // Make sure the current page is actually the requested video.
+            let currentURL = webView.url?.absoluteString ?? ""
+            guard currentURL.contains(videoID) else {
+                ErrorLog.log("WebView not on video \(videoID) page (current: \(currentURL))")
+                completion([])
+                return
+            }
+
+            let js = YouTubeWebExtractor.javaScriptToReadPlayerResponse
+
+            webView.evaluateJavaScript(js) { result, error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        ErrorLog.log("WebView player response extraction error: \(error.localizedDescription)")
+                        completion([])
+                        return
+                    }
+                    guard let jsonString = result as? String, !jsonString.isEmpty, jsonString != "null" else {
+                        ErrorLog.log("WebView player response empty for video \(videoID)")
+                        completion([])
+                        return
+                    }
+                    let streams = YouTubeWebExtractor.parsePlayerResponse(jsonString: jsonString, pageURL: currentURL)
+                    ErrorLog.log("WebView extraction returned \(streams.count) streams for \(videoID)")
+                    completion(streams)
+                }
+            }
+        }
     }
 
     /// Push the current iPhone-side settings, bookmarks, and history to the

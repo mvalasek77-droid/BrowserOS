@@ -70,8 +70,6 @@ struct LoginRequiredView: View {
 // Shimmer placeholder shown while page content is being fetched/loaded.
 
 struct SkeletonLoadingView: View {
-    @State private var animateShimmer = false
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             // Title skeleton
@@ -87,11 +85,11 @@ struct SkeletonLoadingView: View {
 
             // Image skeleton
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.gray.opacity(0.1))
+                .fill(Color.secondary.opacity(0.08))
                 .frame(height: 70)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.gray.opacity(0.05), lineWidth: 0.5)
+                        .stroke(Color.secondary.opacity(0.05), lineWidth: 0.5)
                 )
 
             // More body
@@ -100,19 +98,12 @@ struct SkeletonLoadingView: View {
             skeletonLine(width: 140, height: 10)
         }
         .padding(.vertical, 8)
-        .onAppear {
-            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                animateShimmer = true
-            }
-        }
-        .onDisappear {
-            animateShimmer = false
-        }
+        .steroidShimmer(isActive: true)
     }
 
     private func skeletonLine(width: CGFloat, height: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: height / 2)
-            .fill(animateShimmer ? Color.gray.opacity(0.15) : Color.gray.opacity(0.08))
+            .fill(Color.secondary.opacity(0.12))
             .frame(width: width, height: height)
     }
 }

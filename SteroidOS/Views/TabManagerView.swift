@@ -1,7 +1,7 @@
 import SwiftUI
-#if os(watchOS)
-import WatchKit
-#endif
+
+// MARK: - Tab Manager View
+// List of open browser tabs with subtle spring interactions and adaptive haptics.
 
 struct TabManagerView: View {
     @EnvironmentObject var browserState: BrowserState
@@ -18,6 +18,8 @@ struct TabManagerView: View {
                         .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel("New tab")
+                .accessibilityHint("Create a new browsing tab")
             }
 
             Section("Open Tabs") {
@@ -74,6 +76,7 @@ struct TabManagerView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Open tab \(tab.title.isEmpty ? "New Tab" : tab.title)")
+            .accessibilityHint("Switch to this tab")
 
             if browserState.tabs.count > 1 {
                 Button(role: .destructive) {
@@ -87,6 +90,7 @@ struct TabManagerView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Close tab")
+                .accessibilityHint("Remove this browsing tab")
             }
         }
         .padding(.horizontal, 8)
@@ -97,22 +101,20 @@ struct TabManagerView: View {
         )
     }
 
-    private func haptic(_ type: HapticType) {
-        #if os(watchOS)
-        switch type {
-        case .click:
-            WKInterfaceDevice.current().play(.click)
-        case .success:
-            WKInterfaceDevice.current().play(.success)
-        case .notification:
-            WKInterfaceDevice.current().play(.notification)
-        }
-        #endif
-    }
-
     private enum HapticType {
         case click
         case success
         case notification
+    }
+
+    private func haptic(_ type: HapticType) {
+        switch type {
+        case .click:
+            SteroidHaptics.selection()
+        case .success:
+            SteroidHaptics.success()
+        case .notification:
+            SteroidHaptics.warning()
+        }
     }
 }

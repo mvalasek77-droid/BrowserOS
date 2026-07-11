@@ -638,6 +638,12 @@ struct DOMParser {
     /// provided fields, fires input+change events (so onChange validators run),
     /// and clicks the submit button (preferring click over form.submit() so the
     /// page's onSubmit handlers and onClick validation fire).
+    ///
+    /// For SPAs (Facebook, ChatGPT, Claude, Google) the orphan-password
+    /// detector synthesizes a virtual form whose index is `document.forms.length`.
+    /// That index does not exist in `document.forms`, so we fall back to filling
+    /// the first visible password/email/text inputs and clicking the nearest
+    /// submit button — or pressing Enter on the password field.
     static func formSubmitJavaScript(formIndex: Int, values: [String: String]) -> String {
         guard let valuesData = try? JSONSerialization.data(withJSONObject: values, options: []),
               let valuesJSON = String(data: valuesData, encoding: .utf8) else {
@@ -645,26 +651,104 @@ struct DOMParser {
         }
         return """
         (function() {
-            var form = document.forms[\(formIndex)];
-            if (!form) { return 'form_not_found'; }
             var values = \(valuesJSON);
-            for (var name in values) {
-                if (!values.hasOwnProperty(name)) continue;
-                var field = form.elements[name];
-                if (!field) continue;
+            var form = document.forms[\(formIndex)];
+
+            function fillField(field, value) {
+                if (!field || value == null) return false;
                 try {
                     field.focus();
-                    field.value = values[name];
-                    field.dispatchEvent(new Event('input', { bubbles: true }));
-                    field.dispatchEvent(new Event('change', { bubbles: true }));
-                    field.blur();
-                } catch(e) { /* ignore per-field errors */ }
+                    // React and other controlled inputs cache the native setter, so use it.
+                    var nativeInputSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+                    var nativeTextareaSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+                    if (nativeInputSetter && field instanceof window.HTMLInputElement) {
+                        nativeInputSetter.call(field, value);
+                    } else if (nativeTextareaSetter && field instanceof window.HTMLTextAreaElement) {
+                        nativeTextareaSetter.call(field, value);
+                    } else {
+                        field.value = value;
+                    }
+                    ['focus', 'input', 'change', 'keyup', 'keydown', 'keypress', 'blur'].forEach(function(evt) {
+                        field.dispatchEvent(new Event(evt, { bubbles: true, cancelable: true }));
+                    });
+                    return true;
+                } catch(e) { return false; }
             }
-            var btn = form.querySelector('input[type="submit"], button[type="submit"], button:not([type])');
+
+            function clickSubmit(startNode) {
+                // Prefer an explicit submit button inside or near the form.
+                var candidates = [];
+                if (startNode) {
+                    candidates = Array.from(startNode.querySelectorAll('input[type="submit"], button[type="submit"], button:not([type])'));
+                }
+                if (candidates.length === 0) {
+                    candidates = Array.from(document.querySelectorAll('input[type="submit"], button[type="submit"], button:not([type])'));
+                }
+                // Click the first visible button whose text/aria-label suggests submission.
+                for (var i = 0; i < candidates.length; i++) {
+                    var btn = candidates[i];
+                    var text = (btn.innerText || btn.value || btn.getAttribute('aria-label') || '').toLowerCase();
+                    if (text.match(/(submit|log in|login|sign in|signin|continue|next|go|start)/)) {
+                        try { btn.click(); return true; } catch(e) {}
+                    }
+                }
+                // Fallback: click the first visible candidate.
+                for (var i = 0; i < candidates.length; i++) {
+                    var btn = candidates[i];
+                    var rect = btn.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        try { btn.click(); return true; } catch(e) {}
+                    }
+                }
+                return false;
+            }
+
+            if (form) {
+                // Real HTML form path.
+                for (var name in values) {
+                    if (!values.hasOwnProperty(name)) continue;
+                    var field = form.elements[name];
+                    if (!field) continue;
+                    fillField(field, values[name]);
+                }
+                if (clickSubmit(form)) return 'submitted';
+                try { form.submit(); } catch(e) {}
+                return 'submitted';
+            }
+
+            // SPA/orphan form fallback.
+            var pwd = document.querySelector('input[type="password"]');
+            if (!pwd) return 'form_not_found';
+            var container = pwd.closest('form') || pwd.closest('div, section, article, main, body');
+            var fields = container ? Array.from(container.querySelectorAll('input[type="password"], input[type="email"], input[type="text"], input[type="tel"], input:not([type])')) : [];
+            if (fields.length === 0) {
+                fields = Array.from(document.querySelectorAll('input[type="password"], input[type="email"], input[type="text"], input[type="tel"], input:not([type])'));
+            }
+
+            // Fill by name match first.
+            for (var name in values) {
+                if (!values.hasOwnProperty(name)) continue;
+                var matched = fields.find(function(f) { return (f.name || f.id || f.placeholder || '').toLowerCase() === name.toLowerCase(); });
+                if (!matched) {
+                    // Type-based heuristic when names don't match.
+                    if (name.toLowerCase().includes('pass')) matched = fields.find(function(f) { return f.type === 'password'; });
+                    else if (name.toLowerCase().includes('mail') || name.toLowerCase().includes('user') || name.toLowerCase().includes('login')) {
+                        matched = fields.find(function(f) { return f.type === 'email' || f.type === 'text'; });
+                    }
+                }
+                fillField(matched, values[name]);
+            }
+
+            if (clickSubmit(container || pwd)) return 'submitted';
+
+            // Last resort: dispatch Enter key on the password field.
             try {
-                if (btn) { btn.click(); }
-                else { form.submit(); }
-            } catch(e) { form.submit(); }
+                pwd.focus();
+                var event = new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true });
+                pwd.dispatchEvent(event);
+                var up = new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true });
+                pwd.dispatchEvent(up);
+            } catch(e) {}
             return 'submitted';
         })();
         """
