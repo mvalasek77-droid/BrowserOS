@@ -24,7 +24,10 @@ class BrowserViewModel: ObservableObject {
     /// with a handoff button instead of rendering the login form.
     @Published var loginRequiredInfo: LoginRequiredInfo? = nil
     
-    private var currentURL: String = ""
+    /// URL of the page currently loaded or being loaded. Exposed read-only so
+    /// BrowserPageView can tell a user navigation apart from the phone echoing
+    /// back the final (possibly redirected) URL of the page we already asked for.
+    private(set) var currentURL: String = ""
     private var activeTabId: UUID?
     private let sessionManager = WatchSessionManager.shared
     private var currentLoadTask: Task<Void, Never>?
@@ -89,11 +92,13 @@ class BrowserViewModel: ObservableObject {
                     self.isShowingPreview = true
                     // Keep isLoading true so the skeleton/spinner stays visible
                     // while the full content is on its way.
+                    self.isLoading = true
                 } else {
                     self.isShowingPreview = false
                     self.isLoading = false
                     self.loadingProgress = 1.0
                     self.loginRequiredInfo = nil
+                    self.errorMessage = nil
                 }
             }
         })
@@ -133,8 +138,15 @@ class BrowserViewModel: ObservableObject {
                 guard let self else { return }
                 guard self.shouldHandle(notification) else { return }
                 if let progress = notification.userInfo?["progress"] as? Double {
-                    self.loadingProgress = progress
-                    self.isLoading = progress < 1.0
+                    // The phone reports 1.0 at WKWebView didFinish, but the
+                    // extracted content arrives seconds later (after the SPA
+                    // stability wait). Cap the bar and keep the loading state
+                    // active until pageLoaded/pageError actually clears it —
+                    // otherwise the watch flashes "Couldn't load this page".
+                    self.loadingProgress = min(progress, 0.95)
+                    if progress < 1.0 {
+                        self.isLoading = true
+                    }
                 }
             }
         })
@@ -308,17 +320,11 @@ class BrowserViewModel: ObservableObject {
     }
 
     private func shouldHandle(_ notification: Notification) -> Bool {
-        guard let rawTabId = notification.userInfo?["tabId"] as? String,
-              !rawTabId.isEmpty,
-              let incomingTabId = UUID(uuidString: rawTabId) else {
-            return true
-        }
-
-        // The current protocol identifies page payloads with the iPhone-side
-        // tab UUID. Watch-originated loadURL messages do not send a watch tab
-        // UUID for the phone to echo back, so rejecting mismatched IDs causes
-        // valid mirrored pages to be ignored. Verify the incoming ID matches
-        // our active tab instead of mutating it.
-        return activeTabId == incomingTabId || activeTabId == nil
+        // The protocol tags payloads with the iPhone-side tab UUID, which the
+        // watch has no way to know or match against its own tab IDs — the
+        // phone mirrors exactly one page at a time (the one the watch last
+        // requested), so every incoming page event is for this view model.
+        // Comparing UUIDs here silently dropped ALL phone messages.
+        true
     }
 }

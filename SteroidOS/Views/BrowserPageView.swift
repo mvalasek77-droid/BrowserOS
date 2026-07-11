@@ -93,7 +93,11 @@ struct BrowserPageView: View {
             withAnimation(SteroidBrand.AnimationTiming.mediumSpring) {
                 showHomePage = newURL.isEmpty || newURL == "https://duckduckgo.com/" || newURL == "https://duckduckgo.com"
             }
-            if !showHomePage && !newURL.isEmpty {
+            // Skip when the change is the phone echoing back the final
+            // (possibly redirected) URL of the page we already loaded —
+            // re-requesting it caused an endless reload loop on any
+            // redirecting site.
+            if !showHomePage && !newURL.isEmpty && newURL != viewModel.currentURL {
                 viewModel.loadPage(url: newURL, readerMode: browserState.activeTab.isReaderMode)
             }
         }

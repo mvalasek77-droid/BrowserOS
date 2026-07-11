@@ -321,43 +321,67 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         // Always clear the buffer first so a partial-decode failure cannot leak it.
         pendingChunks[tabId] = nil
         pendingChunkTimestamps.removeValue(forKey: tabId)
+        pendingChunkGroupIds.removeValue(forKey: tabId)
 
-        var combinedElements: [NativeWebElement] = []
+        var elementJSONs: [String] = []
         var url = ""
         var title = ""
-        var readerContent: ReaderContent? = nil
+        var readerJSON: String? = nil
         for i in 0..<totalChunks {
             guard let chunk = chunks[i] else {
                 // Defensive: every index was verified above, but if a chunk
                 // disappeared, bail without posting a broken page.
                 return
             }
-            if let elementsJSON = chunk[WCKey.elements.rawValue] as? String,
-               let data = elementsJSON.data(using: .utf8) {
-                let elements = self.deserializeNativeWebElements(from: data)
-                combinedElements.append(contentsOf: elements)
+            if let elementsJSON = chunk[WCKey.elements.rawValue] as? String {
+                elementJSONs.append(elementsJSON)
             }
             if url.isEmpty, let u = chunk[WCKey.url.rawValue] as? String { url = u }
             if title.isEmpty, let t = chunk[WCKey.title.rawValue] as? String { title = t }
             // Reader content rides on the last chunk only.
             if i == totalChunks - 1,
-               let readerJSON = chunk[WCKey.readerContent.rawValue] as? String,
-               let data = readerJSON.data(using: .utf8) {
-                readerContent = self.deserializeReaderContent(from: data)
+               let json = chunk[WCKey.readerContent.rawValue] as? String {
+                readerJSON = json
             }
         }
 
-        NotificationCenter.default.post(
-            name: .pageLoaded,
-            object: nil,
-            userInfo: [
-                "tabId": tabId,
-                "elements": combinedElements,
-                "readerContent": readerContent as Any,
-                "url": url,
-                "title": title
-            ]
-        )
+        // Decode off the main thread — a large page is hundreds of KB of JSON
+        // and decoding it on main froze the watch UI for seconds.
+        let pageURL = url
+        let pageTitle = title
+        Task.detached(priority: .userInitiated) {
+            let decoder = JSONDecoder()
+            var combinedElements: [NativeWebElement] = []
+            for json in elementJSONs {
+                guard let data = json.data(using: .utf8) else { continue }
+                do {
+                    combinedElements.append(contentsOf: try decoder.decode([NativeWebElement].self, from: data))
+                } catch {
+                    ErrorLog.log("Decode error (chunk elements): \(error)")
+                }
+            }
+            var readerContent: ReaderContent? = nil
+            if let readerJSON, let data = readerJSON.data(using: .utf8) {
+                do {
+                    readerContent = try decoder.decode(ReaderContent.self, from: data)
+                } catch {
+                    ErrorLog.log("Decode error (reader): \(error)")
+                }
+            }
+            await MainActor.run {
+                NotificationCenter.default.post(
+                    name: .pageLoaded,
+                    object: nil,
+                    userInfo: [
+                        "tabId": tabId,
+                        "elements": combinedElements,
+                        "readerContent": readerContent as Any,
+                        "url": pageURL,
+                        "title": pageTitle
+                    ]
+                )
+            }
+        }
     }
 
     // MARK: - Fast Preview Handling
@@ -405,6 +429,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         // Clear any pending chunks — this page won't send content chunks.
         pendingChunks[tabId] = nil
         pendingChunkTimestamps.removeValue(forKey: tabId)
+        pendingChunkGroupIds.removeValue(forKey: tabId)
 
         NotificationCenter.default.post(
             name: .loginRequired,
@@ -439,6 +464,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         for id in staleIds {
             pendingChunks.removeValue(forKey: id)
             pendingChunkTimestamps.removeValue(forKey: id)
+            pendingChunkGroupIds.removeValue(forKey: id)
             ErrorLog.log("Evicted stale chunks for tabId=\(id) after \(staleTimeout)s timeout")
             NotificationCenter.default.post(name: .pageError, object: nil, userInfo: ["error": "Page chunks timed out and were evicted", "tabId": id])
         }

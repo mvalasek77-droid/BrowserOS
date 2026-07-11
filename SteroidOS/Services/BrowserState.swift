@@ -111,11 +111,21 @@ class BrowserState: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] notification in
                 guard let self else { return }
+                let isPreview = notification.userInfo?["isPreview"] as? Bool ?? false
+                let isLocked = notification.userInfo?["locked"] as? Bool ?? false
                 self.pageElements = notification.userInfo?["elements"] as? [NativeWebElement] ?? []
                 self.readerContent = notification.userInfo?["readerContent"] as? ReaderContent
-                self.isLoading = false
+                // A preview is not the finished page — keep loading until the
+                // full pageChunk stream lands.
+                if !isPreview {
+                    self.isLoading = false
+                }
 
-                if let urlString = notification.userInfo?["url"] as? String,
+                // Only a real, unlocked page should update the tab and get a
+                // history entry; previews carry interim titles and would
+                // double-record every visit.
+                if !isPreview && !isLocked,
+                   let urlString = notification.userInfo?["url"] as? String,
                    let title = notification.userInfo?["title"] as? String {
                     self.updateActiveTab(title: title, url: urlString)
                 }
@@ -368,6 +378,9 @@ class BrowserState: ObservableObject {
     // MARK: - History
     
     func addToHistory(url: String, title: String) {
+        // Dedup by URL so revisits move the entry to the top instead of
+        // piling up duplicates.
+        history.removeAll { $0.url == url }
         let entry = HistoryEntry(url: url, title: title, timestamp: Date())
         history.insert(entry, at: 0)
         if history.count > 200 {

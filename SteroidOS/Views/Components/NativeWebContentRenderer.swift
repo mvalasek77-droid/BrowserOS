@@ -234,6 +234,15 @@ struct WebImageView: View {
     @State private var isLoading = false
     @State private var loadTask: Task<Void, Never>?
 
+    /// Downscaled images keyed by URL. LazyVStack discards row state on
+    /// scroll, so without this every image is refetched and re-downscaled
+    /// each time it scrolls back into view.
+    private static let cache: NSCache<NSString, NSData> = {
+        let cache = NSCache<NSString, NSData>()
+        cache.totalCostLimit = 8 * 1024 * 1024
+        return cache
+    }()
+
     var body: some View {
         Group {
             if let data = imageData, let uiImage = UIImage(data: data) {
@@ -294,13 +303,20 @@ struct WebImageView: View {
     
     private func loadImage() {
         guard imageData == nil, !isLoading else { return }
+        if let cached = Self.cache.object(forKey: url as NSString) {
+            imageData = cached as Data
+            return
+        }
         isLoading = true
-        loadTask = Task {
+        let url = self.url
+        // Detached so the downscale/JPEG re-encode runs off the main actor.
+        loadTask = Task.detached(priority: .utility) {
             do {
-                let fetcher = WebFetcher()
+                let fetcher = await WebFetcher()
                 let data = try await fetcher.fetchImageData(url: url)
                 // Downscale for watchOS memory constraints
                 let compressed = Self.downscaleForWatch(data: data, maxDimension: 200)
+                Self.cache.setObject(compressed as NSData, forKey: url as NSString, cost: compressed.count)
                 await MainActor.run {
                     imageData = compressed
                     isLoading = false

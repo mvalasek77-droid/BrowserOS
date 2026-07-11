@@ -454,9 +454,25 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         return chunks
     }
     
+    private var lastProgressSent: Double = -1
+    private var lastProgressSentAt: Date = .distantPast
+
     /// Send load progress to Watch. Uses updateApplicationContext for
     /// lightweight updates, but falls back to transferUserInfo if not reachable.
     func sendProgressToWatch(tabId: UUID, progress: Double) {
+        // Throttle: WKWebView's estimatedProgress KVO fires many times per
+        // load, and each interactive message competes with page chunks on the
+        // same WCSession channel. Terminal values always go through.
+        let now = Date()
+        let isTerminal = progress <= 0 || progress >= 1.0
+        guard isTerminal
+                || abs(progress - lastProgressSent) >= 0.1
+                || now.timeIntervalSince(lastProgressSentAt) >= 0.3 else {
+            return
+        }
+        lastProgressSent = progress
+        lastProgressSentAt = now
+
         let payload: [String: Any] = [
             WCKey.messageType.rawValue: WCMessageType.pageLoadProgress.rawValue,
             WCKey.tabId.rawValue: tabId.uuidString,
@@ -562,9 +578,12 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         sendPayload(payload)
     }
 
-    /// Send current history to Watch.
+    /// Send current history to Watch. Capped to the most recent entries so the
+    /// payload stays well under the ~65KB sendMessage limit and doesn't crowd
+    /// out page chunks (this is re-sent on every page load).
     @MainActor
-    func sendHistoryToWatch(_ history: [HistoryEntry]) {
+    func sendHistoryToWatch(_ fullHistory: [HistoryEntry]) {
+        let history = Array(fullHistory.prefix(100))
         guard let data = try? JSONEncoder().encode(history),
               let json = String(data: data, encoding: .utf8) else {
             ErrorLog.log("Failed to encode history for Watch sync")

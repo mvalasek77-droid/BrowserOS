@@ -40,7 +40,10 @@ class WebFetcher: ObservableObject {
         return (elements, nil)
     }
     
-    func fetchImageData(url: String) async throws -> Data {
+    /// Nonisolated: touches no fetcher state, and callers decode/downscale the
+    /// result — hopping through the main actor here would drag that work onto
+    /// the UI thread.
+    nonisolated func fetchImageData(url: String) async throws -> Data {
         guard let validURL = URL(string: url) else {
             throw BrowserError.invalidURL
         }
