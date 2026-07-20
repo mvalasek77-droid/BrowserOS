@@ -387,15 +387,42 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
         // of order or interleave with chunks from a different tab.
         let chunkGroupId = UUID().uuidString
         let chunks = Self.chunkElements(elements, maxPayloadBytes: 58_000)
-        let payloadChunks = chunks.isEmpty ? [[]] : chunks
-        let totalChunks = payloadChunks.count
         let encoder = JSONEncoder()
+
+        // Reader content is often tens of KB for articles. Riding it on a
+        // full 58KB element chunk blows the ~65KB sendMessage limit, the
+        // oversized chunk never arrives, and the whole page times out on the
+        // watch. Ship it as its own final chunk instead, truncated if it is
+        // enormous on its own.
+        var readerJSON: String? = nil
+        if var reader = readerContent {
+            var encoded = (try? encoder.encode(reader)).flatMap { String(data: $0, encoding: .utf8) }
+            while let json = encoded, json.utf8.count > 55_000, reader.content.count > 1 {
+                reader.content.removeLast(max(1, reader.content.count / 4))
+                encoded = (try? encoder.encode(reader)).flatMap { String(data: $0, encoding: .utf8) }
+            }
+            if let json = encoded, json.utf8.count <= 55_000 {
+                readerJSON = json
+            }
+        }
+
+        // Element chunks, plus one trailing chunk for reader content. A page
+        // with neither still sends one empty chunk so the watch clears its
+        // loading state.
+        var elementJSONs: [String] = chunks.compactMap { chunk in
+            guard let data = try? encoder.encode(chunk) else { return "[]" }
+            return String(data: data, encoding: .utf8) ?? "[]"
+        }
+        if readerJSON != nil || elementJSONs.isEmpty {
+            elementJSONs.append("[]")
+        }
+        let totalChunks = elementJSONs.count
 
         // Decide transport ONCE for all chunks to avoid mixed delivery
         // (mixing sendMessage + transferUserInfo causes unrecoverable reassembly)
         let useInteractive = session?.isReachable ?? false
 
-        for (idx, chunk) in payloadChunks.enumerated() {
+        for (idx, elementsJSON) in elementJSONs.enumerated() {
             var payload: [String: Any] = [
                 WCKey.messageType.rawValue: WCMessageType.pageChunk.rawValue,
                 WCKey.tabId.rawValue: tabId.uuidString,
@@ -403,20 +430,12 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                 WCKey.title.rawValue: title,
                 WCKey.chunkIndex.rawValue: idx,
                 WCKey.totalChunks.rawValue: totalChunks,
-                WCKey.chunkGroupId.rawValue: chunkGroupId
+                WCKey.chunkGroupId.rawValue: chunkGroupId,
+                WCKey.elements.rawValue: elementsJSON
             ]
 
-            if let data = try? encoder.encode(chunk),
-               let json = String(data: data, encoding: .utf8) {
-                payload[WCKey.elements.rawValue] = json
-            }
-
-            // Reader content only ships on the final payload, including the
-            // single empty-elements payload used for reader-only pages.
-            if idx == totalChunks - 1, let reader = readerContent,
-               let data = try? encoder.encode(reader),
-               let json = String(data: data, encoding: .utf8) {
-                payload[WCKey.readerContent.rawValue] = json
+            if idx == totalChunks - 1, let readerJSON {
+                payload[WCKey.readerContent.rawValue] = readerJSON
             }
 
             sendPayloadUnified(payload, useInteractive: useInteractive)
@@ -469,10 +488,23 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
             slices.append(imageData.subdata(in: offset..<end))
             offset = end
         }
-        let totalChunks = slices.count
+
+        var linksJSON: String? = nil
+        if !links.isEmpty,
+           let data = try? JSONEncoder().encode(links),
+           let json = String(data: data, encoding: .utf8) {
+            linksJSON = json
+        }
+
+        // The link JSON can be 20KB+ for link-dense pages; riding on a full
+        // 50KB image slice would blow the ~65KB sendMessage limit and the
+        // whole snapshot would never reassemble. Give links their own final
+        // chunk (empty image slice) unless they comfortably fit on the last one.
+        let linksFitOnLastSlice = (linksJSON?.utf8.count ?? 0) + (slices.last?.count ?? 0) < 58_000
+        let totalChunks = slices.count + (linksJSON != nil && !linksFitOnLastSlice ? 1 : 0)
         let useInteractive = session?.isReachable ?? false
 
-        for (idx, slice) in slices.enumerated() {
+        for idx in 0..<totalChunks {
             var payload: [String: Any] = [
                 WCKey.messageType.rawValue: WCMessageType.pageSnapshot.rawValue,
                 WCKey.tabId.rawValue: tabId.uuidString,
@@ -481,14 +513,12 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                 WCKey.chunkIndex.rawValue: idx,
                 WCKey.totalChunks.rawValue: totalChunks,
                 WCKey.chunkGroupId.rawValue: chunkGroupId,
-                WCKey.snapshotData.rawValue: slice,
+                WCKey.snapshotData.rawValue: idx < slices.count ? slices[idx] : Data(),
                 WCKey.snapshotWidth.rawValue: pixelWidth,
                 WCKey.snapshotHeight.rawValue: pixelHeight
             ]
-            if idx == totalChunks - 1, !links.isEmpty,
-               let data = try? JSONEncoder().encode(links),
-               let json = String(data: data, encoding: .utf8) {
-                payload[WCKey.linkRects.rawValue] = json
+            if idx == totalChunks - 1, let linksJSON {
+                payload[WCKey.linkRects.rawValue] = linksJSON
             }
             sendPayloadUnified(payload, useInteractive: useInteractive)
         }

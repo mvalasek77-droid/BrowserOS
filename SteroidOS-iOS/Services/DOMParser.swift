@@ -23,15 +23,11 @@ struct DOMParser {
             
             function resolveURL(path) {
                 if (!path) return '';
-                if (path.startsWith('http://') || path.startsWith('https://')) return path;
-                if (path.startsWith('//')) return 'https:' + path;
-                if (path.startsWith('/')) {
-                    try {
-                        var u = new URL(baseURL);
-                        return u.protocol + '//' + u.host + path;
-                    } catch(e) { return path; }
-                }
-                return baseURL + '/' + path;
+                // new URL() handles absolute URLs (http, data:, etc.),
+                // protocol-relative //, root-relative /, and document-relative
+                // paths correctly — the old string concatenation produced
+                // broken URLs like "https://site/page.html/other.html".
+                try { return new URL(path, baseURL).href; } catch(e) { return path; }
             }
             
             function getText(el) {
@@ -365,13 +361,18 @@ struct DOMParser {
             var seenTexts = {};
             function isJunk(el) {
                 if (el.closest('nav, footer, aside, [role="navigation"], [role="banner"], [aria-hidden="true"], script, style, noscript')) return true;
-                // Hidden elements (display:none subtrees have a null offsetParent;
-                // position:fixed also does, so allow those through).
-                if (el.offsetParent === null) {
-                    try {
-                        if (getComputedStyle(el).position !== 'fixed') return true;
-                    } catch (e) { return true; }
-                }
+                // Null offsetParent = hidden (display:none subtree).
+                if (el.offsetParent === null) return true;
+                // Anything inside a position:fixed overlay (cookie banners,
+                // chat bubbles, floating bars) is junk on a watch. Children of
+                // fixed containers have a non-null offsetParent, so walk up.
+                try {
+                    var n = el;
+                    while (n && n.nodeType === 1 && n !== document.body) {
+                        if (getComputedStyle(n).position === 'fixed') return true;
+                        n = n.parentElement;
+                    }
+                } catch (e) {}
                 return false;
             }
 
@@ -611,7 +612,9 @@ struct DOMParser {
                 } else if (tag === 'blockquote') {
                     var text = getText(node);
                     if (text) result.content.push({type: 'quote', text: text});
-                } else if (tag === 'pre' || (tag === 'code' && node.parentElement && node.parentElement.tagName.toLowerCase() === 'pre')) {
+                } else if (tag === 'pre') {
+                    // Only <pre> — the walker also visits its <code> child, and
+                    // matching both emitted every code block twice.
                     var text = getText(node);
                     if (text) result.content.push({type: 'code', text: text});
                 }
