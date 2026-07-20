@@ -28,6 +28,9 @@ class BrowserViewModel: ObservableObject {
     /// this image instead of extracted elements.
     @Published var mirrorImageData: Data? = nil
     @Published var mirrorLinks: [MirrorLink] = []
+    /// URL the current mirror snapshot belongs to, so a stale mirror can be
+    /// dropped when a different page finishes loading without one.
+    private var mirrorURL: String = ""
     
     /// URL of the page currently loaded or being loaded. Exposed read-only so
     /// BrowserPageView can tell a user navigation apart from the phone echoing
@@ -61,6 +64,7 @@ class BrowserViewModel: ObservableObject {
                     self.readerContent = nil
                     self.mirrorImageData = nil
                     self.mirrorLinks = []
+                    self.mirrorURL = ""
                     self.pageTitle = notification.userInfo?["title"] as? String ?? SteroidBrand.name
                     let url = notification.userInfo?["url"] as? String ?? ""
                     if !url.isEmpty {
@@ -91,6 +95,14 @@ class BrowserViewModel: ObservableObject {
                 if !url.isEmpty {
                     self.currentURL = url
                     self.addressBarText = url
+                }
+                // A finished page without a matching mirror means the mirror
+                // on screen belongs to the PREVIOUS page — drop it so it
+                // doesn't mask the fresh content.
+                if !isPreview, !url.isEmpty, self.mirrorURL != url {
+                    self.mirrorImageData = nil
+                    self.mirrorLinks = []
+                    self.mirrorURL = ""
                 }
                 // Preview: keep loading state active so the full content can
                 // replace the preview. Only the final pageChunk stream clears
@@ -131,6 +143,7 @@ class BrowserViewModel: ObservableObject {
                     self.pageTitle = title
                 }
                 if let url = notification.userInfo?["url"] as? String, !url.isEmpty {
+                    self.mirrorURL = url
                     self.currentURL = url
                     self.addressBarText = url
                 }
@@ -155,6 +168,7 @@ class BrowserViewModel: ObservableObject {
                 self.readerContent = nil
                 self.mirrorImageData = nil
                 self.mirrorLinks = []
+                self.mirrorURL = ""
                 self.pageTitle = title.isEmpty ? (URL(string: url)?.host ?? SteroidBrand.name) : title
                 if !url.isEmpty {
                     self.currentURL = url
@@ -246,10 +260,10 @@ class BrowserViewModel: ObservableObject {
     func loadPage(url: String, readerMode: Bool = false) {
         // Cancel any in-flight page load
         currentLoadTask?.cancel()
-        pageElements = []
-        readerContent = nil
-        mirrorImageData = nil
-        mirrorLinks = []
+        // Keep the previous page's content (mirror image and elements)
+        // visible while the new page loads — clearing it here flashed a
+        // skeleton on every navigation. Fresh content replaces it wholesale
+        // when it arrives, and the pageLoaded handler drops a stale mirror.
         detectedMedia = []
         isPageLocked = false
         isShowingPreview = false

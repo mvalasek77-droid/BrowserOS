@@ -255,6 +255,10 @@ struct BrowserPageView: View {
                 browserState.navigate(to: url)
                 showHomePage = false
             }
+            // The previous page stays visible while the next one loads
+            // (browser-like); dim it so the transition state is obvious.
+            .opacity(viewModel.isLoading ? 0.55 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
         }
         // Reader content is also a fallback when DOM extraction yields no
         // native elements, so the watch does not show a blank mirrored page.
@@ -357,6 +361,13 @@ struct BrowserPageView: View {
         let links: [MirrorLink]
         let onLinkTap: (String) -> Void
 
+        /// Large links first, so small links render later (on top) and stay
+        /// individually tappable when the minimum tap size inflates a big
+        /// neighbor over them.
+        private var orderedLinks: [MirrorLink] {
+            links.sorted { $0.w * $0.h > $1.w * $1.h }
+        }
+
         var body: some View {
             if let uiImage = UIImage(data: imageData) {
                 Image(uiImage: uiImage)
@@ -364,7 +375,7 @@ struct BrowserPageView: View {
                     .scaledToFit()
                     .overlay(
                         GeometryReader { geo in
-                            ForEach(Array(links.enumerated()), id: \.offset) { _, link in
+                            ForEach(Array(orderedLinks.enumerated()), id: \.offset) { _, link in
                                 Rectangle()
                                     .fill(Color.clear)
                                     .contentShape(Rectangle())

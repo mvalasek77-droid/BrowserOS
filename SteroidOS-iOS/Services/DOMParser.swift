@@ -796,7 +796,9 @@ struct DOMParser {
                 }
             });
             
-            // HTML5 video elements
+            // HTML5 video elements. Track seen srcs — a <video> with a
+            // <source> child would otherwise be captured by both passes.
+            var seenDirect = {};
             var videos = document.querySelectorAll('video');
             videos.forEach(function(video) {
                 var src = video.getAttribute('src');
@@ -805,7 +807,8 @@ struct DOMParser {
                     var source = video.querySelector('source[src]');
                     if (source) src = source.getAttribute('src');
                 }
-                if (src) {
+                if (src && !seenDirect[src]) {
+                    seenDirect[src] = 1;
                     items.push({
                         type: 'direct',
                         src: src,
@@ -814,12 +817,13 @@ struct DOMParser {
                     });
                 }
             });
-            
+
             // Source elements with video type
             var sources = document.querySelectorAll('source[type^="video/"]');
             sources.forEach(function(source) {
                 var src = source.getAttribute('src');
-                if (src) {
+                if (src && !seenDirect[src]) {
+                    seenDirect[src] = 1;
                     items.push({
                         type: 'direct',
                         src: src,
