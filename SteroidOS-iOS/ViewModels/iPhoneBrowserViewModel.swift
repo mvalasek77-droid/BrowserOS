@@ -577,6 +577,7 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
     private var webView: WKWebView?
     private var completion: (@MainActor (Data?, Int, Int, [MirrorLink]) -> Void)?
     private var settleWorkItem: DispatchWorkItem?
+    private var renderTimeoutItem: DispatchWorkItem?
     private var isAttachedToWindow = false
     private var backgroundObserver: NSObjectProtocol?
 
@@ -588,13 +589,19 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
         let wv = makeWebViewIfNeeded()
         attachToWindowIfNeeded(wv)
         settleWorkItem?.cancel()
-        // A newer render supersedes any in-flight one; the old caller's page
-        // is stale anyway.
+        renderTimeoutItem?.cancel()
         self.completion = completion
         wv.stopLoading()
         var request = URLRequest(url: url)
         request.timeoutInterval = 30
         wv.load(request)
+
+        let timeout = DispatchWorkItem { [weak self] in
+            guard let self, self.completion != nil else { return }
+            self.capture()
+        }
+        renderTimeoutItem = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
     }
 
     private func makeWebViewIfNeeded() -> WKWebView {
@@ -628,6 +635,8 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
     private func tearDown() {
         settleWorkItem?.cancel()
         settleWorkItem = nil
+        renderTimeoutItem?.cancel()
+        renderTimeoutItem = nil
         settleLastHeight = -1
         settleStableCount = 0
         settleStartTime = nil
@@ -667,6 +676,7 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
     private var settleStartTime: Date?
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        renderTimeoutItem?.cancel()
         settleWorkItem?.cancel()
         settleLastHeight = -1
         settleStableCount = 0
@@ -702,10 +712,12 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        renderTimeoutItem?.cancel()
         finish(nil, 0, 0, [])
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        renderTimeoutItem?.cancel()
         finish(nil, 0, 0, [])
     }
 
@@ -771,7 +783,8 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
                     return
                 }
                 let scaled = Self.downscale(image, toPixelWidth: self.targetPixelWidth)
-                guard let jpeg = scaled.jpegData(compressionQuality: 0.55) else {
+                let quality: CGFloat = captureHeight <= 900 ? 0.7 : captureHeight <= 1600 ? 0.6 : 0.5
+                guard let jpeg = scaled.jpegData(compressionQuality: quality) else {
                     self.finish(nil, 0, 0, [])
                     return
                 }
