@@ -44,7 +44,7 @@ struct WatchHomePage: View {
             .padding(.vertical, 8)
             .padding(.bottom, 60)
         }
-        .navigationTitle("Home")
+        .navigationBarHidden(true)
     }
 
     private var brandHero: some View {

@@ -9,31 +9,18 @@ struct BrowserPageView: View {
     @State private var hasLoadedOnce = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                AddressBarView(viewModel: viewModel)
-                    .padding(.vertical, 2)
+        VStack(spacing: 0) {
+            AddressBarView(viewModel: viewModel)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
 
-                if viewModel.isLoading && viewModel.mirrorImageData == nil {
-                    ProgressView()
-                        .padding(.top, 40)
-                }
-
-                if showHomePage && (browserState.activeTab.url.isEmpty || browserState.activeTab.url.hasPrefix("https://duckduckgo.com")) {
-                    WatchHomePage()
-                } else {
-                    contentArea
-                }
+            if showHomePage && (browserState.activeTab.url.isEmpty || browserState.activeTab.url.hasPrefix("https://duckduckgo.com")) {
+                WatchHomePage()
+            } else {
+                contentArea
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            bottomBar
-        }
-        .navigationTitle {
-            Text(viewModel.pageTitle.count > 15 ? String(viewModel.pageTitle.prefix(15)) + "…" : viewModel.pageTitle)
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-        }
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.activate(tabId: tabId)
             viewModel.isPhoneReachable = sessionManager.isPhoneReachable
@@ -61,117 +48,63 @@ struct BrowserPageView: View {
     // MARK: - Content
 
     private var contentArea: some View {
-        VStack(spacing: 0) {
+        ZStack {
             if viewModel.isPageLocked {
-                VStack(spacing: 10) {
+                VStack(spacing: 8) {
                     Image(systemName: "lock.fill")
-                        .font(.system(size: 28))
+                        .font(.system(size: 24))
                         .foregroundStyle(.yellow)
                     Text("Pro Required")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
                     Text("Open the iPhone app to subscribe.")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .font(.system(size: 11, design: .rounded))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 12)
                 }
-                .frame(maxWidth: .infinity, minHeight: 140)
-                .padding(.top, 24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let mirrorData = viewModel.mirrorImageData {
                 MirrorPageView(imageData: mirrorData, links: viewModel.mirrorLinks) { url in
                     viewModel.addressBarText = url
                     browserState.navigate(to: url)
                     showHomePage = false
                 }
-                .opacity(viewModel.isLoading ? 0.55 : 1.0)
-                .animation(.easeInOut(duration: 0.15), value: viewModel.isLoading)
+                .opacity(viewModel.isLoading ? 0.5 : 1.0)
             } else if let error = viewModel.errorMessage {
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 24))
+                        .font(.system(size: 20))
                         .foregroundStyle(.orange)
                     Text(error)
                         .font(.system(size: 11, design: .rounded))
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                         .lineLimit(3)
-                    Button {
+                    Button("Retry") {
                         viewModel.loadPage(url: browserState.activeTab.url)
-                    } label: {
-                        Text("Retry")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 12)
-                .padding(.top, 20)
-            } else if !viewModel.isLoading {
-                VStack(spacing: 8) {
+            } else if viewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 6) {
                     Image(systemName: "questionmark.circle")
-                        .font(.system(size: 24))
+                        .font(.system(size: 20))
                         .foregroundStyle(.secondary)
                     Text("Couldn't load this page")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .font(.system(size: 11, design: .rounded))
                         .foregroundStyle(.secondary)
-                    Button {
+                    Button("Retry") {
                         viewModel.loadPage(url: browserState.activeTab.url)
-                    } label: {
-                        Text("Retry")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.bordered)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
                 }
-                .padding(.top, 20)
-            }
-
-            if !viewModel.isPhoneReachable && !showHomePage {
-                HStack(spacing: 4) {
-                    Image(systemName: "iphone.slash")
-                        .font(.caption2)
-                    Text("iPhone not connected")
-                        .font(.caption2)
-                }
-                .foregroundStyle(.secondary)
-                .padding(.top, 12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-    }
-
-    // MARK: - Bottom Bar
-
-    private var bottomBar: some View {
-        HStack(spacing: 0) {
-            barButton(icon: "chevron.left", enabled: sessionManager.canGoBack) {
-                viewModel.goBackOnPhone()
-            }
-            barButton(icon: "chevron.right", enabled: sessionManager.canGoForward) {
-                viewModel.goForwardOnPhone()
-            }
-            barButton(icon: "arrow.clockwise", enabled: true) {
-                viewModel.loadPage(url: browserState.activeTab.url)
-            }
-        }
-        .padding(.horizontal, 4)
-        .padding(.top, 4)
-        .padding(.bottom, 2)
-        .steroidGlassCapsule()
-        .padding(.horizontal, 4)
-    }
-
-    private func barButton(icon: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: {
-            SteroidHaptics.tap()
-            action()
-        }) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(enabled ? .blue : .gray.opacity(0.35))
-                .frame(maxWidth: .infinity, minHeight: 44)
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
     }
 
     // MARK: - Mirror Page View
@@ -219,7 +152,6 @@ struct BrowserPageView: View {
                     )
                     .scaleEffect(isZoomed ? 2.0 : 1.0, anchor: zoomAnchor)
                     .offset(isZoomed ? dragOffset : .zero)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isZoomed)
                     .gesture(
                         isZoomed
                         ? DragGesture()
@@ -227,9 +159,7 @@ struct BrowserPageView: View {
                                 dragOffset = clampedOffset(value.translation)
                             }
                             .onEnded { value in
-                                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                    dragOffset = clampedOffset(value.translation)
-                                }
+                                dragOffset = clampedOffset(value.translation)
                             }
                         : nil
                     )
