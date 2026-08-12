@@ -163,16 +163,16 @@ final class EntitlementManager: ObservableObject {
     }
 
     /// Activate the admin bypass. Called from the 5-tap gesture in Settings.
-    /// Only works on developer-team builds.
+    /// Only available in DEBUG builds — stripped entirely from App Store
+    /// submissions so it can never be triggered by end users.
     func activateAdminBypass() {
-        guard Self.isRunningOnDeveloperTeam else {
-            ErrorLog.log("Admin bypass attempted on non-developer team build — ignoring.")
-            return
-        }
-
+        #if DEBUG
         ErrorLog.log("Admin bypass activated (developer mode).")
         isAdminBypass = true
         setPro(true, source: .adminBypass)
+        #else
+        ErrorLog.log("Admin bypass is not available in release builds.")
+        #endif
     }
 
     /// Deactivate the admin bypass. Useful for testing the free-tier flow

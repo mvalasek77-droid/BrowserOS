@@ -190,6 +190,7 @@ struct SupportAndPrivacyView: View {
                     Label("Restore Purchases", systemImage: "arrow.clockwise")
                 }
 
+                #if DEBUG
                 if entitlement.isAdminBypass {
                     Button(role: .destructive) {
                         entitlement.deactivateAdminBypass()
@@ -197,6 +198,7 @@ struct SupportAndPrivacyView: View {
                         Label("Disable Developer Mode", systemImage: "xmark.octagon")
                     }
                 }
+                #endif
             }
 
             Section("Support") {
@@ -240,19 +242,23 @@ struct SupportAndPrivacyView: View {
                     Text("SteroidOS \(appVersion) (\(buildNumber))")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        #if DEBUG
                         .onTapGesture {
                             handleVersionTap()
                         }
+                        #endif
                     Spacer()
                 }
             } header: {
                 Text("")  // No header text — just a footer-like row
             } footer: {
+                #if DEBUG
                 if entitlement.isAdminBypass {
                     Text("Developer mode active — all Pro features unlocked on this build.")
                 } else {
-                    Text("Tap version \(EntitlementManager.adminBypassTapCount)× to toggle developer mode (developer builds only).")
+                    Text("Tap version \(EntitlementManager.adminBypassTapCount)× to toggle developer mode (debug builds only).")
                 }
+                #endif
             }
         }
         .navigationTitle("Support")
