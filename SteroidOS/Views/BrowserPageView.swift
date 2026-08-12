@@ -356,7 +356,7 @@ struct BrowserPageView: View {
 
     /// Displays the iPhone-rendered page snapshot with tappable link regions —
     /// the watch shows exactly what the phone rendered at watch width.
-    /// Supports double-tap to zoom for reading dense pages.
+    /// Supports double-tap to zoom + drag to pan for reading dense pages.
     struct MirrorPageView: View {
         let imageData: Data
         let links: [MirrorLink]
@@ -364,6 +364,8 @@ struct BrowserPageView: View {
 
         @State private var isZoomed = false
         @State private var zoomAnchor: UnitPoint = .center
+        @State private var dragOffset: CGSize = .zero
+        @State private var viewSize: CGSize = .zero
 
         /// Large links first, so small links render later (on top) and stay
         /// individually tappable when the minimum tap size inflates a big
@@ -379,6 +381,7 @@ struct BrowserPageView: View {
                     .scaledToFit()
                     .overlay(
                         GeometryReader { geo in
+                            Color.clear.onAppear { viewSize = geo.size }
                             ForEach(Array(orderedLinks.enumerated()), id: \.offset) { _, link in
                                 Rectangle()
                                     .fill(Color.clear)
@@ -399,20 +402,37 @@ struct BrowserPageView: View {
                         }
                     )
                     .scaleEffect(isZoomed ? 2.0 : 1.0, anchor: zoomAnchor)
+                    .offset(isZoomed ? dragOffset : .zero)
                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isZoomed)
+                    .gesture(
+                        isZoomed
+                        ? DragGesture()
+                            .onChanged { value in
+                                dragOffset = clampedOffset(value.translation)
+                            }
+                            .onEnded { value in
+                                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                                    dragOffset = clampedOffset(value.translation)
+                                }
+                            }
+                        : nil
+                    )
                     .onTapGesture(count: 2) { location in
                         SteroidHaptics.tap()
                         if isZoomed {
                             isZoomed = false
+                            dragOffset = .zero
                         } else {
-                            // Zoom toward tap location
-                            let geo = UIScreen.main.bounds
                             zoomAnchor = UnitPoint(
-                                x: location.x / geo.width,
-                                y: location.y / geo.height
+                                x: viewSize.width > 0 ? location.x / viewSize.width : 0.5,
+                                y: viewSize.height > 0 ? location.y / viewSize.height : 0.5
                             )
                             isZoomed = true
                         }
+                    }
+                    .onChange(of: imageData) { _, _ in
+                        isZoomed = false
+                        dragOffset = .zero
                     }
             } else {
                 Text("Couldn't decode page snapshot")
@@ -420,6 +440,15 @@ struct BrowserPageView: View {
                     .foregroundStyle(.secondary)
                     .padding(.top, 20)
             }
+        }
+
+        private func clampedOffset(_ translation: CGSize) -> CGSize {
+            let maxX = viewSize.width * 0.5
+            let maxY = viewSize.height * 0.5
+            return CGSize(
+                width: min(max(translation.width, -maxX), maxX),
+                height: min(max(translation.height, -maxY), maxY)
+            )
         }
     }
 

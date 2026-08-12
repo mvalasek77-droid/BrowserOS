@@ -628,6 +628,9 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
     private func tearDown() {
         settleWorkItem?.cancel()
         settleWorkItem = nil
+        settleLastHeight = -1
+        settleStableCount = 0
+        settleStartTime = nil
         webView?.stopLoading()
         webView?.removeFromSuperview()
         webView = nil
@@ -659,14 +662,43 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
 
     // MARK: WKNavigationDelegate
 
+    private var settleLastHeight: CGFloat = -1
+    private var settleStableCount = 0
+    private var settleStartTime: Date?
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        // Give SPAs a moment to paint before capturing.
         settleWorkItem?.cancel()
+        settleLastHeight = -1
+        settleStableCount = 0
+        settleStartTime = Date()
+        scheduleSettleCheck(webView)
+    }
+
+    /// Poll scrollHeight every 200ms; capture once two consecutive reads match
+    /// (the DOM has stopped changing). Hard cap at 2.5s so slow SPAs don't stall
+    /// forever. Static pages typically capture in ~400ms instead of a fixed 1.2s.
+    private func scheduleSettleCheck(_ webView: WKWebView) {
         let item = DispatchWorkItem { [weak self] in
-            Task { @MainActor in self?.capture() }
+            guard let self, self.webView === webView else { return }
+            webView.evaluateJavaScript("document.body ? document.body.scrollHeight : 0") { [weak self] result, _ in
+                guard let self, self.webView === webView else { return }
+                let h = CGFloat((result as? Double) ?? 0)
+                let elapsed = Date().timeIntervalSince(self.settleStartTime ?? Date())
+                if h > 0 && h == self.settleLastHeight {
+                    self.settleStableCount += 1
+                } else {
+                    self.settleStableCount = 0
+                }
+                self.settleLastHeight = h
+                if self.settleStableCount >= 2 || elapsed >= 2.5 {
+                    self.capture()
+                } else {
+                    self.scheduleSettleCheck(webView)
+                }
+            }
         }
         settleWorkItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: item)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: item)
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
@@ -698,6 +730,7 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
             var anchors = document.querySelectorAll('a[href]');
             for (var i = 0; i < anchors.length && out.length < 120; i++) {
                 var a = anchors[i];
+                if (a.offsetParent === null && getComputedStyle(a).position !== 'fixed') continue;
                 var r = a.getBoundingClientRect();
                 if (r.width < 4 || r.height < 4) continue;
                 var x = r.left + window.scrollX;
