@@ -356,10 +356,14 @@ struct BrowserPageView: View {
 
     /// Displays the iPhone-rendered page snapshot with tappable link regions —
     /// the watch shows exactly what the phone rendered at watch width.
+    /// Supports double-tap to zoom for reading dense pages.
     struct MirrorPageView: View {
         let imageData: Data
         let links: [MirrorLink]
         let onLinkTap: (String) -> Void
+
+        @State private var isZoomed = false
+        @State private var zoomAnchor: UnitPoint = .center
 
         /// Large links first, so small links render later (on top) and stay
         /// individually tappable when the minimum tap size inflates a big
@@ -394,6 +398,22 @@ struct BrowserPageView: View {
                             }
                         }
                     )
+                    .scaleEffect(isZoomed ? 2.0 : 1.0, anchor: zoomAnchor)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: isZoomed)
+                    .onTapGesture(count: 2) { location in
+                        SteroidHaptics.tap()
+                        if isZoomed {
+                            isZoomed = false
+                        } else {
+                            // Zoom toward tap location
+                            let geo = UIScreen.main.bounds
+                            zoomAnchor = UnitPoint(
+                                x: location.x / geo.width,
+                                y: location.y / geo.height
+                            )
+                            isZoomed = true
+                        }
+                    }
             } else {
                 Text("Couldn't decode page snapshot")
                     .font(.footnote)

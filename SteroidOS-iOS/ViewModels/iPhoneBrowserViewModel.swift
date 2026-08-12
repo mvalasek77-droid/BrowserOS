@@ -578,6 +578,7 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
     private var completion: (@MainActor (Data?, Int, Int, [MirrorLink]) -> Void)?
     private var settleWorkItem: DispatchWorkItem?
     private var isAttachedToWindow = false
+    private var backgroundObserver: NSObjectProtocol?
 
     func render(urlString: String, completion: @escaping @MainActor (Data?, Int, Int, [MirrorLink]) -> Void) {
         guard let url = URL(string: urlString) else {
@@ -607,7 +608,40 @@ final class MirrorRenderer: NSObject, WKNavigationDelegate {
         wv.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
         wv.isUserInteractionEnabled = false
         webView = wv
+
+        // Clean up the hidden webview when the app backgrounds — snapshots
+        // require an active render server which is unavailable in background.
+        if backgroundObserver == nil {
+            backgroundObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.didEnterBackgroundNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.tearDown()
+            }
+        }
+
         return wv
+    }
+
+    /// Remove the hidden webview from the window hierarchy and release it.
+    private func tearDown() {
+        settleWorkItem?.cancel()
+        settleWorkItem = nil
+        webView?.stopLoading()
+        webView?.removeFromSuperview()
+        webView = nil
+        isAttachedToWindow = false
+        if let cb = completion {
+            completion = nil
+            cb(nil, 0, 0, [])
+        }
+    }
+
+    deinit {
+        if let observer = backgroundObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     /// The webview must live in a window to render; keep it behind the app UI

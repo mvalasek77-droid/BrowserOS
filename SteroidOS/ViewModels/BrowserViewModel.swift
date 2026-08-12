@@ -43,6 +43,25 @@ class BrowserViewModel: ObservableObject {
     /// automatically removed when the view model is deallocated.
     private var observerTokens: [NSObjectProtocol] = []
 
+    /// Cache of recently viewed mirror snapshots keyed by URL so going back
+    /// to a page shows the snapshot instantly while a fresh render is on its way.
+    private static let mirrorCache: NSCache<NSString, MirrorCacheEntry> = {
+        let cache = NSCache<NSString, MirrorCacheEntry>()
+        cache.countLimit = 8
+        cache.totalCostLimit = 4 * 1024 * 1024
+        return cache
+    }()
+
+    /// Wrapper so NSCache can hold the value type.
+    final class MirrorCacheEntry: NSObject {
+        let imageData: Data
+        let links: [MirrorLink]
+        init(imageData: Data, links: [MirrorLink]) {
+            self.imageData = imageData
+            self.links = links
+        }
+    }
+
     func activate(tabId: UUID) {
         activeTabId = tabId
         // Guard against duplicate registration when activate() is called again.
@@ -132,8 +151,9 @@ class BrowserViewModel: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 guard let imageData = notification.userInfo?["imageData"] as? Data else { return }
+                let links = notification.userInfo?["links"] as? [MirrorLink] ?? []
                 self.mirrorImageData = imageData
-                self.mirrorLinks = notification.userInfo?["links"] as? [MirrorLink] ?? []
+                self.mirrorLinks = links
                 self.isLoading = false
                 self.loadingProgress = 1.0
                 self.isShowingPreview = false
@@ -146,6 +166,9 @@ class BrowserViewModel: ObservableObject {
                     self.mirrorURL = url
                     self.currentURL = url
                     self.addressBarText = url
+                    // Cache the snapshot so back-navigation shows it instantly.
+                    let entry = MirrorCacheEntry(imageData: imageData, links: links)
+                    Self.mirrorCache.setObject(entry, forKey: url as NSString, cost: imageData.count)
                 }
             }
         })
@@ -270,7 +293,15 @@ class BrowserViewModel: ObservableObject {
         loginRequiredInfo = nil
         errorMessage = nil
         pageTitle = URL(string: url)?.host ?? SteroidBrand.name
-        
+
+        // Restore a cached mirror snapshot immediately so back-navigation
+        // shows the page instead of a skeleton while the phone re-renders.
+        if let cached = Self.mirrorCache.object(forKey: url as NSString) {
+            mirrorImageData = cached.imageData
+            mirrorLinks = cached.links
+            mirrorURL = url
+        }
+
         currentLoadTask = Task { [weak self] in
             guard let self else { return }
             // On watchOS, pages load through the iPhone via WatchConnectivity
@@ -278,7 +309,7 @@ class BrowserViewModel: ObservableObject {
             self.loadingProgress = 0.1
             self.currentURL = url
             self.addressBarText = url
-            
+
             if self.sessionManager.isPhoneReachable {
                 self.sessionManager.loadURL(url)
             } else {
