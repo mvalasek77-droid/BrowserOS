@@ -6,7 +6,6 @@ struct MainNavigationView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Tab 1: Browser
             NavigationStack {
                 BrowserPageView(tabId: browserState.activeTab.id)
             }
@@ -15,50 +14,21 @@ struct MainNavigationView: View {
             }
             .tag(0)
 
-            // Tab 2: Media Hub
-            NavigationStack {
-                MediaHubView()
-            }
-            .tabItem {
-                Label("Media", systemImage: "play.rectangle.fill")
-            }
-            .tag(1)
-
-            // Tab 3: Tabs
-            NavigationStack {
-                TabManagerView()
-            }
-            .tabItem {
-                Label("Tabs", systemImage: "square.on.square")
-            }
-            .tag(2)
-
-            // Tab 4: Settings
             NavigationStack {
                 SettingsView()
             }
             .tabItem {
                 Label("Settings", systemImage: "gearshape.fill")
             }
-            .tag(3)
-        }
-        .onChange(of: selectedTab) { _, _ in
-            // Subtle selection haptic on tab switch
-            SteroidHaptics.selection()
+            .tag(1)
         }
         .onChange(of: browserState.activeTab.url) { _, newURL in
-            // Auto-switch to browser tab when navigating.
-            // Only switch for real navigations, not DuckDuckGo search results.
             if !newURL.isEmpty && !newURL.contains("duckduckgo.com/?q=") {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                    selectedTab = 0
-                }
+                selectedTab = 0
             }
         }
         .onChange(of: browserState.activeTabId) { _, _ in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                selectedTab = 0
-            }
+            selectedTab = 0
         }
     }
 }

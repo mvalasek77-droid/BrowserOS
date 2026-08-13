@@ -427,36 +427,48 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         pendingSnapshotTimestamps.removeValue(forKey: tabId)
         pendingSnapshotGroupIds.removeValue(forKey: tabId)
 
-        var imageData = Data()
+        var dataSlices: [Data] = []
         var url = ""
         var title = ""
-        var links: [MirrorLink] = []
+        var linkRectsJSON: String? = nil
         for i in 0..<totalChunks {
             guard let chunk = chunks[i] else { return }
             if let slice = chunk[WCKey.snapshotData.rawValue] as? Data {
-                imageData.append(slice)
+                dataSlices.append(slice)
             }
             if url.isEmpty, let u = chunk[WCKey.url.rawValue] as? String { url = u }
             if title.isEmpty, let t = chunk[WCKey.title.rawValue] as? String { title = t }
-            if i == totalChunks - 1,
-               let json = chunk[WCKey.linkRects.rawValue] as? String,
-               let data = json.data(using: .utf8) {
-                links = (try? JSONDecoder().decode([MirrorLink].self, from: data)) ?? []
+            if i == totalChunks - 1, let json = chunk[WCKey.linkRects.rawValue] as? String {
+                linkRectsJSON = json
             }
         }
-        guard !imageData.isEmpty else { return }
+        guard !dataSlices.isEmpty else { return }
 
-        NotificationCenter.default.post(
-            name: .snapshotLoaded,
-            object: nil,
-            userInfo: [
-                "tabId": tabId,
-                "imageData": imageData,
-                "links": links,
-                "url": url,
-                "title": title
-            ]
-        )
+        let snapshotURL = url
+        let snapshotTitle = title
+        Task.detached(priority: .userInitiated) {
+            var imageData = Data()
+            for slice in dataSlices {
+                imageData.append(slice)
+            }
+            var links: [MirrorLink] = []
+            if let json = linkRectsJSON, let data = json.data(using: .utf8) {
+                links = (try? JSONDecoder().decode([MirrorLink].self, from: data)) ?? []
+            }
+            await MainActor.run {
+                NotificationCenter.default.post(
+                    name: .snapshotLoaded,
+                    object: nil,
+                    userInfo: [
+                        "tabId": tabId,
+                        "imageData": imageData,
+                        "links": links,
+                        "url": snapshotURL,
+                        "title": snapshotTitle
+                    ]
+                )
+            }
+        }
     }
 
     // MARK: - Fast Preview Handling
