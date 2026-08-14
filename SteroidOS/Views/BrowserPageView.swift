@@ -22,6 +22,7 @@ struct BrowserPageView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
+            ErrorLog.log("BrowserPageView.onAppear tabId=\(tabId) url=\(browserState.activeTab.url.prefix(60)) phoneReachable=\(sessionManager.isPhoneReachable)")
             viewModel.activate(tabId: tabId)
             viewModel.isPhoneReachable = sessionManager.isPhoneReachable
             let url = browserState.activeTab.url
@@ -30,13 +31,16 @@ struct BrowserPageView: View {
                 hasLoadedOnce = true
                 viewModel.addressBarText = url
                 if !showHomePage && !url.isEmpty {
+                    ErrorLog.log("BrowserPageView: initial loadPage url=\(url.prefix(60))")
                     viewModel.loadPage(url: url)
                 }
             }
         }
         .onChange(of: browserState.activeTab.url) { _, newURL in
+            ErrorLog.log("BrowserPageView: URL changed to \(newURL.prefix(60))")
             showHomePage = newURL.isEmpty || newURL.hasPrefix("https://duckduckgo.com")
             if !showHomePage && !newURL.isEmpty && newURL != viewModel.currentURL {
+                ErrorLog.log("BrowserPageView: triggering loadPage for \(newURL.prefix(60))")
                 viewModel.loadPage(url: newURL)
             }
         }
@@ -48,7 +52,7 @@ struct BrowserPageView: View {
     // MARK: - Content
 
     private var contentArea: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             if viewModel.isPageLocked {
                 VStack(spacing: 8) {
                     Image(systemName: "lock.fill")
@@ -104,8 +108,34 @@ struct BrowserPageView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+
+            #if DEBUG
+            debugOverlay
+            #endif
         }
     }
+
+    #if DEBUG
+    private var debugOverlay: some View {
+        let state: String = {
+            if viewModel.isPageLocked { return "LOCKED" }
+            if viewModel.mirrorImageData != nil { return "MIRROR" }
+            if viewModel.errorMessage != nil { return "ERROR" }
+            if viewModel.isLoading { return "LOADING" }
+            return "EMPTY"
+        }()
+        return VStack(alignment: .leading, spacing: 1) {
+            Text("ph:\(viewModel.isPhoneReachable ? "Y" : "N") st:\(state)")
+            Text("url:\(viewModel.currentURL.prefix(30))")
+        }
+        .font(.system(size: 7, design: .monospaced))
+        .foregroundStyle(.green)
+        .padding(2)
+        .background(.black.opacity(0.6))
+        .cornerRadius(3)
+        .allowsHitTesting(false)
+    }
+    #endif
 
     // MARK: - Mirror Page View
 

@@ -64,8 +64,12 @@ class BrowserViewModel: ObservableObject {
 
     func activate(tabId: UUID) {
         activeTabId = tabId
+        ErrorLog.log("activate(tabId: \(tabId)) phoneReachable=\(sessionManager.isPhoneReachable)")
         // Guard against duplicate registration when activate() is called again.
-        guard observerTokens.isEmpty else { return }
+        guard observerTokens.isEmpty else {
+            ErrorLog.log("activate: observers already registered, skipping")
+            return
+        }
 
         // Observe WatchSessionManager notifications
         observerTokens.append(NotificationCenter.default.addObserver(
@@ -76,6 +80,11 @@ class BrowserViewModel: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 guard self.shouldHandle(notification) else { return }
+                let pUrl = notification.userInfo?["url"] as? String ?? "(none)"
+                let pLocked = notification.userInfo?["locked"] as? Bool ?? false
+                let pPreview = notification.userInfo?["isPreview"] as? Bool ?? false
+                let elCount = (notification.userInfo?["elements"] as? [NativeWebElement])?.count ?? 0
+                ErrorLog.log("pageLoaded: url=\(pUrl) locked=\(pLocked) preview=\(pPreview) elements=\(elCount)")
                 // Locked page: free-tier user — show Pro upsell on the watch.
                 if let locked = notification.userInfo?["locked"] as? Bool, locked {
                     self.isPageLocked = true
@@ -150,8 +159,13 @@ class BrowserViewModel: ObservableObject {
         ) { [weak self] notification in
             Task { @MainActor in
                 guard let self else { return }
-                guard let imageData = notification.userInfo?["imageData"] as? Data else { return }
+                guard let imageData = notification.userInfo?["imageData"] as? Data else {
+                    ErrorLog.log("snapshotLoaded: MISSING imageData in notification")
+                    return
+                }
                 let links = notification.userInfo?["links"] as? [MirrorLink] ?? []
+                let sUrl = notification.userInfo?["url"] as? String ?? "(none)"
+                ErrorLog.log("snapshotLoaded: url=\(sUrl) imageSize=\(imageData.count) links=\(links.count)")
                 self.mirrorImageData = imageData
                 self.mirrorLinks = links
                 self.isLoading = false
@@ -184,6 +198,7 @@ class BrowserViewModel: ObservableObject {
                 let url = notification.userInfo?["url"] as? String ?? ""
                 let title = notification.userInfo?["title"] as? String ?? ""
                 let reason = notification.userInfo?["reason"] as? String ?? "Login required"
+                ErrorLog.log("loginRequired: url=\(url) reason=\(reason)")
                 self.loginRequiredInfo = LoginRequiredInfo(url: url, title: title, reason: reason)
                 self.isPageLocked = false
                 self.isShowingPreview = false
@@ -233,6 +248,7 @@ class BrowserViewModel: ObservableObject {
                 guard let self else { return }
                 guard self.shouldHandle(notification) else { return }
                 if let error = notification.userInfo?["error"] as? String {
+                    ErrorLog.log("pageError: \(error)")
                     self.errorMessage = error
                     self.isLoading = false
                 }
@@ -281,6 +297,7 @@ class BrowserViewModel: ObservableObject {
     // MARK: - Watch → iPhone Commands
     
     func loadPage(url: String, readerMode: Bool = false) {
+        ErrorLog.log("loadPage: url=\(url) phoneReachable=\(sessionManager.isPhoneReachable)")
         // Cancel any in-flight page load
         currentLoadTask?.cancel()
         // Keep the previous page's content (mirror image and elements)

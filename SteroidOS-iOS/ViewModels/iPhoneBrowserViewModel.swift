@@ -517,7 +517,10 @@ class iPhoneBrowserViewModel: ObservableObject {
     func sendMirrorSnapshotToWatch() {
         let pageURL = urlText
         guard !pageURL.isEmpty, sessionManager != nil else { return }
-        guard EntitlementManager.shared.isPro else { return }
+        guard EntitlementManager.shared.isPro else {
+            sessionManager?.sendLockedPageToWatch(tabId: currentTabId, url: pageURL, title: pageTitle)
+            return
+        }
         mirrorRenderer.render(urlString: pageURL) { [weak self] imageData, pixelWidth, pixelHeight, links in
             guard let self, let imageData else { return }
             // The user may have navigated on while the mirror rendered.
