@@ -105,8 +105,8 @@ class BrowserViewModel: ObservableObject {
                     self.loginRequiredInfo = nil
                     return
                 }
-                self.isPageLocked = false
                 let isPreview = notification.userInfo?["isPreview"] as? Bool ?? false
+                if !isPreview { self.isPageLocked = false }
                 let elements = notification.userInfo?["elements"] as? [NativeWebElement] ?? []
                 self.pageElements = elements
 

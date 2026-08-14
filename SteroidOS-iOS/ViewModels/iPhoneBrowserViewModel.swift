@@ -169,6 +169,7 @@ class iPhoneBrowserViewModel: ObservableObject {
     /// lightweight preview to the Watch. This gives the watch something to show
     /// within ~100ms of page load, before the full extraction pipeline runs.
     private func sendFastPreviewToWatch() {
+        guard EntitlementManager.shared.isPro else { return }
         guard let webView = webView else { return }
         // Lightweight JS: grab headings + first paragraphs + links only.
         let previewJS = """
@@ -243,6 +244,10 @@ class iPhoneBrowserViewModel: ObservableObject {
     /// All users receive the full page content on the Watch. Pro-only
     /// advanced features are gated elsewhere.
     func extractAndSendPageData() {
+        guard EntitlementManager.shared.isPro else {
+            sessionManager?.sendLockedPageToWatch(tabId: currentTabId, url: urlText, title: pageTitle)
+            return
+        }
         extractDOM { [weak self] elementsJSON in
             guard let self else { return }
 

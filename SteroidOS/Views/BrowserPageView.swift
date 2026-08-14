@@ -93,6 +93,8 @@ struct BrowserPageView: View {
             } else if viewModel.isLoading {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if !viewModel.pageElements.isEmpty {
+                textFallback
             } else {
                 VStack(spacing: 6) {
                     Image(systemName: "questionmark.circle")
@@ -112,6 +114,46 @@ struct BrowserPageView: View {
             #if DEBUG
             debugOverlay
             #endif
+        }
+    }
+
+    private var textFallback: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(viewModel.pageElements.prefix(20)) { element in
+                    switch element {
+                    case .heading(let text, let level):
+                        Text(text)
+                            .font(.system(size: level == 1 ? 13 : 11, weight: .bold, design: .rounded))
+                            .lineLimit(3)
+                    case .paragraph(let text):
+                        Text(text)
+                            .font(.system(size: 10, design: .rounded))
+                            .lineLimit(6)
+                    case .link(let text, let url):
+                        Button {
+                            SteroidHaptics.tap()
+                            viewModel.addressBarText = url
+                            browserState.navigate(to: url)
+                            showHomePage = false
+                        } label: {
+                            Text(text)
+                                .font(.system(size: 10, design: .rounded))
+                                .foregroundStyle(.blue)
+                                .lineLimit(2)
+                        }
+                        .buttonStyle(.plain)
+                    case .listItem(let text, _):
+                        Text("- \(text)")
+                            .font(.system(size: 10, design: .rounded))
+                            .lineLimit(3)
+                    default:
+                        EmptyView()
+                    }
+                }
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
         }
     }
 
