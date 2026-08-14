@@ -74,10 +74,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            self.isReachable = session.isReachable
-            self.isPhoneReachable = session.isReachable
-            
-            ErrorLog.log("WC reachability changed: \(session.isReachable)", source: "WatchSessionManager")
+            let newValue = session.isReachable
+            guard newValue != self.isPhoneReachable else { return }
+            self.isReachable = newValue
+            self.isPhoneReachable = newValue
+            ErrorLog.log("WC reachability: \(newValue)", source: "WatchSessionManager")
         }
     }
 
@@ -116,8 +117,6 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            ErrorLog.log("WC recv: \(messageType.rawValue)", source: "WatchSessionManager")
-
             switch messageType {
             case .pageLoaded:
                 // Legacy single-message path (kept for backward compat)
@@ -281,7 +280,6 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
               let totalChunks = message[WCKey.totalChunks.rawValue] as? Int else { return }
         let chunkGroupId = message[WCKey.chunkGroupId.rawValue] as? String ?? tabId
 
-        ErrorLog.log("pageChunk: \(chunkIndex+1)/\(totalChunks) locked=\(message[WCKey.locked.rawValue] as? Bool ?? false)", source: "WatchSessionManager")
         // Locked page: free-tier users get title + URL only, no elements.
         // Post a locked pageLoaded so the watch UI shows the Pro upsell.
         if let locked = message[WCKey.locked.rawValue] as? Bool, locked {
@@ -409,8 +407,6 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             return
         }
         let chunkGroupId = message[WCKey.chunkGroupId.rawValue] as? String ?? tabId
-        ErrorLog.log("snapshotChunk: \(chunkIndex+1)/\(totalChunks) group=\(chunkGroupId.prefix(8))", source: "WatchSessionManager")
-
         // A new snapshot group replaces any stale partial one for this tab.
         if let existingGroupId = pendingSnapshotGroupIds[tabId], existingGroupId != chunkGroupId {
             pendingSnapshotChunks.removeValue(forKey: tabId)
@@ -585,7 +581,6 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     // MARK: - Sending Commands to iPhone
     
     func loadURL(_ url: String) {
-        ErrorLog.log("loadURL: sending to phone url=\(url.prefix(60)) reachable=\(isPhoneReachable)", source: "WatchSessionManager")
         let message: [String: Any] = [
             WCKey.messageType.rawValue: WCMessageType.loadURL.rawValue,
             WCKey.url.rawValue: url

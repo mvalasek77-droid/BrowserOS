@@ -33,10 +33,21 @@ final class ErrorLog: ObservableObject {
         entries = Self.loadEntries(key: storageKey)
     }
 
+    private var persistWorkItem: DispatchWorkItem?
+
     func append(source: String, _ message: String) {
         entries.insert(ErrorLogEntry(source: source, message: message), at: 0)
         if entries.count > maxEntries { entries.removeLast() }
-        persist()
+        debouncedPersist()
+    }
+
+    private func debouncedPersist() {
+        persistWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            Task { @MainActor in self?.persist() }
+        }
+        persistWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: item)
     }
 
     func clear() {

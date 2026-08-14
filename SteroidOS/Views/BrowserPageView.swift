@@ -22,7 +22,6 @@ struct BrowserPageView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
-            ErrorLog.log("BrowserPageView.onAppear tabId=\(tabId) url=\(browserState.activeTab.url.prefix(60)) phoneReachable=\(sessionManager.isPhoneReachable)")
             viewModel.activate(tabId: tabId)
             viewModel.isPhoneReachable = sessionManager.isPhoneReachable
             let url = browserState.activeTab.url
@@ -31,16 +30,13 @@ struct BrowserPageView: View {
                 hasLoadedOnce = true
                 viewModel.addressBarText = url
                 if !showHomePage && !url.isEmpty {
-                    ErrorLog.log("BrowserPageView: initial loadPage url=\(url.prefix(60))")
                     viewModel.loadPage(url: url)
                 }
             }
         }
         .onChange(of: browserState.activeTab.url) { _, newURL in
-            ErrorLog.log("BrowserPageView: URL changed to \(newURL.prefix(60))")
             showHomePage = newURL.isEmpty || newURL.hasPrefix("https://duckduckgo.com")
             if !showHomePage && !newURL.isEmpty && newURL != viewModel.currentURL {
-                ErrorLog.log("BrowserPageView: triggering loadPage for \(newURL.prefix(60))")
                 viewModel.loadPage(url: newURL)
             }
         }
