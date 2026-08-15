@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 @MainActor
 class BrowserViewModel: ObservableObject {
@@ -42,6 +43,7 @@ class BrowserViewModel: ObservableObject {
     /// Tokens from addObserver(forName:…) — retained so observers are
     /// automatically removed when the view model is deallocated.
     private var observerTokens: [NSObjectProtocol] = []
+    private var reachabilitySink: AnyCancellable?
 
     /// Cache of recently viewed mirror snapshots keyed by URL so going back
     /// to a page shows the snapshot instantly while a fresh render is on its way.
@@ -272,6 +274,12 @@ class BrowserViewModel: ObservableObject {
         
         // Bind to session manager reachability
         isPhoneReachable = sessionManager.isPhoneReachable
+        reachabilitySink = sessionManager.$isPhoneReachable
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] reachable in
+                self?.isPhoneReachable = reachable
+            }
     }
 
     deinit {

@@ -4,7 +4,6 @@ struct BrowserPageView: View {
     let tabId: UUID
     @EnvironmentObject var browserState: BrowserState
     @StateObject private var viewModel = BrowserViewModel()
-    @ObservedObject private var sessionManager = WatchSessionManager.shared
     @State private var showHomePage = true
     @State private var hasLoadedOnce = false
 
@@ -23,7 +22,6 @@ struct BrowserPageView: View {
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
             viewModel.activate(tabId: tabId)
-            viewModel.isPhoneReachable = sessionManager.isPhoneReachable
             let url = browserState.activeTab.url
             showHomePage = url.isEmpty || url.hasPrefix("https://duckduckgo.com")
             if !hasLoadedOnce {
@@ -39,9 +37,6 @@ struct BrowserPageView: View {
             if !showHomePage && !newURL.isEmpty && newURL != viewModel.currentURL {
                 viewModel.loadPage(url: newURL)
             }
-        }
-        .onChange(of: sessionManager.isPhoneReachable) { _, reachable in
-            viewModel.isPhoneReachable = reachable
         }
     }
 
