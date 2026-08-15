@@ -33,21 +33,31 @@ final class ErrorLog: ObservableObject {
         entries = Self.loadEntries(key: storageKey)
     }
 
-    private var persistWorkItem: DispatchWorkItem?
+    private var lastPersistTime: Date = .distantPast
+    private var persistPending = false
 
     func append(source: String, _ message: String) {
         entries.insert(ErrorLogEntry(source: source, message: message), at: 0)
         if entries.count > maxEntries { entries.removeLast() }
-        debouncedPersist()
+        throttledPersist()
     }
 
-    private func debouncedPersist() {
-        persistWorkItem?.cancel()
-        let item = DispatchWorkItem { [weak self] in
-            Task { @MainActor in self?.persist() }
+    private func throttledPersist() {
+        let now = Date()
+        if now.timeIntervalSince(lastPersistTime) >= 2.0 {
+            lastPersistTime = now
+            persistPending = false
+            persist()
+        } else if !persistPending {
+            persistPending = true
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(2))
+                guard let self, self.persistPending else { return }
+                self.persistPending = false
+                self.lastPersistTime = Date()
+                self.persist()
+            }
         }
-        persistWorkItem = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: item)
     }
 
     func clear() {

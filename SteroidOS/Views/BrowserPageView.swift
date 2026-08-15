@@ -116,7 +116,7 @@ struct BrowserPageView: View {
     private var textFallback: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(viewModel.pageElements.prefix(20)) { element in
+                ForEach(Array(viewModel.pageElements.prefix(20).enumerated()), id: \.offset) { _, element in
                     switch element {
                     case .heading(let text, let level):
                         Text(text)
