@@ -37,12 +37,17 @@ struct WatchConnectionView: View {
             }
         }
         .onAppear {
-            if sessionManager.isActivated {
+            if sessionManager.isActivated && sessionManager.isWatchReachable {
                 sessionManager.ping()
             }
         }
         .onChange(of: sessionManager.isActivated) { _, activated in
             if activated && sessionManager.isWatchReachable {
+                sessionManager.ping()
+            }
+        }
+        .onChange(of: sessionManager.isWatchReachable) { _, reachable in
+            if reachable && sessionManager.isActivated {
                 sessionManager.ping()
             }
         }
@@ -162,17 +167,12 @@ struct WatchConnectionView: View {
     private func openWatchApp() {
         isOpeningWatchApp = true
 
-        // iOS 26 note: Apple has largely folded the Watch companion app and the
-        // Watch App Store together. The public schemes below open the Watch app
-        // if possible; if iOS routes them to the store section, we show a hint
-        // telling the user to switch to the "My Watch" tab.
-        let watchBundle = "com.steroidos.ios.watchapp"
+        // Try URL schemes that open the iOS Watch companion app (My Watch tab).
+        // itms-watch:// opens the Watch app on iOS 17+; watch:// is the legacy
+        // fallback. Both require LSApplicationQueriesSchemes in Info.plist.
         let candidateURLs = [
-            "itms-watch://watch/\(watchBundle)",
-            "itms-watch://mywatch",
             "itms-watch://",
-            "watch://",
-            "itms-apps://apps.apple.com/us/app/watch/id1064636943"
+            "watch://"
         ]
 
         var opened = false

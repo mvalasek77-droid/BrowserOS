@@ -63,6 +63,8 @@
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>itms-watch</string>
+		<string>itms-watchs</string>
 		<string>watch</string>
 		<string>itms-watchkit</string>
 		<string>youtube</string>
