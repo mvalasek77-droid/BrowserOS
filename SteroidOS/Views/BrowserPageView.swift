@@ -4,8 +4,6 @@ struct BrowserPageView: View {
     let tabId: UUID
     @EnvironmentObject var browserState: BrowserState
     @StateObject private var viewModel = BrowserViewModel()
-    @State private var showHomePage = true
-    @State private var hasLoadedOnce = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -13,7 +11,7 @@ struct BrowserPageView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 2)
 
-            if showHomePage && (browserState.activeTab.url.isEmpty || browserState.activeTab.url.hasPrefix("https://duckduckgo.com")) {
+            if isHomePage {
                 WatchHomePage()
             } else {
                 contentArea
@@ -23,83 +21,91 @@ struct BrowserPageView: View {
         .onAppear {
             viewModel.activate(tabId: tabId)
             let url = browserState.activeTab.url
-            showHomePage = url.isEmpty || url.hasPrefix("https://duckduckgo.com")
-            if !hasLoadedOnce {
-                hasLoadedOnce = true
-                viewModel.addressBarText = url
-                if !showHomePage && !url.isEmpty {
-                    viewModel.loadPage(url: url)
-                }
+            viewModel.addressBarText = url
+            if !url.isEmpty && !url.hasPrefix("https://duckduckgo.com") && url != viewModel.currentURL {
+                viewModel.loadPage(url: url)
             }
         }
         .onChange(of: browserState.activeTab.url) { _, newURL in
-            showHomePage = newURL.isEmpty || newURL.hasPrefix("https://duckduckgo.com")
-            if !showHomePage && !newURL.isEmpty && newURL != viewModel.currentURL {
+            if newURL.isEmpty || newURL.hasPrefix("https://duckduckgo.com") {
+                viewModel.resetDisplay()
+            } else if newURL != viewModel.currentURL {
                 viewModel.loadPage(url: newURL)
             }
         }
+    }
+
+    private var isHomePage: Bool {
+        let url = browserState.activeTab.url
+        return (url.isEmpty || url.hasPrefix("https://duckduckgo.com")) && viewModel.display.content.isIdle
     }
 
     // MARK: - Content
 
     private var contentArea: some View {
         ZStack(alignment: .bottom) {
-            if viewModel.isPageLocked {
-                VStack(spacing: 8) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 24))
-                        .foregroundStyle(.yellow)
-                    Text("Pro Required")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                    Text("Open the iPhone app to subscribe.")
-                        .font(.system(size: 11, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let mirrorData = viewModel.mirrorImageData {
-                MirrorPageView(imageData: mirrorData, links: viewModel.mirrorLinks) { url in
-                    viewModel.addressBarText = url
-                    browserState.navigate(to: url)
-                    showHomePage = false
-                }
-                .opacity(viewModel.isLoading ? 0.5 : 1.0)
-            } else if let error = viewModel.errorMessage {
-                VStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.orange)
-                    Text(error)
-                        .font(.system(size: 11, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(3)
-                    Button("Retry") {
-                        viewModel.loadPage(url: browserState.activeTab.url)
+            Group {
+                switch viewModel.display.content {
+                case .idle, .loading:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                case .mirror(let imageData, let links):
+                    MirrorPageView(imageData: imageData, links: links) { url in
+                        viewModel.addressBarText = url
+                        browserState.navigate(to: url)
                     }
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.horizontal, 12)
-            } else if viewModel.isLoading {
-                ProgressView()
+
+                case .elements(let elements):
+                    textFallback(elements: elements)
+
+                case .locked:
+                    VStack(spacing: 8) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(.yellow)
+                        Text("Pro Required")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                        Text("Open the iPhone app to subscribe.")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if !viewModel.pageElements.isEmpty {
-                textFallback
-            } else {
-                VStack(spacing: 6) {
-                    Image(systemName: "questionmark.circle")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.secondary)
-                    Text("Couldn't load this page")
-                        .font(.system(size: 11, design: .rounded))
-                        .foregroundStyle(.secondary)
-                    Button("Retry") {
-                        viewModel.loadPage(url: browserState.activeTab.url)
+
+                case .error(let message):
+                    VStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.orange)
+                        Text(message)
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(3)
+                        Button("Retry") {
+                            viewModel.loadPage(url: browserState.activeTab.url)
+                        }
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
                     }
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(.horizontal, 12)
+
+                case .loginRequired(let info):
+                    VStack(spacing: 8) {
+                        Image(systemName: "person.crop.circle.badge.exclamationmark")
+                            .font(.system(size: 24))
+                            .foregroundStyle(.orange)
+                        Text(info.reason)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .multilineTextAlignment(.center)
+                        Button("Open on iPhone") {
+                            viewModel.openOnIPhoneToLogin()
+                        }
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
             #if DEBUG
@@ -108,10 +114,10 @@ struct BrowserPageView: View {
         }
     }
 
-    private var textFallback: some View {
+    private func textFallback(elements: [NativeWebElement]) -> some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(Array(viewModel.pageElements.prefix(20).enumerated()), id: \.offset) { _, element in
+                ForEach(Array(elements.prefix(20).enumerated()), id: \.offset) { _, element in
                     switch element {
                     case .heading(let text, let level):
                         Text(text)
@@ -126,7 +132,6 @@ struct BrowserPageView: View {
                             SteroidHaptics.tap()
                             viewModel.addressBarText = url
                             browserState.navigate(to: url)
-                            showHomePage = false
                         } label: {
                             Text(text)
                                 .font(.system(size: 10, design: .rounded))
@@ -151,15 +156,19 @@ struct BrowserPageView: View {
     #if DEBUG
     private var debugOverlay: some View {
         let state: String = {
-            if viewModel.isPageLocked { return "LOCKED" }
-            if viewModel.mirrorImageData != nil { return "MIRROR" }
-            if viewModel.errorMessage != nil { return "ERROR" }
-            if viewModel.isLoading { return "LOADING" }
-            return "EMPTY"
+            switch viewModel.display.content {
+            case .idle: return "IDLE"
+            case .loading: return "LOADING"
+            case .mirror: return "MIRROR"
+            case .elements: return "ELEMENTS"
+            case .locked: return "LOCKED"
+            case .error: return "ERROR"
+            case .loginRequired: return "LOGIN"
+            }
         }()
         return VStack(alignment: .leading, spacing: 1) {
             Text("ph:\(viewModel.isPhoneReachable ? "Y" : "N") st:\(state)")
-            Text("url:\(viewModel.currentURL.prefix(30))")
+            Text("url:\(viewModel.display.url.prefix(30))")
         }
         .font(.system(size: 7, design: .monospaced))
         .foregroundStyle(.green)

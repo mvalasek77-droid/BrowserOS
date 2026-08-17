@@ -14,6 +14,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
     @Published var loadProgress: Double = 0
     @Published var canGoBack: Bool = false
     @Published var canGoForward: Bool = false
+    @Published var pageDisplay = PageDisplay()
     
     private var session: WCSession?
     
@@ -130,6 +131,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                     }
                     let url = message[WCKey.url.rawValue] as? String ?? ""
                     let title = message[WCKey.title.rawValue] as? String ?? ""
+                    self.pageDisplay = PageDisplay(
+                        content: elements.isEmpty ? .idle : .elements(elements),
+                        url: url,
+                        title: title
+                    )
                     NotificationCenter.default.post(
                         name: .pageLoaded,
                         object: nil,
@@ -172,6 +178,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                 if let errorMessage = message[WCKey.error.rawValue] as? String {
                     self.lastError = errorMessage
                     ErrorLog.log("Page error: \(errorMessage)")
+                    self.pageDisplay = PageDisplay(
+                        content: .error(errorMessage),
+                        url: self.pageDisplay.url,
+                        title: self.pageDisplay.title
+                    )
                     NotificationCenter.default.post(
                         name: .pageError,
                         object: nil,
@@ -289,6 +300,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             pendingChunks[tabId] = nil
             pendingChunkTimestamps.removeValue(forKey: tabId)
             pendingChunkGroupIds.removeValue(forKey: tabId)
+            self.pageDisplay = PageDisplay(content: .locked, url: url, title: title)
             NotificationCenter.default.post(
                 name: .pageLoaded,
                 object: nil,
@@ -359,7 +371,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         // and decoding it on main froze the watch UI for seconds.
         let pageURL = url
         let pageTitle = title
-        Task.detached(priority: .userInitiated) {
+        Task.detached(priority: .userInitiated) { [weak self] in
             let decoder = JSONDecoder()
             var combinedElements: [NativeWebElement] = []
             for json in elementJSONs {
@@ -379,6 +391,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                 }
             }
             await MainActor.run {
+                self?.pageDisplay = PageDisplay(
+                    content: combinedElements.isEmpty ? .idle : .elements(combinedElements),
+                    url: pageURL,
+                    title: pageTitle
+                )
                 NotificationCenter.default.post(
                     name: .pageLoaded,
                     object: nil,
@@ -455,7 +472,7 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         ErrorLog.log("snapshotChunk: assembled \(totalChunks) chunks, \(totalBytes)B, url=\(url.prefix(60))", source: "WatchSessionManager")
         let snapshotURL = url
         let snapshotTitle = title
-        Task.detached(priority: .userInitiated) {
+        Task.detached(priority: .userInitiated) { [weak self] in
             var imageData = Data()
             for slice in dataSlices {
                 imageData.append(slice)
@@ -465,6 +482,11 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                 links = (try? JSONDecoder().decode([MirrorLink].self, from: data)) ?? []
             }
             await MainActor.run {
+                self?.pageDisplay = PageDisplay(
+                    content: .mirror(imageData: imageData, links: links),
+                    url: snapshotURL,
+                    title: snapshotTitle
+                )
                 NotificationCenter.default.post(
                     name: .snapshotLoaded,
                     object: nil,
@@ -497,6 +519,9 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             elements = deserializeNativeWebElements(from: data)
         }
 
+        if !elements.isEmpty {
+            self.pageDisplay = PageDisplay(content: .elements(elements), url: url, title: title)
+        }
         NotificationCenter.default.post(
             name: .pageLoaded,
             object: nil,
@@ -527,6 +552,8 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
         pendingChunkTimestamps.removeValue(forKey: tabId)
         pendingChunkGroupIds.removeValue(forKey: tabId)
 
+        let info = LoginRequiredInfo(url: url, title: title, reason: reason)
+        self.pageDisplay = PageDisplay(content: .loginRequired(info), url: url, title: title)
         NotificationCenter.default.post(
             name: .loginRequired,
             object: nil,

@@ -196,6 +196,29 @@ struct MirrorLink: Codable {
     let url: String
 }
 
+// MARK: - Page Display State (watchOS display pipeline)
+
+enum PageContentState {
+    case idle
+    case loading
+    case mirror(imageData: Data, links: [MirrorLink])
+    case elements([NativeWebElement])
+    case locked
+    case error(String)
+    case loginRequired(LoginRequiredInfo)
+
+    var isIdle: Bool {
+        if case .idle = self { return true }
+        return false
+    }
+}
+
+struct PageDisplay {
+    var content: PageContentState = .idle
+    var url: String = ""
+    var title: String = ""
+}
+
 // MARK: - Reader Content
 struct ReaderContent: Identifiable, Codable {
     let id: UUID
