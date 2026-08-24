@@ -1,0 +1,25 @@
+{
+  "name": "example-vendor-pack",
+  "version": "1.0.0",
+  "description": "Template for wiring a real vendor. Copy it, edit endpoint/headers/body, then import it from the Tool Rack — the tool appears on the rack with no code change. Placeholders {{apiKey}}, {{units}}, {{prompt}} and {{taskId}} are filled at call time.",
+  "tools": [
+    {
+      "id": "example-video-vendor",
+      "name": "Example Video Vendor",
+      "vendor": "example",
+      "version": "1.0.0",
+      "status": "experimental",
+      "capabilities": ["video.t2v"],
+      "pricing": { "model": "per_second", "rate": 0.18, "minUnit": 5, "granularity": 1 },
+      "quality": 0.8,
+      "speed": { "secondsPerOutputSecond": 15 },
+      "limits": { "maxShotSeconds": 10, "maxConcurrency": 4 },
+      "tiers": ["standard", "premium"],
+      "keyRef": "example",
+      "endpoint": "https://api.example.com/v1/generations",
+      "method": "POST",
+      "headers": { "authorization": "Bearer {{apiKey}}" },
+      "body": { "prompt": "{{prompt}}", "duration_seconds": "{{units}}", "client_ref": "{{taskId}}" }
+    }
+  ]
+}

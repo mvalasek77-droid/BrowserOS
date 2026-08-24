@@ -81,6 +81,51 @@ targets:
         SDKROOT: watchos
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
 
+  # Cinema Composer Pro — AI feature-film conductor, producer and cutting room
+  CinemaComposerPro:
+    type: application
+    platform: iOS
+    sources:
+      - path: CinemaComposerPro
+        excludes:
+          - "**/.DS_Store"
+          - "Info.plist"
+          - "CinemaComposerPro.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.steroidos.cinemacomposer
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        INFOPLIST_FILE: CinemaComposerPro/Info.plist
+        GENERATE_INFOPLIST_FILE: false
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: CinemaComposerPro/CinemaComposerPro.entitlements
+        DEVELOPMENT_TEAM: UDM4W27W9V
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        ENABLE_PREVIEWS: true
+        SWIFT_EMIT_LOC_STRINGS: YES
+
+  # Engine tests: breakdown, planner, budget, rack, timeline, conductor
+  CinemaComposerProTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: CinemaComposerProTests
+        excludes:
+          - "**/.DS_Store"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.steroidos.cinemacomposer.tests
+        SWIFT_VERSION: "5.9"
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: true
+    dependencies:
+      - target: CinemaComposerPro
+
 schemes:
   SteroidOS:
     build:
@@ -96,3 +141,15 @@ schemes:
     run:
       config: Debug
       executable: "SteroidOS Watch App"
+  CinemaComposerPro:
+    build:
+      targets:
+        CinemaComposerPro: all
+        CinemaComposerProTests: [test]
+    run:
+      config: Debug
+      executable: CinemaComposerPro
+    test:
+      config: Debug
+      targets:
+        - CinemaComposerProTests
