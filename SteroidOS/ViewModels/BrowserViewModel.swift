@@ -23,6 +23,19 @@ class BrowserViewModel: ObservableObject {
             .receive(on: RunLoop.main)
             .sink { [weak self] newDisplay in
                 guard let self else { return }
+                // STALE SNAPSHOT GUARD: a snapshot for a page the user has
+                // already navigated away from must never replace the current
+                // content. Compare on path+host so in-page hash/query churn
+                // (SPA routing) doesn't drop legitimate updates.
+                func normalized(_ u: String) -> String {
+                    guard let url = URL(string: u), let host = url.host else { return u }
+                    return host + url.path
+                }
+                let samePage = self.currentURL.isEmpty
+                    || normalized(self.currentURL) == normalized(newDisplay.url)
+                if case .mirror = newDisplay.content, !samePage {
+                    return
+                }
                 self.display = newDisplay
                 if !newDisplay.url.isEmpty {
                     self.currentURL = newDisplay.url
@@ -54,6 +67,14 @@ class BrowserViewModel: ObservableObject {
         } else {
             display = PageDisplay(content: .error("iPhone not connected"), url: url, title: "")
         }
+    }
+
+    /// The user navigated to a NEW page. An incoming snapshot may still be in
+    /// flight from the previous one — when it lands, drop it instead of
+    /// showing stale content.
+    func noteNavigatingTo(url: String) {
+        currentURL = url
+        addressBarText = url
     }
 
     func resetDisplay() {

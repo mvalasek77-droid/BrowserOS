@@ -391,6 +391,19 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
                 }
             }
             await MainActor.run {
+                // MIRROR WINS: if the phone already sent a full-page mirror
+                // snapshot for THIS page, don't let the element-chunk stream
+                // clobber it. The element view is the fallback, not the goal —
+                // without this guard the mirror flashes for a moment and is
+                // then silently replaced by the text fallback when the slower
+                // DOM extraction finishes. URL-guarded so a mirror from a
+                // previous navigation can never suppress new content.
+                if case .mirror = self?.pageDisplay.content,
+                   !pageURL.isEmpty,
+                   self?.pageDisplay.url == pageURL {
+                    ErrorLog.log("pageChunk assembled but mirror already showing for this URL — keeping mirror", source: "WatchSessionManager")
+                    return
+                }
                 self?.pageDisplay = PageDisplay(
                     content: combinedElements.isEmpty ? .idle : .elements(combinedElements),
                     url: pageURL,

@@ -47,8 +47,15 @@ struct BrowserPageView: View {
             Group {
                 switch viewModel.display.content {
                 case .idle, .loading:
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    VStack(spacing: 6) {
+                        ProgressView()
+                        if case .loading = viewModel.display.content {
+                            Text("Loading on iPhone…")
+                                .font(.system(size: 10, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 case .mirror(let imageData, let links):
                     MirrorPageView(imageData: imageData, links: links) { url in
@@ -196,63 +203,80 @@ struct BrowserPageView: View {
         }
 
         var body: some View {
-            if let uiImage = UIImage(data: imageData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .overlay(
-                        GeometryReader { geo in
-                            Color.clear.onAppear { viewSize = geo.size }
-                            ForEach(Array(orderedLinks.enumerated()), id: \.offset) { _, link in
-                                Rectangle()
-                                    .fill(Color.clear)
-                                    .contentShape(Rectangle())
-                                    .frame(
-                                        width: max(geo.size.width * link.w, 22),
-                                        height: max(geo.size.height * link.h, 16)
-                                    )
-                                    .position(
-                                        x: geo.size.width * (link.x + link.w / 2),
-                                        y: geo.size.height * (link.y + link.h / 2)
-                                    )
-                                    .onTapGesture {
-                                        SteroidHaptics.tap()
-                                        onLinkTap(link.url)
-                                    }
+            Group {
+                if let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .overlay(
+                            GeometryReader { geo in
+                                Color.clear.onAppear { viewSize = geo.size }
+                                ForEach(Array(orderedLinks.enumerated()), id: \.offset) { _, link in
+                                    Rectangle()
+                                        .fill(Color.clear)
+                                        .contentShape(Rectangle())
+                                        .frame(
+                                            width: max(geo.size.width * link.w, 22),
+                                            height: max(geo.size.height * link.h, 16)
+                                        )
+                                        .position(
+                                            x: geo.size.width * (link.x + link.w / 2),
+                                            y: geo.size.height * (link.y + link.h / 2)
+                                        )
+                                        .onTapGesture {
+                                            SteroidHaptics.tap()
+                                            onLinkTap(link.url)
+                                        }
+                                }
                             }
-                        }
-                    )
-                    .scaleEffect(isZoomed ? 2.0 : 1.0, anchor: zoomAnchor)
-                    .offset(isZoomed ? dragOffset : .zero)
-                    .gesture(
-                        isZoomed
-                        ? DragGesture()
-                            .onChanged { value in
-                                dragOffset = clampedOffset(value.translation)
-                            }
-                            .onEnded { value in
-                                dragOffset = clampedOffset(value.translation)
-                            }
-                        : nil
-                    )
-                    .onTapGesture(count: 2) { location in
-                        SteroidHaptics.tap()
-                        if isZoomed {
-                            isZoomed = false
-                            dragOffset = .zero
-                        } else {
-                            zoomAnchor = UnitPoint(
-                                x: viewSize.width > 0 ? location.x / viewSize.width : 0.5,
-                                y: viewSize.height > 0 ? location.y / viewSize.height : 0.5
-                            )
-                            isZoomed = true
-                        }
+                        )
+                } else {
+                    // Corrupt JPEG data — don't render a silent blank view.
+                    VStack(spacing: 6) {
+                        Image(systemName: "photo.badge.exclamationmark")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.orange)
+                        Text("Page snapshot failed")
+                            .font(.system(size: 10, design: .rounded))
+                            .foregroundStyle(.secondary)
+                        Text("Tap reload on the iPhone to resend")
+                            .font(.system(size: 9, design: .rounded))
+                            .foregroundStyle(.secondary)
                     }
-                    .onChange(of: imageData) { _, _ in
-                        isZoomed = false
-                        dragOffset = .zero
-                    }
+                }
             }
+            .scaleEffect(isZoomed ? 2.0 : 1.0, anchor: zoomAnchor)
+            .offset(isZoomed ? dragOffset : .zero)
+            .gesture(
+                isZoomed
+                ? DragGesture()
+                    .onChanged { value in
+                        dragOffset = clampedOffset(value.translation)
+                    }
+                    .onEnded { value in
+                        dragOffset = clampedOffset(value.translation)
+                    }
+                : nil
+            )
+            .onTapGesture(count: 2) { location in
+                guard UIImage(data: imageData) != nil else { return }
+                SteroidHaptics.tap()
+                if isZoomed {
+                    isZoomed = false
+                    dragOffset = .zero
+                } else {
+                    zoomAnchor = UnitPoint(
+                        x: viewSize.width > 0 ? location.x / viewSize.width : 0.5,
+                        y: viewSize.height > 0 ? location.y / viewSize.height : 0.5
+                    )
+                    isZoomed = true
+                }
+            }
+            .onChange(of: imageData) { _, _ in
+                isZoomed = false
+                dragOffset = .zero
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
 
         private func clampedOffset(_ translation: CGSize) -> CGSize {

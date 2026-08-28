@@ -28,6 +28,10 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     var onAddBookmark: ((String, String) -> Void)?
     var onRemoveBookmark: ((UUID) -> Void)?
     var onClearHistory: (() -> Void)?
+    /// Fired when the watch app connects (handshake) or reachability is
+    /// restored. The browser view model should re-send whatever page is
+    /// currently loaded so the watch never sits on stale/blank content.
+    var onResyncCurrentPage: (() -> Void)?
     
     /// Optional extractor that can pull streams from the current webview.
     /// Set by the browser view model so `playMedia` requests can use the
@@ -90,12 +94,21 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func refreshWatchState(_ session: WCSession) {
+        let wasReachable = isWatchReachable
         isWatchReachable = session.isReachable
         isWatchAppInstalled = session.isWatchAppInstalled
         isPaired = session.isPaired
         
         // Debug logging for diagnosing connection issues
         ErrorLog.log("WC state: activated=\(session.activationState == .activated), paired=\(session.isPaired), installed=\(session.isWatchAppInstalled), reachable=\(session.isReachable)")
+
+        // Reachability restored: the watch may have missed page updates while
+        // disconnected. Ask the browser to re-send its current page so the
+        // watch never sits on stale or blank content.
+        if !wasReachable && isWatchReachable {
+            ErrorLog.log("Watch reachability restored — requesting page resync", source: "PhoneSessionManager")
+            onResyncCurrentPage?()
+        }
     }
     
     // MARK: - Ping
@@ -265,8 +278,12 @@ class PhoneSessionManager: NSObject, ObservableObject, WCSessionDelegate {
                     self.onLoadURL?(url)
                 }
             case .handshake:
-                // Watch announced itself — log so we know the watch is alive.
-                ErrorLog.log("Watch handshake received")
+                // Watch announced itself — it may have just launched with no
+                // content (or stale content) while the iPhone already has a
+                // page loaded. Re-send the current page immediately so the
+                // watch shows real content instead of blank/idle.
+                ErrorLog.log("Watch handshake received — requesting page resync")
+                onResyncCurrentPage?()
             case .playMedia:
                 // Handled via the reply-handler path in
                 // didReceiveMessage(_:replyHandler:). If it arrives here it

@@ -415,6 +415,21 @@ class iPhoneBrowserViewModel: ObservableObject {
             self.sessionManager?.sendHistoryToWatch([])
         }
 
+        // Watch (re)connected or reachability restored: re-send the page that
+        // is currently loaded on the iPhone. Both the element extraction and
+        // the mirror snapshot are re-shipped — whichever arrives last wins on
+        // the watch, so the user always ends up with the fullest render.
+        sessionManager.onResyncCurrentPage = { [weak self] in
+            guard let self else { return }
+            // Defer: the reachability flag may not be observed by the send
+            // path until the next runloop turn.
+            DispatchQueue.main.async {
+                guard !self.urlText.isEmpty else { return }
+                _ = self.resendCurrentPageToWatch()
+                self.sendMirrorSnapshotToWatch()
+            }
+        }
+
         // Push current settings/bookmarks/history to the Watch on connect.
         syncAllToWatch()
 

@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		071DF38D5E07BDCA622E3FF3 /* SharedModels+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */; };
 		1523764305B1E08E29961C29 /* YouTubeStreamExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25641B70B84B792601D4BC6A /* YouTubeStreamExtractor.swift */; };
-		1A2B3C4D5E6F708192A3B4C5 /* YouTubeWebExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8B7C6D5E4F3A291B0C9D8E /* YouTubeWebExtractor.swift */; };
 		1BD48220DA9C4A6E42D46FAD /* MediaDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80873ED12C212A76AFDA086A /* MediaDetector.swift */; };
 		1E9B36A1B2F21B59AFFC3F03 /* SteroidOS_iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */; };
 		2332ACCE81DD1E32066E5E47 /* BrowserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */; };
@@ -31,6 +30,7 @@
 		543CA158D7278647EFBADE59 /* SharedModels+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */; };
 		57539F96E0521EF180D2D70A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8333E635200AF1CDA701BC /* HistoryView.swift */; };
 		5B4A4B6116CC5EA140559339 /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
+		5BF3233E945A45BF91DCC7EE /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8537C96BD37D9BED12CAC71C /* PrivacyInfo.xcprivacy */; };
 		6FD17B021040A5F848753E80 /* SteroidComplianceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */; };
 		72E3ABD8EF33FA046BE595CE /* MediaHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825650AD59C1E72672543270 /* MediaHubView.swift */; };
 		751CE507984A3168DC2BDB3F /* ErrorLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15088BCB756B2057ABD5334 /* ErrorLogView.swift */; };
@@ -51,6 +51,7 @@
 		B3F1BDE224109A3174C50450 /* LoginAndLoadingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82570824192C1F9D4B181CFA /* LoginAndLoadingViews.swift */; };
 		B5EDC4E1C1C7893236E65EC0 /* EntitlementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B81863195E1B0B3C7602304 /* EntitlementManager.swift */; };
 		B99A42613A53281F8F899EDC /* TabManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5816CCD424567C7059FC243 /* TabManagerView.swift */; };
+		BC433F78DBE47924CDDC83EA /* YouTubeWebExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B72CACF88B7C9777AEF0980 /* YouTubeWebExtractor.swift */; };
 		C332B70DDCA5D61D6280E533 /* SteroidComplianceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */; };
 		C6820C6D17653B4B9BD5680B /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98D22680550D76F8788B9F9 /* SharedModels.swift */; };
 		C74AA0296D3C99E88136B5CD /* DOMParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A6616440E2DF41084E4F5D /* DOMParser.swift */; };
@@ -59,6 +60,7 @@
 		D080CF6C9AE42CF2D42BCBB1 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
 		D3A92CD9376D6BA885E471C6 /* ReaderModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB877F5C5D1965EAA07287B /* ReaderModeView.swift */; };
 		DB40B7EA8B7886BEF594CCD9 /* BrowserPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E94C6B6DB4DED288C0E85B /* BrowserPageView.swift */; };
+		DCC648AD0D14C0366138823B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7B5EDC6C7260CEA24992D96B /* PrivacyInfo.xcprivacy */; };
 		DDAE97748BC8101B272653A3 /* MainNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466FE7DF25CEEAD30E16C83E /* MainNavigationView.swift */; };
 		E3812153517797D4FD684AEA /* VoiceInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FA02DDAFAAB97033FF807 /* VoiceInputController.swift */; };
 		E57A54BEC8BD8AEE8C409547 /* SteroidOSIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */; };
@@ -99,8 +101,8 @@
 		207F3C4B00312B5E5A4E5668 /* BookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksView.swift; sourceTree = "<group>"; };
 		225FDB9430F461ED3944C454 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		25641B70B84B792601D4BC6A /* YouTubeStreamExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeStreamExtractor.swift; sourceTree = "<group>"; };
-		9A8B7C6D5E4F3A291B0C9D8E /* YouTubeWebExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebExtractor.swift; sourceTree = "<group>"; };
 		29FBAF03C87C6DBEF7444609 /* iPhoneWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneWebView.swift; sourceTree = "<group>"; };
+		2B72CACF88B7C9777AEF0980 /* YouTubeWebExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebExtractor.swift; sourceTree = "<group>"; };
 		2F8333E635200AF1CDA701BC /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOS_iOSApp.swift; sourceTree = "<group>"; };
 		39A6616440E2DF41084E4F5D /* DOMParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMParser.swift; sourceTree = "<group>"; };
@@ -120,9 +122,11 @@
 		755076ADA1C094FA89609FBA /* SteroidOS-Watch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SteroidOS-Watch.entitlements"; sourceTree = "<group>"; };
 		7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSIntents.swift; sourceTree = "<group>"; };
 		7B044641F6F4C7BFDC4DDECC /* NativeWebContentRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWebContentRenderer.swift; sourceTree = "<group>"; };
+		7B5EDC6C7260CEA24992D96B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		80873ED12C212A76AFDA086A /* MediaDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetector.swift; sourceTree = "<group>"; };
 		825650AD59C1E72672543270 /* MediaHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaHubView.swift; sourceTree = "<group>"; };
 		82570824192C1F9D4B181CFA /* LoginAndLoadingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginAndLoadingViews.swift; sourceTree = "<group>"; };
+		8537C96BD37D9BED12CAC71C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		896BD7A00D1ACE90FCB937B9 /* SteroidOS-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SteroidOS-iOS.entitlements"; sourceTree = "<group>"; };
 		944136042A42411F60A43475 /* ErrorLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorLog.swift; sourceTree = "<group>"; };
 		9D2F17A43889A2E1569302B1 /* WebFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFetcher.swift; sourceTree = "<group>"; };
@@ -172,7 +176,7 @@
 				39A6616440E2DF41084E4F5D /* DOMParser.swift */,
 				47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */,
 				25641B70B84B792601D4BC6A /* YouTubeStreamExtractor.swift */,
-				9A8B7C6D5E4F3A291B0C9D8E /* YouTubeWebExtractor.swift */,
+				2B72CACF88B7C9777AEF0980 /* YouTubeWebExtractor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -192,6 +196,7 @@
 			children = (
 				C416346CCFA67DFBABBDCE9D /* Assets.xcassets */,
 				D653BEA352BDAE196CE93A78 /* Info.plist */,
+				7B5EDC6C7260CEA24992D96B /* PrivacyInfo.xcprivacy */,
 				755076ADA1C094FA89609FBA /* SteroidOS-Watch.entitlements */,
 				A603FD5656DC6D052E02C64A /* SteroidOSApp.swift */,
 				E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */,
@@ -217,6 +222,7 @@
 			children = (
 				E10EC521F65D1AD78559BDCA /* Assets.xcassets */,
 				225FDB9430F461ED3944C454 /* Info.plist */,
+				8537C96BD37D9BED12CAC71C /* PrivacyInfo.xcprivacy */,
 				347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */,
 				896BD7A00D1ACE90FCB937B9 /* SteroidOS-iOS.entitlements */,
 				405E04F1C4D81A969529C61A /* Services */,
@@ -387,6 +393,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				89DF1A14A0FDB7BC521238A0 /* Assets.xcassets in Resources */,
+				5BF3233E945A45BF91DCC7EE /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -395,6 +402,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4844595559349B8F6E6EA9FE /* Assets.xcassets in Resources */,
+				DCC648AD0D14C0366138823B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -465,7 +473,7 @@
 				4BC44086F2F5AF224E4F4F24 /* WatchConnectionView.swift in Sources */,
 				C805C3C4845953B807EA6FDC /* WatchConnectivityProtocol.swift in Sources */,
 				1523764305B1E08E29961C29 /* YouTubeStreamExtractor.swift in Sources */,
-				1A2B3C4D5E6F708192A3B4C5 /* YouTubeWebExtractor.swift in Sources */,
+				BC433F78DBE47924CDDC83EA /* YouTubeWebExtractor.swift in Sources */,
 				A7A247A17A0D7F91B7916BB9 /* iPhoneBrowserView.swift in Sources */,
 				337FF2840877F2988843D93A /* iPhoneBrowserViewModel.swift in Sources */,
 				309554F67984B1A9643DE6C0 /* iPhoneWebView.swift in Sources */,
