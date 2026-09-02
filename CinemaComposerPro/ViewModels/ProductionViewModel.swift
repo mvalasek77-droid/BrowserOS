@@ -35,10 +35,14 @@ final class ProductionViewModel: ObservableObject {
     let modules: ModuleRegistry
     let conductor: Conductor
 
-    init(registry: ToolRegistry = ToolRegistry(),
-         keys: KeychainStore = KeychainStore(),
-         modules: ModuleRegistry = ModuleRegistry(),
-         conductor: Conductor = Conductor()) {
+    @MainActor init(registry: ToolRegistry? = nil,
+         keys: KeychainStore? = nil,
+         modules: ModuleRegistry? = nil,
+         conductor: Conductor? = nil) {
+        let registry = registry ?? ToolRegistry()
+        let keys = keys ?? KeychainStore()
+        let modules = modules ?? ModuleRegistry()
+        let conductor = conductor ?? Conductor()
         self.registry = registry
         self.keys = keys
         self.modules = modules
