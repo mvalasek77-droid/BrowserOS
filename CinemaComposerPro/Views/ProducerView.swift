@@ -1,40 +1,25 @@
 import SwiftUI
 
-/// The producer's desk: describe the picture, watch what it costs, see where
-/// the money actually goes.
+/// The producer's desk: describe the picture, watch what it costs, and see
+/// where the money actually goes before a single frame is generated.
 struct ProducerView: View {
     @EnvironmentObject private var model: ProductionViewModel
-    @State private var exportURL: URL?
+    @State private var topSheetURL: URL?
+    @State private var csvURL: URL?
 
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    StatGrid(stats: headlineStats)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
-                }
-
+                headlineSection
+                if !model.budget.isComplete { gapSection }
+                adviceSection
                 pictureSection
                 spendSection
+                deepDiveSection
                 economicsSection
                 overheadSection
                 assumptionsSection
-
-                Section {
-                    NavigationLink("All line items (\(model.budget.lineItems.count))") {
-                        LineItemsView(budget: model.budget)
-                    }
-                    if let exportURL {
-                        ShareLink(item: exportURL) { Label("Share budget CSV", systemImage: "square.and.arrow.up") }
-                    } else {
-                        Button {
-                            exportURL = model.export(.budgetCSV)
-                        } label: {
-                            Label("Prepare budget CSV", systemImage: "tablecells")
-                        }
-                    }
-                }
-
+                exportSection
                 if !model.budget.warnings.isEmpty {
                     Section("Notes from the planner") {
                         WarningBanner(messages: model.budget.warnings)
@@ -42,7 +27,220 @@ struct ProducerView: View {
                 }
             }
             .navigationTitle("Producer")
-            .onChange(of: model.budget.total) { _, _ in exportURL = nil }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { templateMenu }
+            }
+            .onChange(of: model.budget.total) { _, _ in
+                topSheetURL = nil
+                csvURL = nil
+            }
+        }
+    }
+
+    // MARK: - Sections
+
+    private var headlineSection: some View {
+        Section {
+            StatGrid(stats: headlineStats)
+                .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+        }
+    }
+
+    private var gapSection: some View {
+        Section {
+            ForEach(model.budget.gaps) { gap in
+                VStack(alignment: .leading, spacing: 3) {
+                    Label("\(gap.department.label) is unplanned", systemImage: "exclamationmark.octagon.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Palette.bad)
+                    Text(gap.reason).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text("This budget is incomplete")
+        } footer: {
+            Text("The total below is a floor, not a quote — the work above is missing from it entirely.")
+        }
+    }
+
+    @ViewBuilder
+    private var adviceSection: some View {
+        let best = model.recommendations.filter { $0.kind == .cost }.map(\.saving).max() ?? 0
+        Section {
+            NavigationLink {
+                AdvisorView()
+            } label: {
+                HStack {
+                    Label("Advisor", systemImage: "lightbulb.max")
+                    Spacer()
+                    if best > 0 {
+                        Text("save up to \(Money.compact(best))")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(Palette.good)
+                    } else if model.isAdvising {
+                        ProgressView()
+                    }
+                }
+            }
+        }
+        .task(id: adviceKey) { await model.refreshAdvice() }
+    }
+
+    private var adviceKey: String {
+        "\(model.spec.title)-\(Int(model.spec.runtimeMinutes))-\(model.spec.tier.rawValue)-\(model.spec.genre.rawValue)-\(model.strategy.rawValue)-\(Int(model.overhead.supervisorHourly))"
+    }
+
+    private var pictureSection: some View {
+        Section("The picture") {
+            TextField("Title", text: $model.spec.title)
+                .textInputAutocapitalization(.words)
+
+            LabelledSlider(label: "Runtime",
+                           value: $model.spec.runtimeMinutes,
+                           range: 1...210,
+                           step: 1,
+                           display: "\(Int(model.spec.runtimeMinutes)) min")
+
+            Picker("Genre", selection: $model.spec.genre) {
+                ForEach(Genre.allCases) { genre in Text(genre.label).tag(genre) }
+            }
+
+            Picker("Tier", selection: $model.spec.tier) {
+                ForEach(ProductionTier.allCases) { tier in Text(tier.label).tag(tier) }
+            }
+
+            Picker("Strategy", selection: $model.strategy) {
+                ForEach(PlanningStrategy.allCases) { strategy in Text(strategy.label).tag(strategy) }
+            }
+
+            LabelledSlider(label: "Takes per keeper",
+                           value: Binding(get: { model.spec.resolvedTakesPerKeeper },
+                                          set: { model.spec.takesPerKeeperOverride = $0 }),
+                           range: 1...6,
+                           step: 0.1,
+                           display: String(format: "%.1f", model.spec.resolvedTakesPerKeeper))
+
+            TextField("Look & style", text: $model.spec.style, axis: .vertical)
+                .lineLimit(1...3)
+
+            Stepper("Cast: \(model.spec.castCount)", value: $model.spec.castCount, in: 1...60)
+            Stepper("Locations: \(model.spec.locationCount)", value: $model.spec.locationCount, in: 1...120)
+        }
+    }
+
+    private var spendSection: some View {
+        Section("Where the money goes") {
+            DepartmentSpendChart(departments: model.budget.departments)
+            KeyValueRow(key: "Subtotal", value: Money.string(model.budget.subtotal))
+            KeyValueRow(key: "Contingency \(Int(model.budget.contingencyPercent))%", value: Money.string(model.budget.contingency))
+            KeyValueRow(key: "Total", value: Money.string(model.budget.total))
+        }
+    }
+
+    private var deepDiveSection: some View {
+        Section("Go deeper") {
+            NavigationLink {
+                ShotEconomicsView()
+            } label: {
+                Label("Shot economics", systemImage: "chart.bar.xaxis")
+            }
+            NavigationLink {
+                LineItemsView(budget: model.budget)
+            } label: {
+                Label("All line items (\(model.budget.lineItems.count))", systemImage: "list.bullet.rectangle")
+            }
+            NavigationLink {
+                EfficiencyView()
+            } label: {
+                Label("Efficiency & schedule", systemImage: "bolt.badge.clock")
+            }
+            NavigationLink {
+                ScenariosView()
+            } label: {
+                Label("Scenarios (\(model.scenarios.count))", systemImage: "arrow.left.arrow.right.square")
+            }
+        }
+    }
+
+    private var economicsSection: some View {
+        Section("Unit economics") {
+            KeyValueRow(key: "Per runtime minute", value: Money.string(model.budget.unitEconomics.perRuntimeMinute))
+            KeyValueRow(key: "Per finished second", value: Money.rate(model.budget.unitEconomics.perFinishedSecond))
+            KeyValueRow(key: "Per shot", value: Money.string(model.budget.unitEconomics.perShot))
+            KeyValueRow(key: "Per scene", value: Money.string(model.budget.unitEconomics.perScene))
+            KeyValueRow(key: "AI share", value: String(format: "%.0f%%", model.budget.unitEconomics.aiSharePercent))
+            KeyValueRow(key: "Human share", value: String(format: "%.0f%%", model.budget.unitEconomics.humanSharePercent))
+        }
+    }
+
+    private var overheadSection: some View {
+        Section("Overheads") {
+            LabelledSlider(label: "Supervisor rate",
+                           value: $model.overhead.supervisorHourly,
+                           range: 0...300,
+                           step: 5,
+                           display: "\(Money.string(model.overhead.supervisorHourly))/h")
+            LabelledSlider(label: "Contingency",
+                           value: $model.overhead.contingencyPercent,
+                           range: 0...40,
+                           step: 1,
+                           display: "\(Int(model.overhead.contingencyPercent))%")
+            LabelledSlider(label: "Billed failures",
+                           value: $model.overhead.failureWastePercent,
+                           range: 0...25,
+                           step: 1,
+                           display: "\(Int(model.overhead.failureWastePercent))%")
+        }
+    }
+
+    private var assumptionsSection: some View {
+        Section("Assumptions") {
+            ForEach(model.budget.assumptions, id: \.self) { assumption in
+                Text(assumption).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var exportSection: some View {
+        Section("Send it out") {
+            if let topSheetURL {
+                ShareLink(item: topSheetURL) { Label("Share top sheet", systemImage: "square.and.arrow.up") }
+            } else {
+                Button {
+                    topSheetURL = model.export(.topSheet)
+                    Haptics.tap()
+                } label: {
+                    Label("Prepare producer's top sheet", systemImage: "doc.richtext")
+                }
+            }
+            if let csvURL {
+                ShareLink(item: csvURL) { Label("Share budget CSV", systemImage: "square.and.arrow.up") }
+            } else {
+                Button {
+                    csvURL = model.export(.budgetCSV)
+                    Haptics.tap()
+                } label: {
+                    Label("Prepare budget CSV", systemImage: "tablecells")
+                }
+            }
+        }
+    }
+
+    private var templateMenu: some View {
+        Menu {
+            ForEach(ProductionTemplate.allCases) { template in
+                Button {
+                    model.spec = template.spec
+                    Haptics.success()
+                } label: {
+                    VStack(alignment: .leading) {
+                        Text(template.name)
+                        Text(template.blurb)
+                    }
+                }
+            }
+        } label: {
+            Label("Templates", systemImage: "square.grid.2x2")
         }
     }
 
@@ -57,101 +255,24 @@ struct ProducerView: View {
             ("Saved", String(format: "%.0f%%", model.budget.efficiency?.savedPercent ?? 0)),
         ]
     }
+}
 
-    private var pictureSection: some View {
-        Section("The picture") {
-            TextField("Title", text: $model.spec.title)
-                .textInputAutocapitalization(.words)
+/// A slider that shows its value where the eye already is — the label row.
+struct LabelledSlider: View {
+    var label: String
+    @Binding var value: Double
+    var range: ClosedRange<Double>
+    var step: Double
+    var display: String
 
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Runtime")
-                    Spacer()
-                    Text("\(Int(model.spec.runtimeMinutes)) min").monospacedDigit().foregroundStyle(.secondary)
-                }
-                Slider(value: $model.spec.runtimeMinutes, in: 1...210, step: 1)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(label)
+                Spacer()
+                Text(display).monospacedDigit().foregroundStyle(.secondary)
             }
-
-            Picker("Genre", selection: $model.spec.genre) {
-                ForEach(Genre.allCases) { genre in Text(genre.label).tag(genre) }
-            }
-
-            Picker("Tier", selection: $model.spec.tier) {
-                ForEach(ProductionTier.allCases) { tier in Text(tier.label).tag(tier) }
-            }
-
-            Picker("Strategy", selection: $model.strategy) {
-                ForEach(PlanningStrategy.allCases) { strategy in Text(strategy.label).tag(strategy) }
-            }
-
-            TextField("Look & style", text: $model.spec.style, axis: .vertical)
-                .lineLimit(1...3)
-
-            Stepper("Cast: \(model.spec.castCount)", value: $model.spec.castCount, in: 1...60)
-            Stepper("Locations: \(model.spec.locationCount)", value: $model.spec.locationCount, in: 1...120)
-        }
-    }
-
-    private var spendSection: some View {
-        Section("Where the money goes") {
-            ForEach(model.budget.departments) { department in
-                ShareBar(label: department.department.label,
-                         amount: Money.string(department.subtotal),
-                         fraction: department.sharePercent / 100,
-                         tint: department.department == .photography ? Palette.accent : Palette.cool)
-            }
-            KeyValueRow(key: "Subtotal", value: Money.string(model.budget.subtotal))
-            KeyValueRow(key: "Contingency \(Int(model.budget.contingencyPercent))%", value: Money.string(model.budget.contingency))
-            KeyValueRow(key: "Total", value: Money.string(model.budget.total))
-        }
-    }
-
-    private var economicsSection: some View {
-        Section("Unit economics") {
-            let economics = model.budget.unitEconomics
-            KeyValueRow(key: "Per runtime minute", value: Money.string(economics.perRuntimeMinute))
-            KeyValueRow(key: "Per finished second", value: Money.rate(economics.perFinishedSecond))
-            KeyValueRow(key: "Per shot", value: Money.string(economics.perShot))
-            KeyValueRow(key: "Per scene", value: Money.string(economics.perScene))
-            KeyValueRow(key: "AI share", value: String(format: "%.0f%%", economics.aiSharePercent))
-            KeyValueRow(key: "Human share", value: String(format: "%.0f%%", economics.humanSharePercent))
-        }
-    }
-
-    private var overheadSection: some View {
-        Section("Overheads") {
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Supervisor rate")
-                    Spacer()
-                    Text("\(Money.string(model.overhead.supervisorHourly))/h").monospacedDigit().foregroundStyle(.secondary)
-                }
-                Slider(value: $model.overhead.supervisorHourly, in: 0...300, step: 5)
-            }
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Contingency")
-                    Spacer()
-                    Text("\(Int(model.overhead.contingencyPercent))%").monospacedDigit().foregroundStyle(.secondary)
-                }
-                Slider(value: $model.overhead.contingencyPercent, in: 0...40, step: 1)
-            }
-            VStack(alignment: .leading) {
-                HStack {
-                    Text("Billed failures")
-                    Spacer()
-                    Text("\(Int(model.overhead.failureWastePercent))%").monospacedDigit().foregroundStyle(.secondary)
-                }
-                Slider(value: $model.overhead.failureWastePercent, in: 0...25, step: 1)
-            }
-        }
-    }
-
-    private var assumptionsSection: some View {
-        Section("Assumptions") {
-            ForEach(model.budget.assumptions, id: \.self) { assumption in
-                Text(assumption).font(.caption).foregroundStyle(.secondary)
-            }
+            Slider(value: $value, in: range, step: step)
         }
     }
 }

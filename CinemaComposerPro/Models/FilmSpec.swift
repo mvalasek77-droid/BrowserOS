@@ -214,6 +214,16 @@ struct FilmSpec: Codable, Equatable {
     var vfxRatio: Double?
     var sfxPerShot: Double?
 
+    /// How many generations you burn per keeper shot. Tier sets it; tightening
+    /// prompts (or accepting more of what you get) moves it, and it is one of
+    /// the biggest levers in the whole budget — so it is editable.
+    var takesPerKeeperOverride: Double?
+
+    /// Shots the producer has hand-routed, overriding what the breakdown flagged.
+    var forcedHeroShotIDs: Set<String> = []
+    var forcedBodyShotIDs: Set<String> = []
+
+    var resolvedTakesPerKeeper: Double { takesPerKeeperOverride ?? tier.takesPerKeeper }
     var resolvedShotSeconds: Double { averageShotSeconds ?? genre.averageShotSeconds }
     var resolvedDialogueRatio: Double { dialogueRatio ?? genre.dialogueRatio }
     var resolvedMusicCoverage: Double { musicCoverage ?? genre.musicCoverage }

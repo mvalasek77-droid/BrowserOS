@@ -66,7 +66,10 @@ struct Budget: Equatable {
     var unitEconomics: UnitEconomics
     var schedule: PlanSchedule
     var efficiency: EfficiencyReport?
+    /// Jobs the rack could not staff. A budget with gaps is a floor, not a quote.
+    var gaps: [PlanGap] = []
 
+    var isComplete: Bool { gaps.isEmpty }
     var runtimeMinutes: Double { spec.runtimeMinutes }
 }
 
@@ -183,7 +186,8 @@ enum BudgetEngine {
             total: total,
             unitEconomics: economics,
             schedule: plan.schedule,
-            efficiency: plan.efficiency
+            efficiency: plan.efficiency,
+            gaps: plan.gaps
         )
     }
 
@@ -208,7 +212,7 @@ enum BudgetEngine {
         return [
             "\(Int(spec.runtimeMinutes)) min \(spec.genre.label) at \(tier.label) tier, mastered \(tier.resolutionLabel)",
             "\(breakdown.shotCount) shots across \(breakdown.sceneCount) scenes, averaging \(String(format: "%.1f", breakdown.averageShotSeconds))s",
-            "\(String(format: "%.1f", tier.takesPerKeeper)) generations per keeper shot before the QC gate",
+            "\(String(format: "%.1f", spec.resolvedTakesPerKeeper)) generations per keeper shot before the QC gate",
             "\(breakdown.dialogueShotCount) dialogue shots → \(String(format: "%.1f", work.voiceMinutes)) min of performance plus lipsync",
             "\(breakdown.vfxShotCount) shots routed to the hero generator",
             "\(plan.reusedShots) shots served from reused coverage (\(String(format: "%.0f", plan.reusedSeconds))s)",

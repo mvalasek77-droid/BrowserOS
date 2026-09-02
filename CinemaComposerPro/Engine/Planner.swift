@@ -116,6 +116,16 @@ struct EfficiencyReport: Equatable {
     var savedPercent: Double { baselineTotal <= 0 ? 0 : (saved / baselineTotal) * 100 }
 }
 
+/// A job the rack cannot staff. Reported loudly rather than quietly dropped:
+/// a budget that silently omits Photography is worse than no budget.
+struct PlanGap: Identifiable, Equatable {
+    var capability: String
+    var department: Department
+    var reason: String
+
+    var id: String { capability }
+}
+
 struct ProductionPlan: Equatable {
     var spec: FilmSpec
     var strategy: PlanningStrategy
@@ -125,6 +135,11 @@ struct ProductionPlan: Equatable {
     var efficiency: EfficiencyReport?
     var reusedShots: Int
     var reusedSeconds: Double
+    var gaps: [PlanGap] = []
+
+    /// False when some department could not be staffed — the total is then a
+    /// floor, not an estimate, and the UI says so.
+    var isComplete: Bool { gaps.isEmpty }
 
     var total: Double { tasks.reduce(0) { $0 + $1.cost } }
     var toolsUsed: [String] { Array(Set(tasks.map(\.toolID))).sorted() }
@@ -189,6 +204,20 @@ enum Planner {
 
     // MARK: - Planning
 
+    /// Which department a capability belongs to, so a missing tool reads as
+    /// "Photography cannot be planned" rather than a bare capability string.
+    static func department(for capability: String) -> Department {
+        switch capability {
+        case Capability.scriptWrite, Capability.scriptBreakdown, Capability.shotPrompt: return .development
+        case Capability.imageStoryboard, Capability.imageCharacter: return .previs
+        case Capability.videoTextToVideo: return .photography
+        case Capability.videoUpscale, Capability.videoGrade: return .finishing
+        case Capability.audioVoice, Capability.audioMusic, Capability.audioSFX, Capability.videoLipsync: return .sound
+        case Capability.qcReview: return .qualityControl
+        default: return .postDelivery
+        }
+    }
+
     static func plan(breakdown: Breakdown,
                      tools: [AITool],
                      strategy: PlanningStrategy = .balanced,
@@ -200,6 +229,7 @@ enum Planner {
         let tier = spec.tier
         let work = breakdown.workload
         var warnings: [String] = []
+        var gaps: [PlanGap] = []
         var tasks: [PlanTask] = []
 
         func choose(_ capability: String, units: Double, floor: Double? = nil) -> AITool? {
@@ -211,6 +241,13 @@ enum Planner {
                                        strategy: strategy,
                                        availableKeys: availableKeys)
             if let warning = selection.warning, !warnings.contains(warning) { warnings.append(warning) }
+            if selection.tool == nil, !gaps.contains(where: { $0.capability == capability }) {
+                let owningDepartment = department(for: capability)
+                let reason = availableKeys == nil
+                    ? "Nothing on the rack provides \(capability)."
+                    : "No \(capability) tool you hold a key for. Add one in Keys, import a tool pack, or turn off key-restricted planning."
+                gaps.append(PlanGap(capability: capability, department: owningDepartment, reason: reason))
+            }
             return selection.tool
         }
 
@@ -279,7 +316,7 @@ enum Planner {
         let heroSeconds = heroShots.reduce(0) { $0 + $1.seconds }
         let bodySeconds = bodyShots.reduce(0) { $0 + $1.seconds }
         // A cheap QC gate on drafts kills bad takes before the expensive pass.
-        let takes = tier.takesPerKeeper * (passes.isEnabled(.qcGate) ? 0.85 : 1.0)
+        let takes = spec.resolvedTakesPerKeeper * (passes.isEnabled(.qcGate) ? 0.85 : 1.0)
 
         let draftGenerator = tools
             .candidates(capability: Capability.videoTextToVideo, availableKeys: availableKeys)
@@ -365,7 +402,8 @@ enum Planner {
 
         var plan = ProductionPlan(spec: spec, strategy: strategy, tasks: tasks, warnings: warnings,
                                   schedule: computedSchedule, efficiency: nil,
-                                  reusedShots: reuse.reusedIDs.count, reusedSeconds: reuse.reusedSeconds)
+                                  reusedShots: reuse.reusedIDs.count, reusedSeconds: reuse.reusedSeconds,
+                                  gaps: gaps)
 
         if measure {
             plan.efficiency = measureEfficiency(breakdown: breakdown, tools: tools, strategy: strategy,

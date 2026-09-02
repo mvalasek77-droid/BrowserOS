@@ -11,6 +11,7 @@ struct ProjectDocument: Codable {
     var maxConcurrency: Int = 8
     var enabledModules: [String] = []
     var timeline: Timeline?
+    var scenarios: [Scenario] = []
     /// Tools added or upgraded beyond the built-in rack, so an imported pack
     /// survives a relaunch.
     var installedTools: [AITool] = []

@@ -9,8 +9,8 @@ struct RootView: View {
             ProducerView()
                 .tabItem { Label("Producer", systemImage: "dollarsign.circle") }
 
-            EfficiencyView()
-                .tabItem { Label("Efficiency", systemImage: "bolt.badge.clock") }
+            NavigationStack { AdvisorView() }
+                .tabItem { Label("Advisor", systemImage: "lightbulb.max") }
 
             ConductorView()
                 .tabItem { Label("Conductor", systemImage: "waveform.path") }
@@ -18,11 +18,8 @@ struct RootView: View {
             CuttingRoomView()
                 .tabItem { Label("Cutting room", systemImage: "film.stack") }
 
-            ToolRackView()
-                .tabItem { Label("Rack", systemImage: "square.stack.3d.up") }
-
-            KeysView()
-                .tabItem { Label("Keys", systemImage: "key") }
+            NavigationStack { SetupView() }
+                .tabItem { Label("Setup", systemImage: "slider.horizontal.3") }
         }
         .tint(Palette.accent)
         .alert("Something went sideways",

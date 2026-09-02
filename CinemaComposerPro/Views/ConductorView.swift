@@ -48,6 +48,7 @@ private struct ConductorScreen: View {
                             .foregroundStyle(Palette.bad)
                     }
                     Button {
+                        Haptics.tap()
                         if dryRun { start() } else { showLiveConfirmation = true }
                     } label: {
                         Label(isRunning ? "Running…" : "Raise the baton", systemImage: "waveform.path")
@@ -56,6 +57,14 @@ private struct ConductorScreen: View {
 
                     if isRunning {
                         Button("Cancel", role: .destructive) { conductor.cancel() }
+                    }
+                }
+
+                if !conductor.ledger.isEmpty {
+                    Section("Burn-down") {
+                        BurnDownChart(ledger: conductor.ledger,
+                                      estimate: model.budget.total,
+                                      cap: model.budget.total * capMultiplier)
                     }
                 }
 
@@ -114,6 +123,7 @@ private struct ConductorScreen: View {
         Task {
             await model.run(dryRun: dryRun, capMultiplier: capMultiplier)
             isRunning = false
+            Haptics.success()
         }
     }
 

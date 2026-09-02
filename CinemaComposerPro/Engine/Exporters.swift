@@ -172,6 +172,88 @@ enum Exporters {
         return rows.joined(separator: "\n")
     }
 
+    // MARK: - Producer's top sheet
+
+    /// The one page that goes in front of a financier: what it costs, where it
+    /// goes, what it assumes, and what would change it.
+    static func topSheet(budget: Budget, plan: ProductionPlan, breakdown: Breakdown) -> String {
+        var lines: [String] = []
+        let spec = budget.spec
+
+        lines.append("# \(budget.project)")
+        lines.append("")
+        lines.append("**\(Int(spec.runtimeMinutes)) minutes · \(spec.genre.label) · \(spec.tier.label) · \(spec.tier.resolutionLabel)**")
+        lines.append("")
+        lines.append("_\(spec.style)_")
+        lines.append("")
+
+        if !budget.isComplete {
+            lines.append("> **This budget is incomplete.** " + budget.gaps.map { "\($0.department.label): \($0.reason)" }.joined(separator: " "))
+            lines.append("")
+        }
+
+        lines.append("| | |")
+        lines.append("|---|---|")
+        lines.append("| **Total** | **\(Money.string(budget.total))** |")
+        lines.append("| Per runtime minute | \(Money.string(budget.unitEconomics.perRuntimeMinute)) |")
+        lines.append("| Per shot | \(Money.string(budget.unitEconomics.perShot)) (\(budget.shotCount) shots, \(budget.sceneCount) scenes) |")
+        lines.append("| AI vs human | \(Int(budget.unitEconomics.aiSharePercent))% tools, \(Int(budget.unitEconomics.humanSharePercent))% people |")
+        lines.append("| Schedule | \(Clock.duration(budget.schedule.wallClockSeconds)) wall clock (\(String(format: "%.1f", budget.schedule.speedup))× parallel) |")
+        if let efficiency = budget.efficiency {
+            lines.append("| Optimization | \(Money.string(efficiency.saved)) below the naive plan (\(String(format: "%.0f", efficiency.savedPercent))%) |")
+        }
+        lines.append("")
+
+        lines.append("## Where the money goes")
+        lines.append("")
+        lines.append("| Department | Spend | Share |")
+        lines.append("|---|---:|---:|")
+        for department in budget.departments {
+            lines.append("| \(department.department.label) | \(Money.string(department.subtotal)) | \(String(format: "%.0f%%", department.sharePercent)) |")
+        }
+        lines.append("| **Subtotal** | **\(Money.string(budget.subtotal))** | |")
+        lines.append("| Contingency \(Int(budget.contingencyPercent))% | \(Money.string(budget.contingency)) | |")
+        lines.append("| **Total** | **\(Money.string(budget.total))** | |")
+        lines.append("")
+
+        if let efficiency = budget.efficiency {
+            lines.append("## What the optimizer is doing")
+            lines.append("")
+            lines.append("Baseline — best tool for every job, no passes: **\(Money.string(efficiency.baselineTotal))**")
+            lines.append("")
+            for saving in efficiency.passSavings where saving.applied {
+                let amount = saving.saved > 0 ? Money.string(saving.saved) : (saving.note ?? "—")
+                lines.append("- **\(saving.pass.label)** — \(saving.pass.detail) _(\(amount))_")
+            }
+            lines.append("")
+        }
+
+        let expensive = ShotEconomics.mostExpensive(breakdown: breakdown, plan: plan, limit: 10)
+        if !expensive.isEmpty {
+            lines.append("## The ten shots to argue about")
+            lines.append("")
+            lines.append("| Shot | Scene | Length | Generator | Cost |")
+            lines.append("|---|---:|---:|---|---:|")
+            for row in expensive {
+                lines.append("| \(row.shot.id) | \(row.shot.scene) | \(String(format: "%.1fs", row.shot.seconds)) | \(row.toolID) | \(Money.string(row.cost)) |")
+            }
+            lines.append("")
+        }
+
+        lines.append("## Assumptions")
+        lines.append("")
+        for assumption in budget.assumptions { lines.append("- \(assumption)") }
+        lines.append("")
+        lines.append("## Tools on this plan")
+        lines.append("")
+        lines.append(budget.toolsUsed.joined(separator: ", "))
+        lines.append("")
+        lines.append("---")
+        lines.append("")
+        lines.append("Prepared by Cinema Composer Pro · \(budget.generatedAt.formatted(date: .abbreviated, time: .shortened)) · rates are editable defaults, not vendor quotes.")
+        return lines.joined(separator: "\n")
+    }
+
     private static func escape(_ value: String) -> String {
         value
             .replacingOccurrences(of: "&", with: "&amp;")

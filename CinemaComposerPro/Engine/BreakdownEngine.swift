@@ -27,9 +27,20 @@ struct Shot: Codable, Identifiable, Equatable {
     var isVFX: Bool
     var isHero: Bool
     var complexMotion: Bool
+    /// Set when the producer hand-routed this shot in the Cutting Room.
+    var routingOverride: RoutingOverride?
 
-    /// Shots the planner is allowed to route to the value generator.
-    var needsHeroGenerator: Bool { isHero || isVFX }
+    enum RoutingOverride: String, Codable, Equatable { case hero, body }
+
+    /// Which generator this shot earns. A hand override always wins — the
+    /// producer has seen the shot and the heuristic has not.
+    var needsHeroGenerator: Bool {
+        switch routingOverride {
+        case .hero: return true
+        case .body: return false
+        case nil: return isHero || isVFX
+        }
+    }
 }
 
 /// The pile of work a runtime implies, in the units vendors actually bill in.
@@ -89,22 +100,26 @@ struct Breakdown: Equatable {
             remaining -= seconds
 
             let sceneIndex = min(sceneCount - 1, Int(Double(index) / Double(targetShots) * Double(sceneCount)))
+            let id = String(format: "S%03d-%04d", sceneIndex + 1, index + 1)
+            let override: Shot.RoutingOverride? = spec.forcedHeroShotIDs.contains(id) ? .hero
+                : (spec.forcedBodyShotIDs.contains(id) ? .body : nil)
             shots.append(Shot(
-                id: String(format: "S%03d-%04d", sceneIndex + 1, index + 1),
+                id: id,
                 index: index,
                 scene: sceneIndex + 1,
                 seconds: (seconds * 100).rounded() / 100,
                 hasDialogue: Double.random(in: 0...1, using: &rng) < spec.resolvedDialogueRatio,
                 isVFX: Double.random(in: 0...1, using: &rng) < spec.resolvedVFXRatio,
                 isHero: Double.random(in: 0...1, using: &rng) < 0.12,
-                complexMotion: Double.random(in: 0...1, using: &rng) < 0.35
+                complexMotion: Double.random(in: 0...1, using: &rng) < 0.35,
+                routingOverride: override
             ))
             if remaining <= 0 { break }
         }
 
         let finalSeconds = shots.reduce(0) { $0 + $1.seconds }
         let dialogueSeconds = shots.filter(\.hasDialogue).reduce(0) { $0 + $1.seconds }
-        let generatedSeconds = finalSeconds * tier.takesPerKeeper
+        let generatedSeconds = finalSeconds * spec.resolvedTakesPerKeeper
         let bytesPerSecond = tier.resolution.bytesPerSecond
 
         var workload = Workload()
@@ -112,7 +127,7 @@ struct Breakdown: Equatable {
         // re-reads what came before, so bill input and output.
         workload.scriptTokens = spec.runtimeMinutes * 260 * Double(tier.scriptPasses) * 2
         workload.breakdownTokens = Double(shots.count) * 320
-        workload.shotPromptTokens = Double(shots.count) * 180 * tier.takesPerKeeper
+        workload.shotPromptTokens = Double(shots.count) * 180 * spec.resolvedTakesPerKeeper
         // Previs
         workload.storyboards = Double(shots.count * tier.boardsPerShot)
         workload.characterSheets = Double(spec.castCount * 3 + spec.locationCount * 2)
