@@ -9,12 +9,18 @@ import SwiftUI
 @main
 struct CinemaComposerProApp: App {
     @StateObject private var model = ProductionViewModel()
+    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "ccp_onboarding_complete")
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(model)
                 .preferredColorScheme(.dark)
+                .fullScreenCover(isPresented: $showOnboarding) {
+                    GetStartedView(isPresented: $showOnboarding)
+                        .environmentObject(model)
+                        .preferredColorScheme(.dark)
+                }
         }
     }
 }

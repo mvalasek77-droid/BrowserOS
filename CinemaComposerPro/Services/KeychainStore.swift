@@ -48,6 +48,7 @@ final class KeychainStore: ObservableObject {
     var storedRefs: Set<String> { Set(descriptors.map(\.ref)) }
 
     func has(_ ref: String) -> Bool { descriptors.contains { $0.ref == ref } }
+    func has(ref: String) -> Bool { has(ref) }
 
     /// Plaintext read. Only adapters about to make a call should use this.
     func secret(for ref: String) -> String? {

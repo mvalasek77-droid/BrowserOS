@@ -3,14 +3,28 @@ import SwiftUI
 /// Everything that configures the orchestra rather than the picture.
 struct SetupView: View {
     @EnvironmentObject private var model: ProductionViewModel
+    @State private var showOnboarding = false
 
     var body: some View {
         List {
+            Section {
+                Button {
+                    showOnboarding = true
+                } label: {
+                    Label("Get started guide", systemImage: "book.pages")
+                }
+            }
+
             Section {
                 NavigationLink {
                     ToolRackView()
                 } label: {
                     Label("Tool rack (\(model.registry.tools.count))", systemImage: "square.stack.3d.up")
+                }
+                NavigationLink {
+                    VideoToolMarketplaceView()
+                } label: {
+                    Label("Video tool marketplace", systemImage: "plus.square.on.square")
                 }
                 NavigationLink {
                     KeysView()
@@ -58,6 +72,11 @@ struct SetupView: View {
             }
         }
         .navigationTitle("Setup")
+        .fullScreenCover(isPresented: $showOnboarding) {
+            GetStartedView(isPresented: $showOnboarding)
+                .environmentObject(model)
+                .preferredColorScheme(.dark)
+        }
     }
 }
 
