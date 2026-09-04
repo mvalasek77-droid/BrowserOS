@@ -104,3 +104,116 @@ struct WarningBanner: View {
         }
     }
 }
+
+/// Cross-promotion card for Final Script AI — the companion app for screenplay
+/// writing. Opens the App Store listing directly.
+struct FinalScriptAICard: View {
+    var style: CardStyle = .compact
+    @Environment(\.openURL) private var openURL
+
+    enum CardStyle { case compact, full }
+
+    private static let appStoreURL = URL(string: "https://apps.apple.com/app/final-script-ai/id6742578786")!
+
+    var body: some View {
+        Button { openURL(Self.appStoreURL) } label: {
+            switch style {
+            case .compact: compactLayout
+            case .full: fullLayout
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var compactLayout: some View {
+        HStack(spacing: 12) {
+            scriptIcon
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Final Script AI").font(.subheadline.bold())
+                Text("Write production-ready screenplays with AI")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text("GET")
+                .font(.caption.bold())
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(Palette.cool, in: Capsule())
+                .foregroundStyle(.white)
+        }
+        .padding(12)
+        .background(
+            LinearGradient(colors: [Palette.cool.opacity(0.12), Palette.accent.opacity(0.08)],
+                           startPoint: .leading, endPoint: .trailing),
+            in: RoundedRectangle(cornerRadius: 12)
+        )
+    }
+
+    private var fullLayout: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 14) {
+                scriptIcon
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Final Script AI")
+                        .font(.headline)
+                    Text("The screenplay companion to Cinema Composer Pro")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                promoFeature(icon: "doc.text", text: "AI-powered screenplay writing and formatting")
+                promoFeature(icon: "arrow.triangle.branch", text: "Scene breakdowns that feed straight into production")
+                promoFeature(icon: "person.3", text: "Character development and dialogue refinement")
+                promoFeature(icon: "sparkles", text: "Rewrite, expand, and polish with AI assistance")
+            }
+
+            HStack {
+                Text("Write the script, then produce it here.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("Open in App Store")
+                    .font(.caption.bold())
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(Palette.cool, in: Capsule())
+                    .foregroundStyle(.white)
+            }
+        }
+        .padding(16)
+        .background(
+            LinearGradient(colors: [Palette.cool.opacity(0.15), Palette.accent.opacity(0.08)],
+                           startPoint: .topLeading, endPoint: .bottomTrailing),
+            in: RoundedRectangle(cornerRadius: 14)
+        )
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.cool.opacity(0.2), lineWidth: 1))
+    }
+
+    private var scriptIcon: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(LinearGradient(colors: [Palette.cool, Palette.cool.opacity(0.7)],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 44, height: 44)
+            Image(systemName: "text.page.fill")
+                .font(.title3)
+                .foregroundStyle(.white)
+        }
+    }
+
+    private func promoFeature(icon: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundStyle(Palette.cool)
+                .frame(width: 16)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}

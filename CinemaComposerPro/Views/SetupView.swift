@@ -58,6 +58,11 @@ struct SetupView: View {
                 Text("The top sheet is the page you put in front of a financier. The EDL, FCPXML and OTIO carry the cut — with provenance for every clip — into a real edit suite.")
             }
 
+            Section("Our apps") {
+                FinalScriptAICard(style: .compact)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+            }
+
             Section {
                 KeyValueRow(key: "Built-in tools", value: "\(ToolCatalog.builtIn.count)")
                 KeyValueRow(key: "Catalog rates as of", value: ToolCatalog.ratesAsOf)

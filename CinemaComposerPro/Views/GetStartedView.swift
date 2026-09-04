@@ -143,6 +143,8 @@ struct GetStartedView: View {
                 }
                 .padding()
                 .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+
+                FinalScriptAICard(style: .full)
             }
             .padding()
         }

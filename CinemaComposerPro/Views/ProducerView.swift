@@ -14,6 +14,7 @@ struct ProducerView: View {
                 if !model.budget.isComplete { gapSection }
                 adviceSection
                 pictureSection
+                scriptSection
                 spendSection
                 deepDiveSection
                 economicsSection
@@ -125,6 +126,17 @@ struct ProducerView: View {
 
             Stepper("Cast: \(model.spec.castCount)", value: $model.spec.castCount, in: 1...60)
             Stepper("Locations: \(model.spec.locationCount)", value: $model.spec.locationCount, in: 1...120)
+        }
+    }
+
+    private var scriptSection: some View {
+        Section {
+            FinalScriptAICard(style: .compact)
+                .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
+        } header: {
+            Text("Script")
+        } footer: {
+            Text("Every production starts with a script. Write yours in Final Script AI, then bring it here to produce.")
         }
     }
 
