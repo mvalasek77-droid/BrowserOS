@@ -113,7 +113,7 @@ struct FinalScriptAICard: View {
 
     enum CardStyle { case compact, full }
 
-    private static let appStoreURL = URL(string: "https://apps.apple.com/app/final-script-ai/id6742578786")!
+    private static let appStoreURL = URL(string: "https://apps.apple.com/ca/app/final-script-ai/id6783624274")!
 
     var body: some View {
         Button { openURL(Self.appStoreURL) } label: {
