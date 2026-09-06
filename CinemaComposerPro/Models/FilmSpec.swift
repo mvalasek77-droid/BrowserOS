@@ -223,14 +223,14 @@ struct FilmSpec: Codable, Equatable {
     var forcedHeroShotIDs: Set<String> = []
     var forcedBodyShotIDs: Set<String> = []
 
-    var resolvedTakesPerKeeper: Double { takesPerKeeperOverride ?? tier.takesPerKeeper }
-    var resolvedShotSeconds: Double { averageShotSeconds ?? genre.averageShotSeconds }
-    var resolvedDialogueRatio: Double { dialogueRatio ?? genre.dialogueRatio }
-    var resolvedMusicCoverage: Double { musicCoverage ?? genre.musicCoverage }
-    var resolvedVFXRatio: Double { vfxRatio ?? genre.vfxRatio }
-    var resolvedSFXPerShot: Double { sfxPerShot ?? genre.sfxPerShot }
+    var resolvedTakesPerKeeper: Double { max(1, takesPerKeeperOverride ?? tier.takesPerKeeper) }
+    var resolvedShotSeconds: Double { max(0.5, averageShotSeconds ?? genre.averageShotSeconds) }
+    var resolvedDialogueRatio: Double { min(max(dialogueRatio ?? genre.dialogueRatio, 0), 1) }
+    var resolvedMusicCoverage: Double { min(max(musicCoverage ?? genre.musicCoverage, 0), 1) }
+    var resolvedVFXRatio: Double { min(max(vfxRatio ?? genre.vfxRatio, 0), 1) }
+    var resolvedSFXPerShot: Double { max(0, sfxPerShot ?? genre.sfxPerShot) }
 
-    var runtimeSeconds: Double { runtimeMinutes * 60 }
+    var runtimeSeconds: Double { max(0, runtimeMinutes) * 60 }
 }
 
 /// Costs that are not a model call but land on the same invoice.

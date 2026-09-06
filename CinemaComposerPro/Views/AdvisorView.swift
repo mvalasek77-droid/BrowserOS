@@ -10,6 +10,7 @@ struct AdvisorView: View {
     private var totalOpportunity: Double { costAdvice.reduce(0) { max($0, $1.saving) } }
 
     var body: some View {
+        NavigationStack {
         List {
             Section {
                 StatGrid(stats: [
@@ -69,6 +70,7 @@ struct AdvisorView: View {
             }
         }
         .task { if model.recommendations.isEmpty { await model.refreshAdvice() } }
+        }
     }
 }
 
@@ -123,23 +125,3 @@ extension Recommendation.Kind {
     }
 }
 
-/// Small, deliberate haptics — this app moves real money around.
-enum Haptics {
-    static func success() {
-#if canImport(UIKit)
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-#endif
-    }
-
-    static func tap() {
-#if canImport(UIKit)
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-#endif
-    }
-
-    static func warning() {
-#if canImport(UIKit)
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
-#endif
-    }
-}

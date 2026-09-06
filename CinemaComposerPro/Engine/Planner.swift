@@ -449,8 +449,6 @@ enum Planner {
     @discardableResult
     static func schedule(tasks: inout [PlanTask], maxConcurrency: Int, parallel: Bool) -> PlanSchedule {
         var finishTimes: [String: Double] = [:]
-        var indexByID: [String: Int] = [:]
-        for (index, task) in tasks.enumerated() { indexByID[task.id] = index }
 
         func wallClock(_ task: PlanTask) -> Double {
             parallel ? task.workerSeconds / Double(max(1, min(task.concurrency, maxConcurrency))) : task.workerSeconds

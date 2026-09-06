@@ -15,11 +15,9 @@ struct CinemaComposerProApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(model)
-                .preferredColorScheme(.dark)
                 .fullScreenCover(isPresented: $showOnboarding) {
                     GetStartedView(isPresented: $showOnboarding)
                         .environmentObject(model)
-                        .preferredColorScheme(.dark)
                 }
         }
     }

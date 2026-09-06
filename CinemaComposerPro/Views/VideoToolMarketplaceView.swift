@@ -145,9 +145,9 @@ struct VideoToolMarketplaceView: View {
                         HStack {
                             Text(tool.name).font(.subheadline)
                             if let ref = tool.keyRef {
-                                Image(systemName: model.keys.has(ref: ref) ? "key.fill" : "key")
+                                Image(systemName: model.keys.has( ref) ? "key.fill" : "key")
                                     .font(.caption2)
-                                    .foregroundStyle(model.keys.has(ref: ref) ? Palette.good : .secondary)
+                                    .foregroundStyle(model.keys.has( ref) ? Palette.good : .secondary)
                             }
                         }
                         HStack(spacing: 6) {

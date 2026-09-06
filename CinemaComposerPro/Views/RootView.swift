@@ -9,7 +9,7 @@ struct RootView: View {
             ProducerView()
                 .tabItem { Label("Producer", systemImage: "dollarsign.circle") }
 
-            NavigationStack { AdvisorView() }
+            AdvisorView()
                 .tabItem { Label("Advisor", systemImage: "lightbulb.max") }
 
             ConductorView()
@@ -18,7 +18,7 @@ struct RootView: View {
             CuttingRoomView()
                 .tabItem { Label("Cutting room", systemImage: "film.stack") }
 
-            NavigationStack { SetupView() }
+            SetupView()
                 .tabItem { Label("Setup", systemImage: "slider.horizontal.3") }
         }
         .tint(Palette.accent)

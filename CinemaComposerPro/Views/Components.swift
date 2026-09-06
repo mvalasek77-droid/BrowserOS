@@ -1,13 +1,47 @@
 import SwiftUI
 
-/// Shared furniture. The app reads as a piece of production software, so the
-/// numbers are monospaced, the panels are dark, and nothing bounces.
+extension Color {
+    init(light: Color, dark: Color) {
+        self.init(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
+        })
+    }
+}
+
 enum Palette {
     static let accent = Color(red: 0.94, green: 0.63, blue: 0.13)
     static let cool = Color(red: 0.31, green: 0.64, blue: 1.0)
     static let good = Color(red: 0.26, green: 0.75, blue: 0.48)
     static let bad = Color(red: 1.0, green: 0.42, blue: 0.42)
     static let panel = Color(.secondarySystemBackground)
+}
+
+enum Haptics {
+    private static let successGenerator = UINotificationFeedbackGenerator()
+    private static let warningGenerator = UINotificationFeedbackGenerator()
+    private static let tapGenerator = UIImpactFeedbackGenerator(style: .light)
+    private static let heavyGenerator = UIImpactFeedbackGenerator(style: .medium)
+
+    static func success() {
+        successGenerator.notificationOccurred(.success)
+    }
+
+    static func tap() {
+        tapGenerator.impactOccurred()
+    }
+
+    static func warning() {
+        warningGenerator.notificationOccurred(.warning)
+    }
+
+    static func heavy() {
+        heavyGenerator.impactOccurred()
+    }
+
+    static func prepare() {
+        successGenerator.prepare()
+        tapGenerator.prepare()
+    }
 }
 
 struct StatTile: View {
@@ -29,7 +63,7 @@ struct StatTile: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(Palette.panel, in: RoundedRectangle(cornerRadius: 10))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
@@ -45,8 +79,6 @@ struct StatGrid: View {
     }
 }
 
-/// A labelled bar — used for department share, where the shape of the spend
-/// matters more than the exact number.
 struct ShareBar: View {
     var label: String
     var amount: String
@@ -62,7 +94,7 @@ struct ShareBar: View {
             }
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Palette.panel)
+                    Capsule().fill(.quaternary)
                     Capsule().fill(tint.opacity(0.85))
                         .frame(width: max(2, geometry.size.width * min(max(fraction, 0), 1)))
                 }
@@ -105,15 +137,13 @@ struct WarningBanner: View {
     }
 }
 
-/// Cross-promotion card for Final Script AI — the companion app for screenplay
-/// writing. Opens the App Store listing directly.
 struct FinalScriptAICard: View {
     var style: CardStyle = .compact
     @Environment(\.openURL) private var openURL
 
     enum CardStyle { case compact, full }
 
-    private static let appStoreURL = URL(string: "https://apps.apple.com/ca/app/final-script-ai/id6783624274")!
+    private static let appStoreURL = URL(string: "https://apps.apple.com/app/final-script-ai/id6783624274")!
 
     var body: some View {
         Button { openURL(Self.appStoreURL) } label: {
@@ -123,6 +153,8 @@ struct FinalScriptAICard: View {
             }
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Final Script AI")
+        .accessibilityHint("Opens in the App Store")
     }
 
     private var compactLayout: some View {
@@ -144,9 +176,16 @@ struct FinalScriptAICard: View {
         }
         .padding(12)
         .background(
-            LinearGradient(colors: [Palette.cool.opacity(0.12), Palette.accent.opacity(0.08)],
-                           startPoint: .leading, endPoint: .trailing),
+            .ultraThinMaterial,
             in: RoundedRectangle(cornerRadius: 12)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    LinearGradient(colors: [Palette.cool.opacity(0.3), Palette.accent.opacity(0.15)],
+                                   startPoint: .leading, endPoint: .trailing),
+                    lineWidth: 0.5
+                )
         )
     }
 
@@ -185,12 +224,8 @@ struct FinalScriptAICard: View {
             }
         }
         .padding(16)
-        .background(
-            LinearGradient(colors: [Palette.cool.opacity(0.15), Palette.accent.opacity(0.08)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing),
-            in: RoundedRectangle(cornerRadius: 14)
-        )
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.cool.opacity(0.2), lineWidth: 1))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Palette.cool.opacity(0.2), lineWidth: 0.5))
     }
 
     private var scriptIcon: some View {

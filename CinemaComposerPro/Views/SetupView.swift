@@ -6,6 +6,7 @@ struct SetupView: View {
     @State private var showOnboarding = false
 
     var body: some View {
+        NavigationStack {
         List {
             Section {
                 Button {
@@ -80,7 +81,7 @@ struct SetupView: View {
         .fullScreenCover(isPresented: $showOnboarding) {
             GetStartedView(isPresented: $showOnboarding)
                 .environmentObject(model)
-                .preferredColorScheme(.dark)
+        }
         }
     }
 }

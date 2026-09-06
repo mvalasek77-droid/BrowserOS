@@ -154,6 +154,13 @@ struct TimelineStripView: View {
     var pixelsPerSecond: Double
     @Binding var selectedClipID: String?
 
+    private static let videoClipColor = Color("VideoClip", bundle: nil)
+    private static let audioClipColor = Color("AudioClip", bundle: nil)
+    private static let videoClipFallback = Color(light: Color(red: 0.72, green: 0.78, blue: 0.86),
+                                                  dark: Color(red: 0.16, green: 0.22, blue: 0.28))
+    private static let audioClipFallback = Color(light: Color(red: 0.68, green: 0.84, blue: 0.74),
+                                                  dark: Color(red: 0.11, green: 0.24, blue: 0.18))
+
     var body: some View {
         ScrollView([.horizontal, .vertical]) {
             VStack(alignment: .leading, spacing: 6) {
@@ -170,10 +177,15 @@ struct TimelineStripView: View {
             .padding(10)
         }
         .background(Color(.systemBackground))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Timeline with \(timeline.tracks.count) tracks, \(timeline.clipCount) clips")
     }
 
     private func laneCanvas(for track: Track) -> some View {
         let width = max(240, timeline.duration * pixelsPerSecond)
+        let clipFill = track.kind == .video ? Self.videoClipFallback : Self.audioClipFallback
+        let clipTextColor = Color.primary
+
         return Canvas { context, size in
             for clip in track.clips {
                 let rect = CGRect(x: clip.start * pixelsPerSecond,
@@ -181,21 +193,33 @@ struct TimelineStripView: View {
                                   width: max(1.5, clip.duration * pixelsPerSecond - 1),
                                   height: size.height)
                 let isSelected = clip.id == selectedClipID
-                let fill = track.kind == .video
-                    ? Color(red: 0.16, green: 0.22, blue: 0.28)
-                    : Color(red: 0.11, green: 0.24, blue: 0.18)
-                context.fill(Path(roundedRect: rect, cornerRadius: 3), with: .color(fill))
+                context.fill(Path(roundedRect: rect, cornerRadius: 3), with: .color(clipFill))
                 if isSelected {
                     context.stroke(Path(roundedRect: rect, cornerRadius: 3), with: .color(Palette.accent), lineWidth: 2)
                 }
                 if rect.width > 26 {
-                    context.draw(Text(clip.name).font(.system(size: 8, design: .monospaced)).foregroundColor(.white.opacity(0.8)),
+                    context.draw(Text(clip.name).font(.system(size: 8, design: .monospaced)).foregroundColor(clipTextColor.opacity(0.8)),
                                  at: CGPoint(x: rect.minX + 4, y: rect.midY), anchor: .leading)
                 }
             }
         }
         .frame(width: width, height: 44)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(track.kind == .video ? "Video" : "Audio") track \(track.id), \(track.clips.count) clips")
+        .accessibilityAdjustableAction { direction in
+            guard !track.clips.isEmpty else { return }
+            let currentIndex = track.clips.firstIndex { $0.id == selectedClipID } ?? -1
+            switch direction {
+            case .increment:
+                let next = min(currentIndex + 1, track.clips.count - 1)
+                selectedClipID = track.clips[next].id
+            case .decrement:
+                let prev = max(currentIndex - 1, 0)
+                selectedClipID = track.clips[prev].id
+            @unknown default: break
+            }
+        }
         .gesture(
             DragGesture(minimumDistance: 0).onEnded { value in
                 let seconds = value.location.x / pixelsPerSecond

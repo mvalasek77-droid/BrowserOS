@@ -59,6 +59,12 @@ enum Exporters {
             """
         }.joined(separator: "\n")
 
+        let audioLanes = audioClips.enumerated().map { index, clip -> String in
+            """
+                      <asset-clip ref="\(assetIDs[clip.id] ?? "a1")" name="\(escape(clip.name))" lane="\(index + 1)" offset="\(time(clip.start))" start="\(time(clip.sourceIn))" duration="\(time(clip.duration))"/>
+            """
+        }.joined(separator: "\n")
+
         let markers = timeline.markers.map { marker in
             "          <marker start=\"\(time(marker.at))\" value=\"\(escape(marker.name))\"/>"
         }.joined(separator: "\n")
@@ -77,6 +83,7 @@ enum Exporters {
                 <sequence format="r1" duration="\(time(timeline.duration))">
                   <spine>
         \(spine)
+        \(audioLanes)
         \(markers)
                   </spine>
                 </sequence>

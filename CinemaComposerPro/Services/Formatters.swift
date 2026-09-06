@@ -11,15 +11,17 @@ enum Money {
     }()
 
     static func string(_ value: Double) -> String {
-        formatter.string(from: NSNumber(value: value)) ?? String(format: "$%.2f", value)
+        let copy = formatter.copy() as! NumberFormatter
+        return copy.string(from: NSNumber(value: value)) ?? String(format: "$%.2f", value)
     }
 
-    /// Compact form for tight labels: $1.2k, $34.5k.
     static func compact(_ value: Double) -> String {
-        switch abs(value) {
-        case 1_000_000...: return String(format: "$%.1fM", value / 1_000_000)
-        case 10_000...: return String(format: "$%.0fk", value / 1_000)
-        case 1_000...: return String(format: "$%.1fk", value / 1_000)
+        let sign = value < 0 ? "-" : ""
+        let v = abs(value)
+        switch v {
+        case 1_000_000...: return "\(sign)$\(String(format: "%.1fM", v / 1_000_000))"
+        case 10_000...: return "\(sign)$\(String(format: "%.0fk", v / 1_000))"
+        case 1_000...: return "\(sign)$\(String(format: "%.1fk", v / 1_000))"
         default: return string(value)
         }
     }

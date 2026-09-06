@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 /// Everything about a production that is worth keeping — except the API keys,
 /// which stay in the Keychain and are never written into this file.
@@ -40,19 +41,29 @@ enum ProjectStore {
         guard let data = try? Data(contentsOf: projectURL) else { return nil }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try? decoder.decode(ProjectDocument.self, from: data)
+        do {
+            return try decoder.decode(ProjectDocument.self, from: data)
+        } catch {
+            print("[CCP] Failed to decode project: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     /// Write an export to a temp file and hand back the URL for a share sheet.
     static func stage(_ contents: String, as filename: String) throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(sanitize(filename))
         try contents.write(to: url, atomically: true, encoding: .utf8)
         return url
     }
 
     static func stage(_ data: Data, as filename: String) throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(sanitize(filename))
         try data.write(to: url, options: .atomic)
         return url
+    }
+
+    private static func sanitize(_ filename: String) -> String {
+        let illegal = CharacterSet(charactersIn: "/\\:*?\"<>|")
+        return filename.components(separatedBy: illegal).joined(separator: "_")
     }
 }

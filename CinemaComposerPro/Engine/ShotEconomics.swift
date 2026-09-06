@@ -62,7 +62,8 @@ enum ShotEconomics {
         let all = rows(breakdown: breakdown, plan: plan)
         guard let current = all.first(where: { $0.id == shot.id }) else { return 0 }
         let counterparts = all.filter { $0.shot.needsHeroGenerator != shot.needsHeroGenerator && !$0.isReused }
-        let counterpartRate = counterparts.reduce(0) { $0 + $1.costPerSecond } / Double(max(1, counterparts.count))
+        guard !counterparts.isEmpty else { return 0 }
+        let counterpartRate = counterparts.reduce(0) { $0 + $1.costPerSecond } / Double(counterparts.count)
         return (counterpartRate * shot.seconds) - current.cost
     }
 }

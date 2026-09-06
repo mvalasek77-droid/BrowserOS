@@ -53,7 +53,7 @@ struct SimulatedAdapter: ToolAdapter {
         // Simulated failures hit the first attempt only, so a retry can succeed
         // the way a real transient failure does.
         if failureRate > 0, attempt == 1 {
-            var rng = SeededGenerator(seed: seed &+ UInt64(abs(task.id.hashValue % 100_000)))
+            var rng = SeededGenerator(seed: seed &+ UInt64(task.id.djb2Hash % 100_000))
             if Double.random(in: 0...1, using: &rng) < failureRate {
                 throw ToolInvocationError.transport("\(tool.id): upstream generation failed (simulated)")
             }
@@ -85,9 +85,13 @@ struct HTTPToolAdapter: ToolAdapter {
             request.setValue(fill(value, tool: tool, task: task, apiKey: apiKey), forHTTPHeaderField: header)
         }
         if request.httpMethod != "GET" {
-            let body = (tool.body ?? ["prompt": "{{prompt}}", "duration_seconds": "{{units}}"])
+            let raw = (tool.body ?? ["prompt": "{{prompt}}", "duration_seconds": "{{units}}"])
                 .mapValues { fill($0, tool: tool, task: task, apiKey: apiKey) }
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+            let typed: [String: Any] = raw.mapValues { value in
+                if let number = Double(value), !value.contains(" ") { return number }
+                return value
+            }
+            request.httpBody = try JSONSerialization.data(withJSONObject: typed)
         }
 
         do {

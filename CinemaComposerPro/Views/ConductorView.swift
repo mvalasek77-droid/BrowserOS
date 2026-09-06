@@ -84,9 +84,15 @@ private struct ConductorScreen: View {
                         Text("Nothing has played yet.").font(.caption).foregroundStyle(.secondary)
                     }
                     ForEach(conductor.events.reversed()) { event in
-                        Text(event.message)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(color(for: event.kind))
+                        Label {
+                            Text(event.message)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(color(for: event.kind))
+                        } icon: {
+                            Image(systemName: icon(for: event.kind))
+                                .foregroundStyle(color(for: event.kind))
+                                .font(.caption2)
+                        }
                     }
                 }
 
@@ -133,6 +139,15 @@ private struct ConductorScreen: View {
         case .success: return Palette.good
         case .warning: return Palette.accent
         case .failure: return Palette.bad
+        }
+    }
+
+    private func icon(for kind: ConductorEvent.Kind) -> String {
+        switch kind {
+        case .info: return "info.circle"
+        case .success: return "checkmark.circle"
+        case .warning: return "exclamationmark.triangle"
+        case .failure: return "xmark.circle"
         }
     }
 }

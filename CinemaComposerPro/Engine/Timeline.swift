@@ -59,6 +59,7 @@ struct Marker: Codable, Identifiable, Equatable {
 enum TimelineError: LocalizedError {
     case noSuchClip(String)
     case noSuchTrack(String)
+    case noSuchTake(String)
     case bladeOutsideClip
     case trimConsumesClip
     case nonPositiveDuration
@@ -67,6 +68,7 @@ enum TimelineError: LocalizedError {
         switch self {
         case .noSuchClip(let id): return "No clip \(id) in this sequence"
         case .noSuchTrack(let id): return "No track \(id) in this sequence"
+        case .noSuchTake(let id): return "No take \(id) on this clip"
         case .bladeOutsideClip: return "The blade point is outside the clip"
         case .trimConsumesClip: return "That trim would consume the whole clip"
         case .nonPositiveDuration: return "A clip needs a positive duration"
@@ -317,7 +319,7 @@ struct Timeline: Codable, Equatable {
     mutating func selectTake(_ takeID: String, on clipID: String) throws {
         let at = try locate(clipID)
         guard let take = tracks[at.track].clips[at.clip].takes.first(where: { $0.id == takeID }) else {
-            throw TimelineError.noSuchClip(takeID)
+            throw TimelineError.noSuchTake(takeID)
         }
         tracks[at.track].clips[at.clip].provenance = Provenance(takeID: take.id, toolID: take.toolID, cost: take.cost, prompt: take.prompt)
     }

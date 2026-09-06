@@ -142,7 +142,7 @@ struct GetStartedView: View {
                               detail: "NLE timeline where every clip remembers what made it")
                 }
                 .padding()
-                .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
 
                 FinalScriptAICard(style: .full)
             }
@@ -196,7 +196,7 @@ struct GetStartedView: View {
                     templatePicker
                 }
                 .padding()
-                .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
 
                 livePreview
             }
@@ -226,7 +226,7 @@ struct GetStartedView: View {
                             }
                             .frame(width: 120)
                             .padding(10)
-                            .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 8))
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 8))
                         }
                         .buttonStyle(.plain)
                     }
@@ -255,7 +255,7 @@ struct GetStartedView: View {
                     }
                 }
                 .padding(.vertical, 4)
-                .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
 
                 NavigationLink {
                     VideoToolMarketplaceView()
@@ -273,7 +273,7 @@ struct GetStartedView: View {
     private func videoToolRow(_ tool: AITool) -> some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(tool.keyRef != nil && model.keys.has(ref: tool.keyRef!) ? Palette.good : Color(.tertiaryLabel))
+                .fill(tool.keyRef.flatMap { model.keys.has($0) ? Palette.good : nil } ?? Color(.tertiaryLabel))
                 .frame(width: 10, height: 10)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -290,7 +290,7 @@ struct GetStartedView: View {
             Spacer()
 
             if let ref = tool.keyRef {
-                if model.keys.has(ref: ref) {
+                if model.keys.has( ref) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(Palette.good)
                 } else {
@@ -328,7 +328,7 @@ struct GetStartedView: View {
                     }
                 }
                 .padding(.vertical, 4)
-                .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
 
                 NavigationLink {
                     KeysView()
@@ -336,7 +336,7 @@ struct GetStartedView: View {
                     Label("Manage all keys", systemImage: "key.fill")
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
                 }
 
                 Text("You can add keys later from Setup > API Keys. Dry runs work without any.")
@@ -350,8 +350,8 @@ struct GetStartedView: View {
 
     private func keyRefRow(_ ref: String) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: model.keys.has(ref: ref) ? "key.fill" : "key")
-                .foregroundStyle(model.keys.has(ref: ref) ? Palette.good : Color(.tertiaryLabel))
+            Image(systemName: model.keys.has( ref) ? "key.fill" : "key")
+                .foregroundStyle(model.keys.has( ref) ? Palette.good : Color(.tertiaryLabel))
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -365,7 +365,7 @@ struct GetStartedView: View {
 
             Spacer()
 
-            if model.keys.has(ref: ref) {
+            if model.keys.has( ref) {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundStyle(Palette.good)
             }
@@ -399,7 +399,7 @@ struct GetStartedView: View {
                     KeyValueRow(key: "Wall clock", value: Clock.duration(model.budget.schedule.wallClockSeconds))
                 }
                 .padding()
-                .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
             .padding()
         }
@@ -421,7 +421,7 @@ struct GetStartedView: View {
             Spacer()
         }
         .padding()
-        .background(selected ? Palette.accent.opacity(0.12) : Palette.panel, in: RoundedRectangle(cornerRadius: 10))
+        .background(selected ? Palette.accent.opacity(0.12) : Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Step 6: Ready
@@ -444,14 +444,14 @@ struct GetStartedView: View {
                     readinessRow(label: "Tier", value: model.spec.tier.label, ok: true)
                     readinessRow(label: "Strategy", value: model.strategy.label, ok: true)
 
-                    let keyCount = model.registry.keyRefs.filter { model.keys.has(ref: $0) }.count
+                    let keyCount = model.registry.keyRefs.filter { model.keys.has( $0) }.count
                     let keyTotal = model.registry.keyRefs.count
                     readinessRow(label: "API keys", value: "\(keyCount)/\(keyTotal)", ok: keyCount > 0)
 
                     readinessRow(label: "Budget", value: Money.compact(model.budget.total), ok: model.budget.isComplete)
                 }
                 .padding()
-                .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
 
                 if !model.budget.isComplete {
                     Text("Some departments are unstaffed — the budget is a floor, not a quote. You can still produce; add keys or tools later to fill the gaps.")
@@ -490,7 +490,7 @@ struct GetStartedView: View {
             ])
         }
         .padding()
-        .background(Palette.panel, in: RoundedRectangle(cornerRadius: 12))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
     // MARK: - Helpers

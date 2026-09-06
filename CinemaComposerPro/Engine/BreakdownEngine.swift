@@ -16,6 +16,14 @@ struct SeededGenerator: RandomNumberGenerator {
     }
 }
 
+extension String {
+    var djb2Hash: UInt64 {
+        var hash: UInt64 = 5381
+        for byte in utf8 { hash = ((hash &<< 5) &+ hash) &+ UInt64(byte) }
+        return hash
+    }
+}
+
 /// One shot in the picture. The flags are what drive cost: dialogue buys a
 /// voice take and a lipsync pass, vfx and hero shots buy the expensive model.
 struct Shot: Codable, Identifiable, Equatable {
@@ -82,9 +90,10 @@ struct Breakdown: Equatable {
         let tier = spec.tier
         var rng = SeededGenerator(seed: spec.seed &* 2_654_435_761)
 
-        let runtimeSeconds = spec.runtimeSeconds
+        let runtimeSeconds = max(0, spec.runtimeSeconds)
         let sceneCount = max(1, Int((spec.runtimeMinutes / 2.2).rounded()))
-        let targetShots = max(1, Int((runtimeSeconds / spec.resolvedShotSeconds).rounded()))
+        let shotSeconds = max(0.5, spec.resolvedShotSeconds)
+        let targetShots = max(1, Int((runtimeSeconds / shotSeconds).rounded()))
 
         var shots: [Shot] = []
         shots.reserveCapacity(targetShots)
