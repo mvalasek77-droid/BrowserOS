@@ -152,6 +152,11 @@ struct ProducerView: View {
     private var deepDiveSection: some View {
         Section("Go deeper") {
             NavigationLink {
+                HowItWorksView()
+            } label: {
+                Label("How it works", systemImage: "map")
+            }
+            NavigationLink {
                 ShotEconomicsView()
             } label: {
                 Label("Shot economics", systemImage: "chart.bar.xaxis")

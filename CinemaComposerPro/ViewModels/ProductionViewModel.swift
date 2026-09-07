@@ -196,6 +196,22 @@ final class ProductionViewModel: ObservableObject {
 
     var missingKeys: [String] { conductor.missingKeys(plan: plan, registry: registry, keys: keys) }
 
+    /// Tools on the plan with no endpoint configured. They fall back to the
+    /// simulator even in a live run, so the Conductor says so rather than
+    /// letting a producer confirm a spend that can never happen.
+    var simulatedOnlyTools: [String] {
+        Set(plan.tasks.map(\.toolID))
+            .compactMap { registry.tool(id: $0) }
+            .filter { !$0.canCallLive }
+            .map(\.name)
+            .sorted()
+    }
+
+    /// True when at least one tool on the plan can actually reach a vendor.
+    var canRunLive: Bool {
+        plan.tasks.contains { registry.tool(id: $0.toolID)?.canCallLive == true }
+    }
+
     var runtimeCurve: [BudgetEngine.CurvePoint] {
         BudgetEngine.runtimeCurve(spec: spec, tools: registry.tools, strategy: strategy, overhead: overhead)
     }

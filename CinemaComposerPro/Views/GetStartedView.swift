@@ -459,6 +459,21 @@ struct GetStartedView: View {
                         .foregroundStyle(Palette.accent)
                         .multilineTextAlignment(.center)
                 }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("What happens next")
+                        .font(.subheadline.bold())
+                    Text("Work left to right through the tabs: **Producer** prices the picture, **Advisor** finds savings, **Conductor** runs the plan, **Cutting room** gives you the assembly. You finish with a top sheet for financiers and an EDL, FCPXML or OTIO you conform in your own edit suite.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Label("Runs are simulated and bill nothing until you add a key and a tool with an endpoint.",
+                          systemImage: "checkmark.shield")
+                        .font(.caption2)
+                        .foregroundStyle(Palette.good)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
             }
             .padding()
         }

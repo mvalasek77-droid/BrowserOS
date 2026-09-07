@@ -9,11 +9,18 @@ struct SetupView: View {
         NavigationStack {
         List {
             Section {
+                NavigationLink {
+                    HowItWorksView()
+                } label: {
+                    Label("How it works", systemImage: "map")
+                }
                 Button {
                     showOnboarding = true
                 } label: {
                     Label("Get started guide", systemImage: "book.pages")
                 }
+            } footer: {
+                Text("New here? “How it works” is the five-minute version: what each tab is for and what you end up holding.")
             }
 
             Section {

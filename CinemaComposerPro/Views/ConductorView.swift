@@ -34,6 +34,12 @@ private struct ConductorScreen: View {
 
                 Section("Run") {
                     Toggle("Dry run (simulated, bills nothing)", isOn: $dryRun)
+                    if !dryRun && !model.canRunLive {
+                        Label("No tool on this plan has an endpoint configured, so a live run still simulates every task and bills nothing. Import a tool pack with endpoints in Setup → Tool rack to call real vendors.",
+                              systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundStyle(Palette.cool)
+                    }
                     VStack(alignment: .leading) {
                         HStack {
                             Text("Hard cap")
@@ -113,13 +119,21 @@ private struct ConductorScreen: View {
                 }
             }
             .navigationTitle("Conductor")
-            .confirmationDialog("This spends real money",
+            .confirmationDialog(model.canRunLive ? "This spends real money" : "Nothing on this plan can bill",
                                 isPresented: $showLiveConfirmation,
                                 titleVisibility: .visible) {
-                Button("Run live up to \(Money.string(model.budget.total * capMultiplier))", role: .destructive) { start() }
+                if model.canRunLive {
+                    Button("Run live up to \(Money.string(model.budget.total * capMultiplier))", role: .destructive) { start() }
+                } else {
+                    Button("Run anyway (simulated)") { start() }
+                }
                 Button("Cancel", role: .cancel) { }
             } message: {
-                Text("Live runs call every vendor on the plan with your stored keys. The conductor stops the moment spend would pass the cap.")
+                if model.canRunLive {
+                    Text("Live runs call every vendor on the plan with your stored keys. The conductor stops the moment spend would pass the cap.")
+                } else {
+                    Text("None of the tools on this plan have an endpoint, so every task falls back to the simulator. This run will bill nothing.")
+                }
             }
         }
     }
