@@ -11,16 +11,41 @@ struct CuttingRoomView: View {
     @ObservedObject private var entitlements = EntitlementManager.shared
 
     var body: some View {
-        if entitlements.isPro {
-            CuttingRoomScreen()
+        if entitlements.isPro || entitlements.isDemoActive {
+            CuttingRoomScreen(demoBanner: entitlements.isDemoActive && !entitlements.isPro)
         } else {
             CuttingRoomLockedView()
         }
     }
 }
 
-/// The locked state: what the room looks like, blurred, with the paywall CTA.
+/// In-memory demo state: the user's real timeline is stashed while the demo
+/// sequence is on the table. Exit restores it untouched.
+@MainActor
+final class DemoSession: ObservableObject {
+    static let shared = DemoSession()
+    @Published var savedTimeline: Timeline?
+
+    private init() {}
+
+    func enter(model: ProductionViewModel) {
+        guard savedTimeline == nil else { return }
+        savedTimeline = model.timeline
+        model.timeline = DemoSequence.build()
+        EntitlementManager.shared.activateDemo()
+    }
+
+    func exit(model: ProductionViewModel) {
+        model.timeline = savedTimeline
+        savedTimeline = nil
+        EntitlementManager.shared.deactivateDemo()
+    }
+}
+
+/// The locked state: what the room looks like, blurred, with the paywall CTA
+/// and a way to try the full room on a showcase cut.
 private struct CuttingRoomLockedView: View {
+    @EnvironmentObject private var model: ProductionViewModel
     @State private var showPaywall = false
 
     var body: some View {
@@ -49,6 +74,17 @@ private struct CuttingRoomLockedView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Palette.accent)
+
+                Button {
+                    DemoSession.shared.enter(model: model)
+                    model.selectedClipID = nil
+                    Haptics.tap()
+                } label: {
+                    Label("Or try the demo cut", systemImage: "sparkles")
+                        .font(.subheadline)
+                }
+                .buttonStyle(.bordered)
+                .tint(Palette.cool)
             }
             .padding(24)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
@@ -63,6 +99,7 @@ private struct CuttingRoomLockedView: View {
 struct CuttingRoomScreen: View {
     @EnvironmentObject private var model: ProductionViewModel
     var blurredPreview: Bool = false
+    var demoBanner: Bool = false
     @State private var pixelsPerSecond: Double = 12
     @State private var regenerationTool: String = ""
     @State private var queuedTask: PlanTask?
@@ -74,6 +111,9 @@ struct CuttingRoomScreen: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                if demoBanner {
+                    demoBar
+                }
                 statsBar
                 TimelineStripView(timeline: timeline,
                                   pixelsPerSecond: pixelsPerSecond,
@@ -109,6 +149,28 @@ struct CuttingRoomScreen: View {
                 if regenerationTool.isEmpty { regenerationTool = model.plan.toolsUsed.first ?? "" }
             }
         }
+    }
+
+    /// Demo banner: makes it impossible to mistake the demo for your cut.
+    private var demoBar: some View {
+        HStack(spacing: 10) {
+            Label("Demo cut — nothing you do here is saved", systemImage: "sparkles")
+                .font(.caption.weight(.semibold))
+            Spacer()
+            Button {
+                DemoSession.shared.exit(model: model)
+                model.selectedClipID = nil
+                Haptics.tap()
+            } label: {
+                Text("Exit demo")
+                    .font(.caption.bold())
+            }
+            .buttonStyle(.bordered)
+            .tint(Palette.accent)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Palette.accent.opacity(0.12))
     }
 
     private var statsBar: some View {

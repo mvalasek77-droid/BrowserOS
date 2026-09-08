@@ -27,6 +27,10 @@ final class EntitlementManager: ObservableObject {
     /// True when Pro was unlocked via the admin bypass (not a real purchase).
     @Published private(set) var isAdminBypass: Bool = false
 
+    /// True while the user is exploring the demo cutting room. In-memory only:
+    /// never persisted, never reported to StoreKit as Pro, resets on relaunch.
+    @Published private(set) var isDemoActive: Bool = false
+
     // MARK: - Product IDs
 
     enum ProductID {
@@ -130,6 +134,20 @@ final class EntitlementManager: ObservableObject {
         isAdminBypass = false
         UserDefaults.standard.removeObject(forKey: StorageKey.isAdminBypass)
         Task { await refreshEntitlements() }
+    }
+
+    // MARK: - Demo mode
+
+    /// Unlock the Cutting Room temporarily for the showcase demo. Deliberately
+    /// NOT persisted: a relaunch lands back on the locked screen, and a
+    /// StoreKit entitlement refresh during a demo never clears it.
+    func activateDemo() {
+        guard !isDemoActive else { return }
+        isDemoActive = true
+    }
+
+    func deactivateDemo() {
+        isDemoActive = false
     }
 
     // MARK: - Internals

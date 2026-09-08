@@ -50,6 +50,7 @@
 		5144BD12C56C682E2B404458 /* VideoToolMarketplaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E91DC3690FF36119747135 /* VideoToolMarketplaceView.swift */; };
 		543CA158D7278647EFBADE59 /* SharedModels+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */; };
 		57539F96E0521EF180D2D70A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8333E635200AF1CDA701BC /* HistoryView.swift */; };
+		598769BD4083F504E4428E89 /* DemoSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6406AA252AF01DF4BB5CC9F /* DemoSequence.swift */; };
 		5A0A57E91B218045A65D58F8 /* Scenario.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5623E0B88DAE62249BFD9B /* Scenario.swift */; };
 		5B4A4B6116CC5EA140559339 /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
 		5B92CD070D455448CDE15FAE /* ToolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524355602615D5C10E6CF15E /* ToolCatalog.swift */; };
@@ -231,6 +232,7 @@
 		B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineTests.swift; sourceTree = "<group>"; };
 		B4E39FD7276BE5D765E7F51E /* CinemaComposerProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CinemaComposerProApp.swift; sourceTree = "<group>"; };
 		B5816CCD424567C7059FC243 /* TabManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerView.swift; sourceTree = "<group>"; };
+		B6406AA252AF01DF4BB5CC9F /* DemoSequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSequence.swift; sourceTree = "<group>"; };
 		B83A4ED7B65018DECA1F2737 /* WatchConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectionView.swift; sourceTree = "<group>"; };
 		B98D22680550D76F8788B9F9 /* SharedModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedModels.swift; sourceTree = "<group>"; };
 		BAA42340199258A8D9CAF3C9 /* ToolRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRegistry.swift; sourceTree = "<group>"; };
@@ -465,6 +467,7 @@
 				90C4A43450A79CA0A2CCE425 /* BreakdownEngine.swift */,
 				E1C274A88A630C9A1480F67C /* BudgetEngine.swift */,
 				C0B7FC0BC925AB43640E1815 /* Conductor.swift */,
+				B6406AA252AF01DF4BB5CC9F /* DemoSequence.swift */,
 				B0B2A41FF3345DA4282538E7 /* Exporters.swift */,
 				20B2197304268B33B16B1E52 /* Planner.swift */,
 				D76A9AA93B31710ED3FB3F76 /* ShotEconomics.swift */,
@@ -721,6 +724,7 @@
 				6F87AB9EAB6095D187934472 /* Conductor.swift in Sources */,
 				4C952F52408569D159C0E82B /* ConductorView.swift in Sources */,
 				AAF0336C9112CD5DE17E4BBD /* CuttingRoomView.swift in Sources */,
+				598769BD4083F504E4428E89 /* DemoSequence.swift in Sources */,
 				44D66184A6E376B234CDB27C /* EfficiencyView.swift in Sources */,
 				F9111271314341ADBB6C4753 /* EntitlementManager.swift in Sources */,
 				F80AE8B39E1FECCB0F638BB4 /* Exporters.swift in Sources */,
