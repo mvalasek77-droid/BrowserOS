@@ -104,6 +104,8 @@ struct CuttingRoomScreen: View {
     @State private var regenerationTool: String = ""
     @State private var queuedTask: PlanTask?
     @State private var exportURL: URL?
+    @State private var playhead: Double = 0
+    @State private var bladeMode = false
 
     /// Never seeds during view evaluation — the assembly is built in onAppear.
     private var timeline: Timeline { model.timeline ?? Timeline() }
@@ -115,10 +117,24 @@ struct CuttingRoomScreen: View {
                     demoBar
                 }
                 statsBar
-                TimelineStripView(timeline: timeline,
-                                  pixelsPerSecond: pixelsPerSecond,
-                                  selectedClipID: $model.selectedClipID)
-                    .frame(height: 190)
+                toolbarRow
+                TimelineCanvas(timeline: timeline,
+                               pixelsPerSecond: pixelsPerSecond,
+                               selectedClipID: $model.selectedClipID,
+                               playhead: $playhead,
+                               bladeMode: $bladeMode,
+                               onMove: { clipID, target in
+                                   model.edit { _ = try $0.move(clipID: clipID, to: target) }
+                               },
+                               onTrim: { clipID, head, tail in
+                                   model.edit {
+                                       try $0.trim(clipID, head: head, tail: tail, ripple: false)
+                                   }
+                               },
+                               onBlade: { clipID, at in
+                                   model.edit { _ = try $0.blade(clipID, at: at) }
+                               })
+                    .frame(maxHeight: 320)
                 Divider()
                 inspector
             }
@@ -151,6 +167,42 @@ struct CuttingRoomScreen: View {
         }
     }
 
+    /// Tools + transport row: blade toggle, zoom, playhead timecode.
+    private var toolbarRow: some View {
+        HStack(spacing: 14) {
+            Button {
+                bladeMode.toggle()
+                Haptics.tap()
+            } label: {
+                Label(bladeMode ? "Blade on" : "Blade",
+                      systemImage: bladeMode ? "scissors" : "arrow.selection")
+                    .font(.caption.weight(.semibold))
+            }
+            .buttonStyle(.bordered)
+            .tint(bladeMode ? Palette.bad : Palette.accent)
+
+            HStack(spacing: 6) {
+                Image(systemName: "minus.magnifyingglass")
+                    .foregroundStyle(.secondary)
+                Slider(value: $pixelsPerSecond, in: 2...60)
+                    .frame(maxWidth: 240)
+                Image(systemName: "plus.magnifyingglass")
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Text(Clock.timecode(playhead, fps: timeline.fps))
+                .font(.caption.monospaced().weight(.semibold))
+                .foregroundStyle(Palette.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Palette.accent.opacity(0.12), in: Capsule())
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+    }
+
     /// Demo banner: makes it impossible to mistake the demo for your cut.
     private var demoBar: some View {
         HStack(spacing: 10) {
@@ -181,11 +233,6 @@ struct CuttingRoomScreen: View {
                 ("Cost of cut", Money.compact(timeline.costOfCut)),
                 ("Unused takes", Money.compact(timeline.costOfUnusedTakes)),
             ])
-            HStack {
-                Image(systemName: "minus.magnifyingglass")
-                Slider(value: $pixelsPerSecond, in: 2...60)
-                Image(systemName: "plus.magnifyingglass")
-            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -265,89 +312,5 @@ struct CuttingRoomScreen: View {
                                    systemImage: "film",
                                    description: Text("Tap a clip to trim it, swap takes, or send it back to the orchestra."))
         }
-    }
-}
-
-/// The lanes. Drawn with Canvas rather than a view per clip — a feature is a
-/// thousand-plus clips, and a thousand SwiftUI views would crawl.
-struct TimelineStripView: View {
-    var timeline: Timeline
-    var pixelsPerSecond: Double
-    @Binding var selectedClipID: String?
-
-    private static let videoClipColor = Color("VideoClip", bundle: nil)
-    private static let audioClipColor = Color("AudioClip", bundle: nil)
-    private static let videoClipFallback = Color(light: Color(red: 0.72, green: 0.78, blue: 0.86),
-                                                  dark: Color(red: 0.16, green: 0.22, blue: 0.28))
-    private static let audioClipFallback = Color(light: Color(red: 0.68, green: 0.84, blue: 0.74),
-                                                  dark: Color(red: 0.11, green: 0.24, blue: 0.18))
-
-    var body: some View {
-        ScrollView([.horizontal, .vertical]) {
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(timeline.tracks) { track in
-                    HStack(spacing: 6) {
-                        Text(track.id)
-                            .font(.caption2.monospaced())
-                            .foregroundStyle(.secondary)
-                            .frame(width: 26, alignment: .leading)
-                        laneCanvas(for: track)
-                    }
-                }
-            }
-            .padding(10)
-        }
-        .background(Color(.systemBackground))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Timeline with \(timeline.tracks.count) tracks, \(timeline.clipCount) clips")
-    }
-
-    private func laneCanvas(for track: Track) -> some View {
-        let width = max(240, timeline.duration * pixelsPerSecond)
-        let clipFill = track.kind == .video ? Self.videoClipFallback : Self.audioClipFallback
-        let clipTextColor = Color.primary
-
-        return Canvas { context, size in
-            for clip in track.clips {
-                let rect = CGRect(x: clip.start * pixelsPerSecond,
-                                  y: 0,
-                                  width: max(1.5, clip.duration * pixelsPerSecond - 1),
-                                  height: size.height)
-                let isSelected = clip.id == selectedClipID
-                context.fill(Path(roundedRect: rect, cornerRadius: 3), with: .color(clipFill))
-                if isSelected {
-                    context.stroke(Path(roundedRect: rect, cornerRadius: 3), with: .color(Palette.accent), lineWidth: 2)
-                }
-                if rect.width > 26 {
-                    context.draw(Text(clip.name).font(.system(size: 8, design: .monospaced)).foregroundColor(clipTextColor.opacity(0.8)),
-                                 at: CGPoint(x: rect.minX + 4, y: rect.midY), anchor: .leading)
-                }
-            }
-        }
-        .frame(width: width, height: 44)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(track.kind == .video ? "Video" : "Audio") track \(track.id), \(track.clips.count) clips")
-        .accessibilityAdjustableAction { direction in
-            guard !track.clips.isEmpty else { return }
-            let currentIndex = track.clips.firstIndex { $0.id == selectedClipID } ?? -1
-            switch direction {
-            case .increment:
-                let next = min(currentIndex + 1, track.clips.count - 1)
-                selectedClipID = track.clips[next].id
-            case .decrement:
-                let prev = max(currentIndex - 1, 0)
-                selectedClipID = track.clips[prev].id
-            @unknown default: break
-            }
-        }
-        .gesture(
-            DragGesture(minimumDistance: 0).onEnded { value in
-                let seconds = value.location.x / pixelsPerSecond
-                if let hit = track.clips.first(where: { seconds >= $0.start && seconds <= $0.end }) {
-                    selectedClipID = hit.id
-                }
-            }
-        )
     }
 }

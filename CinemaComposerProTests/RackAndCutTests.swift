@@ -119,9 +119,42 @@ final class TimelineTests: XCTestCase {
         try timeline.append(Clip(name: "A", start: 0, duration: 10), to: "V1")
         try timeline.append(Clip(name: "B", start: 0, duration: 10), to: "V1")
         try timeline.overwrite(Clip(name: "C", start: 0, duration: 4), into: "V1", at: 8)
-        XCTAssertTrue(timeline.validate().isEmpty, "\(timeline.validate())")
+        XCTAssertTrue(timeline.validate().isEmpty)
         XCTAssertEqual(timeline.duration, 20, accuracy: 0.001)
         XCTAssertEqual(timeline.tracks[0].clips.count, 3)
+    }
+
+    func testMoveSnapsMagneticallyInsteadOfOverlapping() throws {
+        var timeline = Timeline()
+        try timeline.append(Clip(name: "A", start: 0, duration: 10), to: "V1")
+        try timeline.append(Clip(name: "B", start: 0, duration: 10), to: "V1")
+        let a = try XCTUnwrap(timeline.allClips.first { $0.name == "A" })
+        let b = try XCTUnwrap(timeline.allClips.first { $0.name == "B" })
+
+        // Drop A just past B's head → it cannot fit before B, so it settles
+        // flush against B's tail (the nearest legal edge).
+        let moved = try timeline.move(clipID: a.id, to: b.start + 2)
+        XCTAssertEqual(moved.start, b.end, accuracy: 0.001,
+                       "should snap flush to B's tail when that is nearest")
+        XCTAssertTrue(timeline.validate().isEmpty, "\(timeline.validate())")
+
+        // Drop A near the head of the timeline → nearest legal edge is
+        // B's leading edge: A ends exactly where B starts.
+        let movedBack = try timeline.move(clipID: a.id, to: 2)
+        XCTAssertEqual(movedBack.end, b.start, accuracy: 0.001,
+                       "should snap flush to B's head when that is nearest")
+        XCTAssertEqual(movedBack.start, 0, accuracy: 0.001)
+        XCTAssertTrue(timeline.validate().isEmpty)
+    }
+
+    func testMoveClampsAtZeroAndKeepsOrder() throws {
+        var timeline = Timeline()
+        try timeline.append(Clip(name: "A", start: 0, duration: 10), to: "V1")
+        let a = try XCTUnwrap(timeline.allClips.first)
+
+        let moved = try timeline.move(clipID: a.id, to: -50)
+        XCTAssertEqual(moved.start, 0, "negative moves must clamp to zero")
+        XCTAssertTrue(timeline.validate().isEmpty)
     }
 
     func testTakesDriveTheCostOfTheCut() throws {
