@@ -15,7 +15,7 @@ struct RootView: View {
             ConductorView()
                 .tabItem { Label("Conductor", systemImage: "waveform.path") }
 
-            CuttingRoomView()
+            CuttingRoomProView()
                 .tabItem { Label("Cutting room", systemImage: "film.stack") }
 
             SetupView()

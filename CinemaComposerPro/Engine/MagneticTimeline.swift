@@ -297,13 +297,18 @@ struct MagneticTimeline: Codable, Equatable {
 
     /// Every marker in the sequence, resolved to absolute time.
     var allMarkers: [(marker: EditMarker, at: RationalTime, itemName: String)] {
-        var found = markers.map { ($0, $0.at, name) }
+        var found: [(marker: EditMarker, at: RationalTime, itemName: String)] = []
+        for marker in markers {
+            found.append((marker: marker, at: marker.at, itemName: name))
+        }
         for placed in placedItems {
             for marker in placed.item.markers {
-                found.append((marker, placed.start + marker.at, placed.item.name))
+                found.append((marker: marker,
+                              at: placed.start + marker.at,
+                              itemName: placed.item.name))
             }
         }
-        return found.sorted { $0.1 < $1.1 }
+        return found.sorted { $0.at < $1.at }
     }
 
     // MARK: - Locating for mutation
@@ -382,8 +387,11 @@ struct MagneticTimeline: Codable, Equatable {
     /// Snap every boundary to the sequence's frame grid. Cheap insurance: an
     /// edit computed from a drag in points should never leave a sub-frame sliver.
     mutating func snapToFrames() {
+        // Bind the rate first: `rate` is a computed property, so reading it
+        // while `&spine[index]` is held would be an overlapping access to self.
+        let frameRate = rate
         for index in spine.indices {
-            Self.snap(&spine[index], to: rate)
+            Self.snap(&spine[index], to: frameRate)
         }
     }
 

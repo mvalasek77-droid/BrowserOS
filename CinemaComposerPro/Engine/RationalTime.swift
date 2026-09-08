@@ -189,22 +189,28 @@ extension RationalTime {
         if negative { frame = -frame }
 
         if rate.isDropFrame {
-            let dropped = Int64((Double(nominal) * 0.0666666).rounded())
-            let framesPerTenMinutes = nominal * 60 * 10 - dropped * 9
+            // Two frame numbers are skipped each minute except every tenth, so
+            // a ten-minute block holds 17982 numbers at 29.97 rather than 18000.
+            let dropped = Int64((Double(nominal) * 0.066666).rounded())
             let framesPerMinute = nominal * 60 - dropped
-            let tenMinuteBlocks = frame / framesPerTenMinutes
-            var remainder = frame % framesPerTenMinutes
-            if remainder >= dropped {
-                remainder += dropped * ((remainder - dropped) / framesPerMinute)
+            let framesPerTenMinutes = nominal * 60 * 10 - dropped * 9
+            guard framesPerTenMinutes > 0, framesPerMinute > 0 else { return "00:00:00;00" }
+
+            let blocks = frame / framesPerTenMinutes
+            let remainder = frame % framesPerTenMinutes
+            frame += dropped * 9 * blocks
+            if remainder > dropped {
+                frame += dropped * ((remainder - dropped) / framesPerMinute)
             }
-            frame += dropped * 9 * tenMinuteBlocks + (remainder - (frame % framesPerTenMinutes))
         }
 
-        let frames = frame % nominal
+        // Narrow to Int before formatting: %d against an Int64 is undefined on
+        // platforms where they differ in width.
+        let frames = Int(frame % nominal)
         let totalSeconds = frame / nominal
-        let seconds = totalSeconds % 60
-        let minutes = (totalSeconds / 60) % 60
-        let hours = (totalSeconds / 3600) % 24
+        let seconds = Int(totalSeconds % 60)
+        let minutes = Int((totalSeconds / 60) % 60)
+        let hours = Int((totalSeconds / 3600) % 24)
         let separator = rate.isDropFrame ? ";" : ":"
         let sign = negative ? "-" : ""
         return String(format: "%@%02d:%02d:%02d%@%02d",

@@ -21,6 +21,9 @@ final class ProductionViewModel: ObservableObject {
     @Published private(set) var plan: ProductionPlan
     @Published private(set) var budget: Budget
     @Published var timeline: Timeline?
+    /// The magnetic cut. Held here so it persists with the project; the cutting
+    /// room drives it through a CutDocument, which owns the editing state.
+    @Published var cut: MagneticTimeline?
     @Published var selectedClipID: String?
     @Published var lastError: String?
     @Published var scenarios: [Scenario] = []
@@ -64,6 +67,7 @@ final class ProductionViewModel: ObservableObject {
         self.overhead = overhead
         self.maxConcurrency = concurrency
         self.timeline = document.timeline
+        self.cut = document.cut
         self.scenarios = document.scenarios
 
         let breakdown = Breakdown.make(from: spec)
@@ -228,6 +232,24 @@ final class ProductionViewModel: ObservableObject {
 
     // MARK: - Cutting room
 
+    /// The magnetic cut, built from the plan the first time it is asked for.
+    @discardableResult
+    func seedCut(force: Bool = false) -> MagneticTimeline {
+        if let existing = cut, !force, !existing.spine.isEmpty { return existing }
+        let assembled = MagneticTimeline.assembly(from: breakdown, plan: plan)
+        cut = assembled
+        timeline = assembled.flattenedToTrackModel()
+        return assembled
+    }
+
+    /// Take the cutting room's result. The flattened track view is kept in step
+    /// so the EDL and OTIO exporters — and the cost-of-cut figures the producer
+    /// reads — stay honest without the cutting room having to know about them.
+    func commitCut(_ updated: MagneticTimeline) {
+        cut = updated
+        timeline = updated.flattenedToTrackModel()
+    }
+
     @discardableResult
     func seedTimeline(force: Bool = false) -> Timeline {
         if let existing = timeline, !force { return existing }
@@ -313,6 +335,7 @@ final class ProductionViewModel: ObservableObject {
             spec: spec, strategy: strategy, passes: passes, overhead: overhead,
             maxConcurrency: maxConcurrency, enabledModules: Array(modules.enabledIDs),
             timeline: timeline,
+            cut: cut,
             scenarios: scenarios,
             installedTools: registry.tools.filter { !builtInIDs.contains("\($0.id)@\($0.version)") }
         )
@@ -348,7 +371,10 @@ final class ProductionViewModel: ObservableObject {
             case .edl:
                 return try ProjectStore.stage(Exporters.edl(seedTimeline()), as: "\(safeTitle).edl")
             case .fcpxml:
-                return try ProjectStore.stage(Exporters.fcpxml(seedTimeline()), as: "\(safeTitle).fcpxml")
+                // The magnetic cut carries lanes, roles, retiming and keyframes;
+                // the flattened track model cannot, so export from the real one.
+                return try ProjectStore.stage(FCPXMLExporter.export(seedCut(), eventName: spec.title),
+                                              as: "\(safeTitle).fcpxml")
             case .otio:
                 return try ProjectStore.stage(Exporters.otio(seedTimeline()), as: "\(safeTitle).otio")
             case .toolPack:

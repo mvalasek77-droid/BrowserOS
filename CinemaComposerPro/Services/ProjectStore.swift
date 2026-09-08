@@ -12,6 +12,9 @@ struct ProjectDocument: Codable {
     var maxConcurrency: Int = 8
     var enabledModules: [String] = []
     var timeline: Timeline?
+    /// The Final Cut-shaped cut. Optional, so a project written before the
+    /// magnetic engine existed still decodes — a missing key reads as nil.
+    var cut: MagneticTimeline?
     var scenarios: [Scenario] = []
     /// Tools added or upgraded beyond the built-in rack, so an imported pack
     /// survives a relaunch.

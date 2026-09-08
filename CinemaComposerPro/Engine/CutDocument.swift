@@ -19,7 +19,13 @@ private struct UndoStep {
 @MainActor
 final class CutDocument: ObservableObject {
 
-    @Published private(set) var timeline: MagneticTimeline
+    /// Resolving every item to absolute time walks the whole tree, so it is
+    /// cached here rather than recomputed on each SwiftUI body evaluation — a
+    /// feature-length cut is thousands of items.
+    @Published private(set) var timeline: MagneticTimeline {
+        didSet { placed = timeline.placedItems }
+    }
+    @Published private(set) var placed: [PlacedItem] = []
     @Published var selection: Set<String> = []
     @Published var playhead: RationalTime = .zero
     @Published var inPoint: RationalTime?
@@ -34,6 +40,7 @@ final class CutDocument: ObservableObject {
 
     init(timeline: MagneticTimeline = MagneticTimeline()) {
         self.timeline = timeline
+        self.placed = timeline.placedItems
         self.selection = timeline.spine.first.map { [$0.id] } ?? []
     }
 
@@ -98,7 +105,7 @@ final class CutDocument: ObservableObject {
     // MARK: - Selection & playhead
 
     var selectedItems: [PlacedItem] {
-        timeline.placedItems.filter { selection.contains($0.item.id) }
+        placed.filter { selection.contains($0.item.id) }
     }
 
     var primarySelection: PlacedItem? {
@@ -116,16 +123,30 @@ final class CutDocument: ObservableObject {
         }
     }
 
-    func selectAll() { selection = Set(timeline.placedItems.map(\.item.id)) }
+    func selectAll() { selection = Set(placed.map(\.item.id)) }
+
+    /// Hit test: what sits on this lane at this time. The timeline view maps a
+    /// tap straight into these coordinates.
+    func item(onLane lane: Int, at time: RationalTime) -> PlacedItem? {
+        placed.first { $0.lane == lane && $0.start <= time && time < $0.end }
+    }
+
+    /// Lanes top to bottom, the way the timeline draws them. Lane 0 — the
+    /// primary storyline — is always present even in an empty sequence.
+    var laneOrder: [Int] {
+        var lanes = Set(placed.map(\.lane))
+        lanes.insert(0)
+        return lanes.sorted(by: >)
+    }
     func deselectAll() { selection = [] }
 
     /// Every point where something starts or ends — what the playhead steps
     /// between and what snapping pulls toward.
     var editPoints: [RationalTime] {
         var points: Set<RationalTime> = [.zero]
-        for placed in timeline.placedItems {
-            points.insert(placed.start)
-            points.insert(placed.end)
+        for entry in placed {
+            points.insert(entry.start)
+            points.insert(entry.end)
         }
         for entry in timeline.allMarkers { points.insert(entry.at) }
         return points.sorted()

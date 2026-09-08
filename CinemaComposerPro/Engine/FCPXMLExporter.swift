@@ -339,7 +339,7 @@ private struct ResourceTable {
     static let titleEffectID = "r_title"
 
     private var formatMarkup: String = ""
-    private var formatIdentifier: String = "r1"
+    private let formatIdentifier: String = "r1"
     private var assetIDs: [String: String] = [:]
     private var assetMarkup: [String] = []
     private var effectIDs: [String: String] = [:]
