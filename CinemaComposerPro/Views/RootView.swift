@@ -18,6 +18,9 @@ struct RootView: View {
             CuttingRoomView()
                 .tabItem { Label("Cutting room", systemImage: "film.stack") }
 
+            BugReporterView()
+                .tabItem { Label("Report bug", systemImage: "ladybug.fill") }
+
             SetupView()
                 .tabItem { Label("Setup", systemImage: "slider.horizontal.3") }
         }
