@@ -35,6 +35,7 @@
 		3675BCE7234EDACD5AA05AFB /* AITool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC053A7A0D714FA73C510F0 /* AITool.swift */; };
 		3751C6EC3F432427A7EC33B4 /* AdvisorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7578C0C4DC2FAB154DC64452 /* AdvisorView.swift */; };
 		37D6A218E2B9E673F3B78C0D /* EngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */; };
+		E9DAB2FD487B5E72F0312C09 /* MagneticTimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F861DDA554C5C6B222042E19 /* MagneticTimelineTests.swift */; };
 		396B31EC986F5CAF2508543D /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
 		3D9FC3C637278F34D94E1124 /* ToolAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2FE3BBD02CCA2709B00AC2 /* ToolAdapter.swift */; };
 		4258AE376D6EC8BD6AD453C2 /* EntitlementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */; };
@@ -43,6 +44,13 @@
 		4844595559349B8F6E6EA9FE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C416346CCFA67DFBABBDCE9D /* Assets.xcassets */; };
 		4A07FF9564DE950355AAAFB0 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
 		4B1954AD175672852742149E /* Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */; };
+		A52AC792CC3079EEC67519EE /* FCPXMLExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1227907ED41B10AE52C83C3D /* FCPXMLExporter.swift */; };
+		D1F9BF3584AAA9CF0CAEBBB1 /* CutDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98E4E37267459F772757B755 /* CutDocument.swift */; };
+		CBE36FA56EBE49416BFE3208 /* MagneticAssembly.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE37594E96BCEBE289221D7B /* MagneticAssembly.swift */; };
+		F1E9086EA8C9D0C678C8C984 /* MagneticTimelineEditing.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5F6D69A337F6C84E7425D2 /* MagneticTimelineEditing.swift */; };
+		AF06206B828FDE30AD1B9888 /* MagneticTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1682DC4A5C9C29896F37906 /* MagneticTimeline.swift */; };
+		A427F656A23F81875229C4E2 /* TimelinePrimitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3988CD96F7D4DCEB9A329498 /* TimelinePrimitives.swift */; };
+		93D183C8FE09D1C28197932B /* RationalTime.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D4204E7CA6944221CE8A37 /* RationalTime.swift */; };
 		4BC44086F2F5AF224E4F4F24 /* WatchConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83A4ED7B65018DECA1F2737 /* WatchConnectionView.swift */; };
 		4BDD6E2A93E6B0587B03C214 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2EDD700B86C632A5E0A9A6 /* SettingsView.swift */; };
 		4C952F52408569D159C0E82B /* ConductorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641BB593A84F1FA224F7259D /* ConductorView.swift */; };
@@ -100,6 +108,8 @@
 		CD755DEDC181AA3232AFE129 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C1619590B2384634932769 /* Formatters.swift */; };
 		D080CF6C9AE42CF2D42BCBB1 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
 		D13CDD0ACFCF4D622326E0CA /* ProducerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91F277FBF944DC0A5510537 /* ProducerView.swift */; };
+		ECEE28A40EC34D2F66DB33DE /* CuttingRoomInspectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C52C7288CDD5C343651991 /* CuttingRoomInspectors.swift */; };
+		A4C796326F640DBDCB192ECF /* CuttingRoomProView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C179BF61B423EEBB9D7E2F1 /* CuttingRoomProView.swift */; };
 		D3554AB2E76E7DF66A4AFBA1 /* ProductionCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F558026324311236ADA4CC /* ProductionCharts.swift */; };
 		D3A92CD9376D6BA885E471C6 /* ReaderModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB877F5C5D1965EAA07287B /* ReaderModeView.swift */; };
 		D8569BACCD0788C1E76500D6 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 206DEEF4DFF606DE408844AE /* README.md */; };
@@ -208,6 +218,13 @@
 		7578C0C4DC2FAB154DC64452 /* AdvisorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvisorView.swift; sourceTree = "<group>"; };
 		7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSIntents.swift; sourceTree = "<group>"; };
 		7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Timeline.swift; sourceTree = "<group>"; };
+		1227907ED41B10AE52C83C3D /* FCPXMLExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCPXMLExporter.swift; sourceTree = "<group>"; };
+		98E4E37267459F772757B755 /* CutDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CutDocument.swift; sourceTree = "<group>"; };
+		FE37594E96BCEBE289221D7B /* MagneticAssembly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagneticAssembly.swift; sourceTree = "<group>"; };
+		EE5F6D69A337F6C84E7425D2 /* MagneticTimelineEditing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagneticTimelineEditing.swift; sourceTree = "<group>"; };
+		E1682DC4A5C9C29896F37906 /* MagneticTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagneticTimeline.swift; sourceTree = "<group>"; };
+		3988CD96F7D4DCEB9A329498 /* TimelinePrimitives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelinePrimitives.swift; sourceTree = "<group>"; };
+		E9D4204E7CA6944221CE8A37 /* RationalTime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RationalTime.swift; sourceTree = "<group>"; };
 		7B044641F6F4C7BFDC4DDECC /* NativeWebContentRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWebContentRenderer.swift; sourceTree = "<group>"; };
 		7B5EDC6C7260CEA24992D96B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		80873ED12C212A76AFDA086A /* MediaDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetector.swift; sourceTree = "<group>"; };
@@ -231,6 +248,7 @@
 		AC9803FB32EA07ED7068E4EF /* BugTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugTrackerTests.swift; sourceTree = "<group>"; };
 		B0B2A41FF3345DA4282538E7 /* Exporters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exporters.swift; sourceTree = "<group>"; };
 		B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineTests.swift; sourceTree = "<group>"; };
+		F861DDA554C5C6B222042E19 /* MagneticTimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagneticTimelineTests.swift; sourceTree = "<group>"; };
 		B4E39FD7276BE5D765E7F51E /* CinemaComposerProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CinemaComposerProApp.swift; sourceTree = "<group>"; };
 		B5816CCD424567C7059FC243 /* TabManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerView.swift; sourceTree = "<group>"; };
 		B6406AA252AF01DF4BB5CC9F /* DemoSequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSequence.swift; sourceTree = "<group>"; };
@@ -257,6 +275,8 @@
 		E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSComplication.swift; sourceTree = "<group>"; };
 		E5857EB7DE5EF907F70B2F87 /* BugReporterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReporterView.swift; sourceTree = "<group>"; };
 		E91F277FBF944DC0A5510537 /* ProducerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProducerView.swift; sourceTree = "<group>"; };
+		96C52C7288CDD5C343651991 /* CuttingRoomInspectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuttingRoomInspectors.swift; sourceTree = "<group>"; };
+		5C179BF61B423EEBB9D7E2F1 /* CuttingRoomProView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuttingRoomProView.swift; sourceTree = "<group>"; };
 		E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewModel.swift; sourceTree = "<group>"; };
 		EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementTests.swift; sourceTree = "<group>"; };
 		ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneBrowserViewModel.swift; sourceTree = "<group>"; };
@@ -301,6 +321,7 @@
 				C380D434CA68070246D05D29 /* AdvisorAndInsightTests.swift */,
 				AC9803FB32EA07ED7068E4EF /* BugTrackerTests.swift */,
 				B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */,
+				F861DDA554C5C6B222042E19 /* MagneticTimelineTests.swift */,
 				EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */,
 				4F3613937FB5A2A03D6AAA2E /* RackAndCutTests.swift */,
 			);
@@ -474,6 +495,13 @@
 				20B2197304268B33B16B1E52 /* Planner.swift */,
 				D76A9AA93B31710ED3FB3F76 /* ShotEconomics.swift */,
 				7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */,
+				1227907ED41B10AE52C83C3D /* FCPXMLExporter.swift */,
+				98E4E37267459F772757B755 /* CutDocument.swift */,
+				FE37594E96BCEBE289221D7B /* MagneticAssembly.swift */,
+				EE5F6D69A337F6C84E7425D2 /* MagneticTimelineEditing.swift */,
+				E1682DC4A5C9C29896F37906 /* MagneticTimeline.swift */,
+				3988CD96F7D4DCEB9A329498 /* TimelinePrimitives.swift */,
+				E9D4204E7CA6944221CE8A37 /* RationalTime.swift */,
 				2A2FE3BBD02CCA2709B00AC2 /* ToolAdapter.swift */,
 				524355602615D5C10E6CF15E /* ToolCatalog.swift */,
 				BAA42340199258A8D9CAF3C9 /* ToolRegistry.swift */,
@@ -520,6 +548,8 @@
 				9C9BE0BBD3C9989CE39B40F4 /* KeysView.swift */,
 				40AEA8007E87AB982653BE0B /* PaywallView.swift */,
 				E91F277FBF944DC0A5510537 /* ProducerView.swift */,
+				96C52C7288CDD5C343651991 /* CuttingRoomInspectors.swift */,
+				5C179BF61B423EEBB9D7E2F1 /* CuttingRoomProView.swift */,
 				05F558026324311236ADA4CC /* ProductionCharts.swift */,
 				13961E0C1EFE014AE7B8FCD1 /* RootView.swift */,
 				8150C1F153196E330B985CA4 /* ScenariosView.swift */,
@@ -750,6 +780,15 @@
 				7259EF25E94957E8C5931818 /* ShotEconomics.swift in Sources */,
 				DCFF7C6CA2CD98173ECB195E /* ShotEconomicsView.swift in Sources */,
 				4B1954AD175672852742149E /* Timeline.swift in Sources */,
+				ECEE28A40EC34D2F66DB33DE /* CuttingRoomInspectors.swift in Sources */,
+				A4C796326F640DBDCB192ECF /* CuttingRoomProView.swift in Sources */,
+				A52AC792CC3079EEC67519EE /* FCPXMLExporter.swift in Sources */,
+				D1F9BF3584AAA9CF0CAEBBB1 /* CutDocument.swift in Sources */,
+				CBE36FA56EBE49416BFE3208 /* MagneticAssembly.swift in Sources */,
+				F1E9086EA8C9D0C678C8C984 /* MagneticTimelineEditing.swift in Sources */,
+				AF06206B828FDE30AD1B9888 /* MagneticTimeline.swift in Sources */,
+				A427F656A23F81875229C4E2 /* TimelinePrimitives.swift in Sources */,
+				93D183C8FE09D1C28197932B /* RationalTime.swift in Sources */,
 				1A35AF992A65FE08957E9BB0 /* TimelineCanvas.swift in Sources */,
 				3D9FC3C637278F34D94E1124 /* ToolAdapter.swift in Sources */,
 				5B92CD070D455448CDE15FAE /* ToolCatalog.swift in Sources */,
@@ -837,6 +876,7 @@
 				136119F75E494E2A0524A08F /* AdvisorAndInsightTests.swift in Sources */,
 				1017ED9CE6AC8FC8DDE44D86 /* BugTrackerTests.swift in Sources */,
 				37D6A218E2B9E673F3B78C0D /* EngineTests.swift in Sources */,
+				E9DAB2FD487B5E72F0312C09 /* MagneticTimelineTests.swift in Sources */,
 				4258AE376D6EC8BD6AD453C2 /* EntitlementTests.swift in Sources */,
 				34ACDEED3115AB98C8EBB571 /* RackAndCutTests.swift in Sources */,
 			);
