@@ -140,6 +140,8 @@ struct GetStartedView: View {
                               detail: "Six efficiency passes that prove what each one saves")
                     featureRow(icon: "film.stack", title: "Cutting Room",
                               detail: "NLE timeline where every clip remembers what made it")
+                    featureRow(icon: "ladybug.fill", title: "Report bug",
+                              detail: "File issues on-set and keep a tracker of every one")
                 }
                 .padding()
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))

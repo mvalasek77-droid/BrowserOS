@@ -56,7 +56,13 @@ struct CuttingRoomProView: View {
             .onAppear(perform: seedIfNeeded)
             // Flattening a feature-length cut on every keystroke would crawl, so
             // the project takes the result when you leave or export, not per edit.
-            .onDisappear { model.commitCut(doc.timeline) }
+            .onDisappear {
+                guard !DemoSession.shared.suppressNextCommit else {
+                    DemoSession.shared.suppressNextCommit = false
+                    return
+                }
+                model.commitCut(doc.timeline)
+            }
             .alert("That edit did not apply",
                    isPresented: Binding(get: { doc.lastError != nil },
                                         set: { if !$0 { doc.clearError() } })) {

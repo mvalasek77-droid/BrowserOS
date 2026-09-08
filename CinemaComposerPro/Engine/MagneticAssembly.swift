@@ -99,6 +99,89 @@ extension MagneticTimeline {
         return timeline
     }
 
+    /// Import a track-model sequence into the magnetic one. The first video
+    /// track becomes the primary storyline — with real gaps where it had holes,
+    /// since a magnetic storyline has no empty space — and every other track's
+    /// clips are connected to whichever storyline clip is under them.
+    ///
+    /// This is how a project saved before the magnetic engine, or a demo cut
+    /// built against the old model, opens in the new cutting room.
+    init(importing flat: Timeline) {
+        let frameRate = FrameRate.nearest(to: flat.fps)
+        self.init(name: flat.name, format: TimelineFormat(rate: frameRate,
+                                                          resolution: flat.resolution))
+
+        func convert(_ clip: Clip, role: Role) -> TimelineItem {
+            let media = MediaRef(assetID: clip.shotID ?? clip.id,
+                                 name: clip.name,
+                                 sourceDuration: .zero,
+                                 hasVideo: role.kind != .audio,
+                                 hasAudio: role.kind == .audio)
+            var item = TimelineItem(name: clip.name,
+                                    content: .media(media),
+                                    duration: RationalTime(seconds: clip.duration, rate: frameRate),
+                                    sourceIn: RationalTime(seconds: clip.sourceIn, rate: frameRate),
+                                    role: role)
+            item.isEnabled = clip.isEnabled
+            item.isLocked = clip.isLocked
+            item.provenance = clip.provenance
+            if !clip.takes.isEmpty {
+                item.audition = Audition(alternatives: clip.takes,
+                                         selectedID: clip.provenance.takeID ?? clip.takes.first?.id)
+            }
+            if let transition = clip.transitionIn {
+                item.transitionIn = EditTransition(
+                    name: transition.type.capitalized,
+                    duration: RationalTime(seconds: transition.duration, rate: frameRate))
+            }
+            return item
+        }
+
+        // Storyline from the first video track, gaps filling any holes.
+        if let video = flat.tracks.first(where: { $0.kind == .video }) {
+            var cursor = RationalTime.zero
+            for clip in video.clips.sorted(by: { $0.start < $1.start }) {
+                let start = RationalTime(seconds: clip.start, rate: frameRate)
+                if cursor < start {
+                    spine.append(TimelineItem.gap(duration: start - cursor))
+                    cursor = start
+                }
+                let item = convert(clip, role: .video)
+                guard !item.duration.isZero else { continue }
+                spine.append(item)
+                cursor += item.duration
+            }
+        }
+        if spine.isEmpty, !flat.allClips.isEmpty {
+            // Audio-only source still needs something to anchor to.
+            let span = RationalTime(seconds: flat.duration, rate: frameRate)
+            if !span.isZero { spine.append(TimelineItem.gap(duration: span)) }
+        }
+
+        // Everything else hangs off the storyline clip beneath it.
+        var lane = -1
+        for track in flat.tracks where track.kind == .audio {
+            let role: Role = lane == -1 ? .dialogue : .music
+            for clip in track.clips.sorted(by: { $0.start < $1.start }) {
+                let start = RationalTime(seconds: clip.start, rate: frameRate)
+                guard let anchor = storylineItem(at: start) else { continue }
+                var item = convert(clip, role: role)
+                guard !item.duration.isZero else { continue }
+                item.lane = lane
+                item.offset = start - anchor.start
+                spine[anchor.index].connected.append(item)
+            }
+            lane -= 1
+        }
+
+        for marker in flat.markers {
+            markers.append(EditMarker(at: RationalTime(seconds: marker.at, rate: frameRate),
+                                      name: marker.name,
+                                      note: marker.note))
+        }
+        snapToFrames()
+    }
+
     /// Bridge to the original track model so the existing EDL/OTIO exporters and
     /// the budget's cost-of-cut keep working while the new engine takes over.
     /// The storyline becomes V1; connected lanes flatten to A1, A2… by role.

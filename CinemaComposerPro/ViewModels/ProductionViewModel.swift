@@ -330,6 +330,9 @@ final class ProductionViewModel: ObservableObject {
     // MARK: - Persistence & export
 
     func save() {
+        // A demo cut is a showroom, not a project — never persist it over the
+        // user's real sequence.
+        guard !EntitlementManager.shared.isDemoActive else { return }
         let builtInIDs = Set(ToolCatalog.builtIn.map { "\($0.id)@\($0.version)" })
         let document = ProjectDocument(
             spec: spec, strategy: strategy, passes: passes, overhead: overhead,

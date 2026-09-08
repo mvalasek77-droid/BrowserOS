@@ -257,6 +257,36 @@ struct Timeline: Codable, Equatable {
         return tracks[at.track].clips.remove(at: at.clip)
     }
 
+    /// Move a clip along its track. Magnetic, the FCP way: a drop that would
+    /// overlap another clip settles against the nearest legal edge instead —
+    /// the track never ends up with an overlap, which `validate()` enforces.
+    @discardableResult
+    mutating func move(clipID: String, to newStart: Double) throws -> Clip {
+        let at = try locate(clipID)
+        let duration = tracks[at.track].clips[at.clip].duration
+        var start = max(0, newStart)
+        // Two passes so a clamp that lands on a second clip resolves too.
+        for _ in 0..<2 {
+            for other in tracks[at.track].clips where other.id != clipID {
+                if start < other.end - 1e-9 && start + duration > other.start + 1e-9 {
+                    let before = other.start - duration
+                    let after = other.end
+                    // A "before" that would push past zero is not a real option.
+                    let dBefore = before >= 0 ? abs(before - start) : .infinity
+                    let dAfter = abs(after - start)
+                    start = dBefore <= dAfter ? before : after
+                }
+            }
+        }
+        start = max(0, start)
+        tracks[at.track].clips[at.clip].start = start
+        sort(track: at.track)
+        guard let moved = tracks[at.track].clips.first(where: { $0.id == clipID }) else {
+            throw TimelineError.noSuchClip(clipID)
+        }
+        return moved
+    }
+
     /// Trim an edge. `ripple` closes the gap the trim opens.
     @discardableResult
     mutating func trim(_ clipID: String, head: Double = 0, tail: Double = 0, ripple: Bool = true) throws -> Clip {

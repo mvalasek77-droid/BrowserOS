@@ -9,12 +9,16 @@ import SwiftUI
 @main
 struct CinemaComposerProApp: App {
     @StateObject private var model = ProductionViewModel()
+    @StateObject private var bugTracker = BugTracker()
+    @StateObject private var entitlements = EntitlementManager.shared
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "ccp_onboarding_complete")
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(model)
+                .environmentObject(bugTracker)
+                .environmentObject(entitlements)
                 .fullScreenCover(isPresented: $showOnboarding) {
                     GetStartedView(isPresented: $showOnboarding)
                         .environmentObject(model)

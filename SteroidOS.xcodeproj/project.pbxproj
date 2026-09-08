@@ -8,65 +8,119 @@
 
 /* Begin PBXBuildFile section */
 		071DF38D5E07BDCA622E3FF3 /* SharedModels+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */; };
+		0EC43C73FD3A081F9B9586D5 /* KeysView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C9BE0BBD3C9989CE39B40F4 /* KeysView.swift */; };
+		1017ED9CE6AC8FC8DDE44D86 /* BugTrackerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9803FB32EA07ED7068E4EF /* BugTrackerTests.swift */; };
+		136119F75E494E2A0524A08F /* AdvisorAndInsightTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C380D434CA68070246D05D29 /* AdvisorAndInsightTests.swift */; };
+		14DEC0C333406B33AEE6520A /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D2A113AB28E503E6B42FA00 /* ProjectStore.swift */; };
 		1523764305B1E08E29961C29 /* YouTubeStreamExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25641B70B84B792601D4BC6A /* YouTubeStreamExtractor.swift */; };
-		1A2B3C4D5E6F708192A3B4C5 /* YouTubeWebExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8B7C6D5E4F3A291B0C9D8E /* YouTubeWebExtractor.swift */; };
+		18C796E3723156F9BEC52D89 /* Advisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2796B4B2DEF107F1CFC90027 /* Advisor.swift */; };
+		1A35AF992A65FE08957E9BB0 /* TimelineCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8E5F40AD6E504FE92371C8E /* TimelineCanvas.swift */; };
+		1BD3FE5A455CB90C43C03755 /* HowItWorksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66885667E0DB3311526A3173 /* HowItWorksView.swift */; };
 		1BD48220DA9C4A6E42D46FAD /* MediaDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80873ED12C212A76AFDA086A /* MediaDetector.swift */; };
 		1E9B36A1B2F21B59AFFC3F03 /* SteroidOS_iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */; };
+		2267033AFB593A7EFF96EF20 /* ScenariosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8150C1F153196E330B985CA4 /* ScenariosView.swift */; };
 		2332ACCE81DD1E32066E5E47 /* BrowserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */; };
 		24369259D084913A93915222 /* VideoPlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42F4E9C225EEA022B7A8F98E /* VideoPlayerViewModel.swift */; };
 		26C46D476A0B70BD064BD048 /* WatchSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45817CA88586537D24ED9831 /* WatchSessionManager.swift */; };
 		283F5EBA0F4213452ABEBF53 /* ErrorLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15088BCB756B2057ABD5334 /* ErrorLogView.swift */; };
+		2967209A675C3E8990BD8FB4 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13961E0C1EFE014AE7B8FCD1 /* RootView.swift */; };
 		2986C057FB20D2C8867D0D79 /* HTMLNativeRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042C2B7443D81129A2EB6BA9 /* HTMLNativeRenderer.swift */; };
 		2A0EF31A137CB0D3CD692679 /* BrowserState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 716A1DCAAECFC159AF432BF4 /* BrowserState.swift */; };
+		2F1FE928A6230DA46CAAD49C /* BudgetModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 297907BA1D11470833B69B42 /* BudgetModule.swift */; };
 		309554F67984B1A9643DE6C0 /* iPhoneWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29FBAF03C87C6DBEF7444609 /* iPhoneWebView.swift */; };
 		315240B96EEB3EC81EE703E6 /* WatchVideoPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F83BE8C72A51777823290E32 /* WatchVideoPlayerView.swift */; };
 		316DB5788145CCD68F25FBA8 /* SteroidBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */; };
 		337FF2840877F2988843D93A /* iPhoneBrowserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */; };
+		34ACDEED3115AB98C8EBB571 /* RackAndCutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F3613937FB5A2A03D6AAA2E /* RackAndCutTests.swift */; };
+		3675BCE7234EDACD5AA05AFB /* AITool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC053A7A0D714FA73C510F0 /* AITool.swift */; };
+		3751C6EC3F432427A7EC33B4 /* AdvisorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7578C0C4DC2FAB154DC64452 /* AdvisorView.swift */; };
+		37D6A218E2B9E673F3B78C0D /* EngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */; };
 		396B31EC986F5CAF2508543D /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
+		3D9FC3C637278F34D94E1124 /* ToolAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2FE3BBD02CCA2709B00AC2 /* ToolAdapter.swift */; };
+		4258AE376D6EC8BD6AD453C2 /* EntitlementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */; };
+		426FB211073E2C7C094824F6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0D2415198DEDB50CCDB67CEF /* Assets.xcassets */; };
+		44D66184A6E376B234CDB27C /* EfficiencyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FBBB5E9D835B374BE5A9AF6 /* EfficiencyView.swift */; };
 		4844595559349B8F6E6EA9FE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C416346CCFA67DFBABBDCE9D /* Assets.xcassets */; };
 		4A07FF9564DE950355AAAFB0 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
+		4B1954AD175672852742149E /* Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */; };
 		4BC44086F2F5AF224E4F4F24 /* WatchConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B83A4ED7B65018DECA1F2737 /* WatchConnectionView.swift */; };
 		4BDD6E2A93E6B0587B03C214 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D2EDD700B86C632A5E0A9A6 /* SettingsView.swift */; };
+		4C952F52408569D159C0E82B /* ConductorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 641BB593A84F1FA224F7259D /* ConductorView.swift */; };
 		4E946313DCA43CBCEC710F63 /* EntitlementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B81863195E1B0B3C7602304 /* EntitlementManager.swift */; };
+		500DEDB57D2712BA1CFFED60 /* GetStartedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AEA98090B46297139D54257 /* GetStartedView.swift */; };
+		5144BD12C56C682E2B404458 /* VideoToolMarketplaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4E91DC3690FF36119747135 /* VideoToolMarketplaceView.swift */; };
 		543CA158D7278647EFBADE59 /* SharedModels+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */; };
 		57539F96E0521EF180D2D70A /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F8333E635200AF1CDA701BC /* HistoryView.swift */; };
+		598769BD4083F504E4428E89 /* DemoSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6406AA252AF01DF4BB5CC9F /* DemoSequence.swift */; };
+		5A0A57E91B218045A65D58F8 /* Scenario.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD5623E0B88DAE62249BFD9B /* Scenario.swift */; };
 		5B4A4B6116CC5EA140559339 /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
+		5B92CD070D455448CDE15FAE /* ToolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 524355602615D5C10E6CF15E /* ToolCatalog.swift */; };
+		5BF3233E945A45BF91DCC7EE /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8537C96BD37D9BED12CAC71C /* PrivacyInfo.xcprivacy */; };
+		608FC87DEA1B7435AC56A58A /* BugReporterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5857EB7DE5EF907F70B2F87 /* BugReporterView.swift */; };
+		64D01D7AF683026BD7674173 /* BudgetEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1C274A88A630C9A1480F67C /* BudgetEngine.swift */; };
+		6F87AB9EAB6095D187934472 /* Conductor.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0B7FC0BC925AB43640E1815 /* Conductor.swift */; };
 		6FD17B021040A5F848753E80 /* SteroidComplianceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */; };
+		7259EF25E94957E8C5931818 /* ShotEconomics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76A9AA93B31710ED3FB3F76 /* ShotEconomics.swift */; };
 		72E3ABD8EF33FA046BE595CE /* MediaHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825650AD59C1E72672543270 /* MediaHubView.swift */; };
+		73F0F638FCD0A99BE1DF4EA8 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AEA8007E87AB982653BE0B /* PaywallView.swift */; };
 		751CE507984A3168DC2BDB3F /* ErrorLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15088BCB756B2057ABD5334 /* ErrorLogView.swift */; };
+		83D0DBE352AF3C88BA8F59F0 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 472A256CA2E514B6B3F78EB9 /* Components.swift */; };
+		861484E3A14621318B287978 /* BugReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1923DF235DFB8AFC2D1C3C /* BugReport.swift */; };
 		86A6401FC1312B91DEF0D4B0 /* WatchConnectivityProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F72685A91BC851C0BB366CF2 /* WatchConnectivityProtocol.swift */; };
 		89DF1A14A0FDB7BC521238A0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E10EC521F65D1AD78559BDCA /* Assets.xcassets */; };
 		8EB5891E6AE2CE2C471BF302 /* ErrorBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 738FFDB0D8ACCBE2C6E1416A /* ErrorBannerView.swift */; };
 		9233B275E369D783B1F79EC1 /* VideoControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA64EBF4546CA221A143CFD8 /* VideoControlsView.swift */; };
+		969F7F8CFF2C98D2E541B7D9 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0641A35BD413B26D2AE33BF4 /* SetupView.swift */; };
+		98C4EDD46C42C99C783E1AFD /* BugTracker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 253DDA213D5101C9DCDDEB2A /* BugTracker.swift */; };
 		9A9C2971531E933AEEA895C1 /* SteroidOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A603FD5656DC6D052E02C64A /* SteroidOSApp.swift */; };
 		9C6F28AC5DD8A199D7838945 /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98D22680550D76F8788B9F9 /* SharedModels.swift */; };
+		9E982B74EAC4C043D94E812D /* ToolRackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 011314A9D94F66F7028A889D /* ToolRackView.swift */; };
 		A0AE525C4F9B6B1CCAD1DE19 /* NativeWebContentRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B044641F6F4C7BFDC4DDECC /* NativeWebContentRenderer.swift */; };
 		A3A909ED6A5F554706E3D26D /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46227A6B44D587F55C13818 /* PaywallView.swift */; };
 		A7A247A17A0D7F91B7916BB9 /* iPhoneBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071A341EB3C832E0F5E8201F /* iPhoneBrowserView.swift */; };
+		A7A589DF80EB1AD4226504A8 /* BreakdownEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90C4A43450A79CA0A2CCE425 /* BreakdownEngine.swift */; };
 		A7AF464797C8C767AA7C9E3A /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F46227A6B44D587F55C13818 /* PaywallView.swift */; };
 		AADBDDFD6E192C5853B9E8BB /* VideoRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C9348BD9E6620DF36A4A71 /* VideoRenderer.swift */; };
+		AAF0336C9112CD5DE17E4BBD /* CuttingRoomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0BAD4C19C9E8A8F4B826BA6 /* CuttingRoomView.swift */; };
 		AC9ACBD019FFE8D3ADCD8CD6 /* WebFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D2F17A43889A2E1569302B1 /* WebFetcher.swift */; };
 		AD049FD2533FB5AAD087BBED /* PhoneSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */; };
 		B25A05D77FA60CB999FE0E2E /* MediaDetectedBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F82FEC1D94BAA02A9ED32B /* MediaDetectedBanner.swift */; };
+		B3B5B7277B4F0644B56B41CC /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C1E329FBCDB7EE21D104ACF /* KeychainStore.swift */; };
 		B3F1BDE224109A3174C50450 /* LoginAndLoadingViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82570824192C1F9D4B181CFA /* LoginAndLoadingViews.swift */; };
 		B5EDC4E1C1C7893236E65EC0 /* EntitlementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B81863195E1B0B3C7602304 /* EntitlementManager.swift */; };
+		B64D493A06EEA52FA5EF11CC /* CinemaComposerProApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E39FD7276BE5D765E7F51E /* CinemaComposerProApp.swift */; };
 		B99A42613A53281F8F899EDC /* TabManagerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5816CCD424567C7059FC243 /* TabManagerView.swift */; };
+		BC433F78DBE47924CDDC83EA /* YouTubeWebExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B72CACF88B7C9777AEF0980 /* YouTubeWebExtractor.swift */; };
 		C332B70DDCA5D61D6280E533 /* SteroidComplianceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */; };
+		C42EA22B20EB7E0D5971B35C /* FilmSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2531EA2AEB63268546387D5E /* FilmSpec.swift */; };
 		C6820C6D17653B4B9BD5680B /* SharedModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B98D22680550D76F8788B9F9 /* SharedModels.swift */; };
 		C74AA0296D3C99E88136B5CD /* DOMParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39A6616440E2DF41084E4F5D /* DOMParser.swift */; };
 		C79C5725350EDDB6550D35A9 /* AddressBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52A557E2B21BBE889448533 /* AddressBarView.swift */; };
 		C805C3C4845953B807EA6FDC /* WatchConnectivityProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = F72685A91BC851C0BB366CF2 /* WatchConnectivityProtocol.swift */; };
+		CD755DEDC181AA3232AFE129 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C1619590B2384634932769 /* Formatters.swift */; };
 		D080CF6C9AE42CF2D42BCBB1 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
+		D13CDD0ACFCF4D622326E0CA /* ProducerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91F277FBF944DC0A5510537 /* ProducerView.swift */; };
+		D3554AB2E76E7DF66A4AFBA1 /* ProductionCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F558026324311236ADA4CC /* ProductionCharts.swift */; };
 		D3A92CD9376D6BA885E471C6 /* ReaderModeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FB877F5C5D1965EAA07287B /* ReaderModeView.swift */; };
+		D8569BACCD0788C1E76500D6 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 206DEEF4DFF606DE408844AE /* README.md */; };
 		DB40B7EA8B7886BEF594CCD9 /* BrowserPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E94C6B6DB4DED288C0E85B /* BrowserPageView.swift */; };
+		DCC648AD0D14C0366138823B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7B5EDC6C7260CEA24992D96B /* PrivacyInfo.xcprivacy */; };
+		DCFF7C6CA2CD98173ECB195E /* ShotEconomicsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D96346C72D5CDAA258F2300 /* ShotEconomicsView.swift */; };
 		DDAE97748BC8101B272653A3 /* MainNavigationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 466FE7DF25CEEAD30E16C83E /* MainNavigationView.swift */; };
+		DEB03C10688E36E6988A54CC /* example-vendor-pack.json in Resources */ = {isa = PBXBuildFile; fileRef = 27B0048153F30A329D1D2FA2 /* example-vendor-pack.json */; };
+		E3067674126A867D438BE017 /* ToolRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAA42340199258A8D9CAF3C9 /* ToolRegistry.swift */; };
 		E3812153517797D4FD684AEA /* VoiceInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A16FA02DDAFAAB97033FF807 /* VoiceInputController.swift */; };
 		E57A54BEC8BD8AEE8C409547 /* SteroidOSIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */; };
+		E57F429423145F51101387FC /* Planner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20B2197304268B33B16B1E52 /* Planner.swift */; };
 		E6A51AB25299A05AC6C88084 /* SteroidBrand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */; };
 		E9ED677C8BEAFBE3AD4D48E7 /* SteroidOSComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */; };
 		F48DAA3954006344FE5B3D35 /* SteroidOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = D2338BDCCF3B866E573371D8 /* SteroidOS Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F4FF5E50018071D2F648D971 /* ProductionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6531EF5D3CDF343340994D /* ProductionViewModel.swift */; };
 		F6F6E52475F051BDB46F4FCC /* WatchHomePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562C197748888C64D99AEE52 /* WatchHomePage.swift */; };
+		F80AE8B39E1FECCB0F638BB4 /* Exporters.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0B2A41FF3345DA4282538E7 /* Exporters.swift */; };
+		F9111271314341ADBB6C4753 /* EntitlementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 531FF7364A44B0D883CB3289 /* EntitlementManager.swift */; };
 		F9D819C0D025E577AA99556F /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207F3C4B00312B5E5A4E5668 /* BookmarksView.swift */; };
+		FD3D314FC5D8D437BC11AD40 /* CinemaComposerPro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = EE9A1210981268DE166B0AD2 /* CinemaComposerPro.storekit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -76,6 +130,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = C89812CB602843555C888695;
 			remoteInfo = "SteroidOS Watch App";
+		};
+		E04C20A944104B93FB04C914 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 64EB93235BF7565D11ECA0BB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DFCA89EF07755D8B4A506F87;
+			remoteInfo = CinemaComposerPro;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -94,56 +155,112 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		011314A9D94F66F7028A889D /* ToolRackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRackView.swift; sourceTree = "<group>"; };
 		042C2B7443D81129A2EB6BA9 /* HTMLNativeRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLNativeRenderer.swift; sourceTree = "<group>"; };
+		05F558026324311236ADA4CC /* ProductionCharts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductionCharts.swift; sourceTree = "<group>"; };
+		0641A35BD413B26D2AE33BF4 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
 		071A341EB3C832E0F5E8201F /* iPhoneBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneBrowserView.swift; sourceTree = "<group>"; };
+		0C6531EF5D3CDF343340994D /* ProductionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductionViewModel.swift; sourceTree = "<group>"; };
+		0D2415198DEDB50CCDB67CEF /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		0F1923DF235DFB8AFC2D1C3C /* BugReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReport.swift; sourceTree = "<group>"; };
+		13961E0C1EFE014AE7B8FCD1 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		206DEEF4DFF606DE408844AE /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		207F3C4B00312B5E5A4E5668 /* BookmarksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksView.swift; sourceTree = "<group>"; };
+		20B2197304268B33B16B1E52 /* Planner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Planner.swift; sourceTree = "<group>"; };
 		225FDB9430F461ED3944C454 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		2531EA2AEB63268546387D5E /* FilmSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilmSpec.swift; sourceTree = "<group>"; };
+		253DDA213D5101C9DCDDEB2A /* BugTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugTracker.swift; sourceTree = "<group>"; };
 		25641B70B84B792601D4BC6A /* YouTubeStreamExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeStreamExtractor.swift; sourceTree = "<group>"; };
-		9A8B7C6D5E4F3A291B0C9D8E /* YouTubeWebExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebExtractor.swift; sourceTree = "<group>"; };
+		2796B4B2DEF107F1CFC90027 /* Advisor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Advisor.swift; sourceTree = "<group>"; };
+		27B0048153F30A329D1D2FA2 /* example-vendor-pack.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "example-vendor-pack.json"; sourceTree = "<group>"; };
+		297907BA1D11470833B69B42 /* BudgetModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetModule.swift; sourceTree = "<group>"; };
 		29FBAF03C87C6DBEF7444609 /* iPhoneWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneWebView.swift; sourceTree = "<group>"; };
+		2A2FE3BBD02CCA2709B00AC2 /* ToolAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolAdapter.swift; sourceTree = "<group>"; };
+		2B72CACF88B7C9777AEF0980 /* YouTubeWebExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YouTubeWebExtractor.swift; sourceTree = "<group>"; };
 		2F8333E635200AF1CDA701BC /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOS_iOSApp.swift; sourceTree = "<group>"; };
 		39A6616440E2DF41084E4F5D /* DOMParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DOMParser.swift; sourceTree = "<group>"; };
+		3C1E329FBCDB7EE21D104ACF /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		3D2EDD700B86C632A5E0A9A6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		3FBBB5E9D835B374BE5A9AF6 /* EfficiencyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyView.swift; sourceTree = "<group>"; };
+		40AEA8007E87AB982653BE0B /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		42F4E9C225EEA022B7A8F98E /* VideoPlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerViewModel.swift; sourceTree = "<group>"; };
 		43655AABE57470C7A54DB8F7 /* SteroidOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SteroidOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidComplianceViews.swift; sourceTree = "<group>"; };
 		45817CA88586537D24ED9831 /* WatchSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionManager.swift; sourceTree = "<group>"; };
 		466FE7DF25CEEAD30E16C83E /* MainNavigationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainNavigationView.swift; sourceTree = "<group>"; };
+		472A256CA2E514B6B3F78EB9 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSessionManager.swift; sourceTree = "<group>"; };
 		4B81863195E1B0B3C7602304 /* EntitlementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementManager.swift; sourceTree = "<group>"; };
+		4BC053A7A0D714FA73C510F0 /* AITool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITool.swift; sourceTree = "<group>"; };
+		4D96346C72D5CDAA258F2300 /* ShotEconomicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotEconomicsView.swift; sourceTree = "<group>"; };
+		4F3613937FB5A2A03D6AAA2E /* RackAndCutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RackAndCutTests.swift; sourceTree = "<group>"; };
+		524355602615D5C10E6CF15E /* ToolCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCatalog.swift; sourceTree = "<group>"; };
+		531FF7364A44B0D883CB3289 /* EntitlementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementManager.swift; sourceTree = "<group>"; };
 		562C197748888C64D99AEE52 /* WatchHomePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHomePage.swift; sourceTree = "<group>"; };
 		5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidBrand.swift; sourceTree = "<group>"; };
+		641BB593A84F1FA224F7259D /* ConductorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConductorView.swift; sourceTree = "<group>"; };
+		66885667E0DB3311526A3173 /* HowItWorksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowItWorksView.swift; sourceTree = "<group>"; };
 		716A1DCAAECFC159AF432BF4 /* BrowserState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserState.swift; sourceTree = "<group>"; };
 		723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SharedModels+SwiftUI.swift"; sourceTree = "<group>"; };
 		738FFDB0D8ACCBE2C6E1416A /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
 		755076ADA1C094FA89609FBA /* SteroidOS-Watch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SteroidOS-Watch.entitlements"; sourceTree = "<group>"; };
+		7578C0C4DC2FAB154DC64452 /* AdvisorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvisorView.swift; sourceTree = "<group>"; };
 		7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSIntents.swift; sourceTree = "<group>"; };
+		7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Timeline.swift; sourceTree = "<group>"; };
 		7B044641F6F4C7BFDC4DDECC /* NativeWebContentRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeWebContentRenderer.swift; sourceTree = "<group>"; };
+		7B5EDC6C7260CEA24992D96B /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		80873ED12C212A76AFDA086A /* MediaDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetector.swift; sourceTree = "<group>"; };
+		8150C1F153196E330B985CA4 /* ScenariosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScenariosView.swift; sourceTree = "<group>"; };
+		81C1619590B2384634932769 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		825650AD59C1E72672543270 /* MediaHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaHubView.swift; sourceTree = "<group>"; };
 		82570824192C1F9D4B181CFA /* LoginAndLoadingViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginAndLoadingViews.swift; sourceTree = "<group>"; };
+		8537C96BD37D9BED12CAC71C /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		896BD7A00D1ACE90FCB937B9 /* SteroidOS-iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "SteroidOS-iOS.entitlements"; sourceTree = "<group>"; };
+		8AEA98090B46297139D54257 /* GetStartedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GetStartedView.swift; sourceTree = "<group>"; };
+		8F137BB2FEEC83B94F5D0A4D /* CinemaComposerProTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = CinemaComposerProTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		90C4A43450A79CA0A2CCE425 /* BreakdownEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakdownEngine.swift; sourceTree = "<group>"; };
 		944136042A42411F60A43475 /* ErrorLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorLog.swift; sourceTree = "<group>"; };
+		9C9BE0BBD3C9989CE39B40F4 /* KeysView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeysView.swift; sourceTree = "<group>"; };
+		9D2A113AB28E503E6B42FA00 /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
 		9D2F17A43889A2E1569302B1 /* WebFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebFetcher.swift; sourceTree = "<group>"; };
 		9FB877F5C5D1965EAA07287B /* ReaderModeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReaderModeView.swift; sourceTree = "<group>"; };
+		A0BAD4C19C9E8A8F4B826BA6 /* CuttingRoomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuttingRoomView.swift; sourceTree = "<group>"; };
 		A16FA02DDAFAAB97033FF807 /* VoiceInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceInputController.swift; sourceTree = "<group>"; };
 		A603FD5656DC6D052E02C64A /* SteroidOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSApp.swift; sourceTree = "<group>"; };
+		AC9803FB32EA07ED7068E4EF /* BugTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugTrackerTests.swift; sourceTree = "<group>"; };
+		B0B2A41FF3345DA4282538E7 /* Exporters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exporters.swift; sourceTree = "<group>"; };
+		B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineTests.swift; sourceTree = "<group>"; };
+		B4E39FD7276BE5D765E7F51E /* CinemaComposerProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CinemaComposerProApp.swift; sourceTree = "<group>"; };
 		B5816CCD424567C7059FC243 /* TabManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerView.swift; sourceTree = "<group>"; };
+		B6406AA252AF01DF4BB5CC9F /* DemoSequence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSequence.swift; sourceTree = "<group>"; };
 		B83A4ED7B65018DECA1F2737 /* WatchConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectionView.swift; sourceTree = "<group>"; };
 		B98D22680550D76F8788B9F9 /* SharedModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedModels.swift; sourceTree = "<group>"; };
+		BAA42340199258A8D9CAF3C9 /* ToolRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRegistry.swift; sourceTree = "<group>"; };
+		C0B7FC0BC925AB43640E1815 /* Conductor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Conductor.swift; sourceTree = "<group>"; };
+		C380D434CA68070246D05D29 /* AdvisorAndInsightTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvisorAndInsightTests.swift; sourceTree = "<group>"; };
 		C416346CCFA67DFBABBDCE9D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C4E91DC3690FF36119747135 /* VideoToolMarketplaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoToolMarketplaceView.swift; sourceTree = "<group>"; };
+		C8E5F40AD6E504FE92371C8E /* TimelineCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineCanvas.swift; sourceTree = "<group>"; };
+		C8F16473C4015263A5FD0D22 /* CinemaComposerPro.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CinemaComposerPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA64EBF4546CA221A143CFD8 /* VideoControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoControlsView.swift; sourceTree = "<group>"; };
+		CD5623E0B88DAE62249BFD9B /* Scenario.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Scenario.swift; sourceTree = "<group>"; };
 		D0C9348BD9E6620DF36A4A71 /* VideoRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoRenderer.swift; sourceTree = "<group>"; };
 		D2338BDCCF3B866E573371D8 /* SteroidOS Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "SteroidOS Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D653BEA352BDAE196CE93A78 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		D76A9AA93B31710ED3FB3F76 /* ShotEconomics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotEconomics.swift; sourceTree = "<group>"; };
 		E10EC521F65D1AD78559BDCA /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E15088BCB756B2057ABD5334 /* ErrorLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorLogView.swift; sourceTree = "<group>"; };
+		E1C274A88A630C9A1480F67C /* BudgetEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BudgetEngine.swift; sourceTree = "<group>"; };
 		E1F82FEC1D94BAA02A9ED32B /* MediaDetectedBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDetectedBanner.swift; sourceTree = "<group>"; };
 		E2E94C6B6DB4DED288C0E85B /* BrowserPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserPageView.swift; sourceTree = "<group>"; };
 		E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSComplication.swift; sourceTree = "<group>"; };
+		E5857EB7DE5EF907F70B2F87 /* BugReporterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReporterView.swift; sourceTree = "<group>"; };
+		E91F277FBF944DC0A5510537 /* ProducerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProducerView.swift; sourceTree = "<group>"; };
 		E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewModel.swift; sourceTree = "<group>"; };
+		EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementTests.swift; sourceTree = "<group>"; };
 		ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneBrowserViewModel.swift; sourceTree = "<group>"; };
+		EE9A1210981268DE166B0AD2 /* CinemaComposerPro.storekit */ = {isa = PBXFileReference; path = CinemaComposerPro.storekit; sourceTree = "<group>"; };
 		EEC409FB208FB4072FAB822A /* PersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceStore.swift; sourceTree = "<group>"; };
 		F46227A6B44D587F55C13818 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		F52A557E2B21BBE889448533 /* AddressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBarView.swift; sourceTree = "<group>"; };
@@ -166,13 +283,48 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		2F12027918B3B7B5A9ECF722 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				253DDA213D5101C9DCDDEB2A /* BugTracker.swift */,
+				531FF7364A44B0D883CB3289 /* EntitlementManager.swift */,
+				81C1619590B2384634932769 /* Formatters.swift */,
+				3C1E329FBCDB7EE21D104ACF /* KeychainStore.swift */,
+				9D2A113AB28E503E6B42FA00 /* ProjectStore.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		3BF6965568F89FE416D8D260 /* CinemaComposerProTests */ = {
+			isa = PBXGroup;
+			children = (
+				C380D434CA68070246D05D29 /* AdvisorAndInsightTests.swift */,
+				AC9803FB32EA07ED7068E4EF /* BugTrackerTests.swift */,
+				B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */,
+				EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */,
+				4F3613937FB5A2A03D6AAA2E /* RackAndCutTests.swift */,
+			);
+			path = CinemaComposerProTests;
+			sourceTree = "<group>";
+		};
+		3D01A6A46A0B2C361AEF13E2 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				4BC053A7A0D714FA73C510F0 /* AITool.swift */,
+				0F1923DF235DFB8AFC2D1C3C /* BugReport.swift */,
+				2531EA2AEB63268546387D5E /* FilmSpec.swift */,
+				CD5623E0B88DAE62249BFD9B /* Scenario.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
 		405E04F1C4D81A969529C61A /* Services */ = {
 			isa = PBXGroup;
 			children = (
 				39A6616440E2DF41084E4F5D /* DOMParser.swift */,
 				47BA87AE94C996A9B4C8FC6E /* PhoneSessionManager.swift */,
 				25641B70B84B792601D4BC6A /* YouTubeStreamExtractor.swift */,
-				9A8B7C6D5E4F3A291B0C9D8E /* YouTubeWebExtractor.swift */,
+				2B72CACF88B7C9777AEF0980 /* YouTubeWebExtractor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -187,11 +339,28 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		57D8631563FCBF495253A663 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				297907BA1D11470833B69B42 /* BudgetModule.swift */,
+			);
+			path = Extensions;
+			sourceTree = "<group>";
+		};
+		58D36A312241CD10FCC39CF1 /* Packs */ = {
+			isa = PBXGroup;
+			children = (
+				27B0048153F30A329D1D2FA2 /* example-vendor-pack.json */,
+			);
+			path = Packs;
+			sourceTree = "<group>";
+		};
 		63CA5E1B75CA529F73B81B81 /* SteroidOS */ = {
 			isa = PBXGroup;
 			children = (
 				C416346CCFA67DFBABBDCE9D /* Assets.xcassets */,
 				D653BEA352BDAE196CE93A78 /* Info.plist */,
+				7B5EDC6C7260CEA24992D96B /* PrivacyInfo.xcprivacy */,
 				755076ADA1C094FA89609FBA /* SteroidOS-Watch.entitlements */,
 				A603FD5656DC6D052E02C64A /* SteroidOSApp.swift */,
 				E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */,
@@ -203,9 +372,19 @@
 			path = SteroidOS;
 			sourceTree = "<group>";
 		};
+		6411C144EF53E188D6BC80B7 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				0C6531EF5D3CDF343340994D /* ProductionViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
 		746CAB4FCECD802EBC6E2CAF /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				C8F16473C4015263A5FD0D22 /* CinemaComposerPro.app */,
+				8F137BB2FEEC83B94F5D0A4D /* CinemaComposerProTests.xctest */,
 				D2338BDCCF3B866E573371D8 /* SteroidOS Watch App.app */,
 				43655AABE57470C7A54DB8F7 /* SteroidOS.app */,
 			);
@@ -217,6 +396,7 @@
 			children = (
 				E10EC521F65D1AD78559BDCA /* Assets.xcassets */,
 				225FDB9430F461ED3944C454 /* Info.plist */,
+				8537C96BD37D9BED12CAC71C /* PrivacyInfo.xcprivacy */,
 				347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */,
 				896BD7A00D1ACE90FCB937B9 /* SteroidOS-iOS.entitlements */,
 				405E04F1C4D81A969529C61A /* Services */,
@@ -248,6 +428,9 @@
 		8E22D27985B9319D61C5F9E2 = {
 			isa = PBXGroup;
 			children = (
+				EE9A1210981268DE166B0AD2 /* CinemaComposerPro.storekit */,
+				AC5DEF8A515F59FE513D6E41 /* CinemaComposerPro */,
+				3BF6965568F89FE416D8D260 /* CinemaComposerProTests */,
 				63CA5E1B75CA529F73B81B81 /* SteroidOS */,
 				7A71819C7FA3D00AB7AE5368 /* SteroidOS-iOS */,
 				746CAB4FCECD802EBC6E2CAF /* Products */,
@@ -279,12 +462,74 @@
 			path = Services;
 			sourceTree = "<group>";
 		};
+		97D3088EC3CB295DA54E0969 /* Engine */ = {
+			isa = PBXGroup;
+			children = (
+				2796B4B2DEF107F1CFC90027 /* Advisor.swift */,
+				90C4A43450A79CA0A2CCE425 /* BreakdownEngine.swift */,
+				E1C274A88A630C9A1480F67C /* BudgetEngine.swift */,
+				C0B7FC0BC925AB43640E1815 /* Conductor.swift */,
+				B6406AA252AF01DF4BB5CC9F /* DemoSequence.swift */,
+				B0B2A41FF3345DA4282538E7 /* Exporters.swift */,
+				20B2197304268B33B16B1E52 /* Planner.swift */,
+				D76A9AA93B31710ED3FB3F76 /* ShotEconomics.swift */,
+				7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */,
+				2A2FE3BBD02CCA2709B00AC2 /* ToolAdapter.swift */,
+				524355602615D5C10E6CF15E /* ToolCatalog.swift */,
+				BAA42340199258A8D9CAF3C9 /* ToolRegistry.swift */,
+			);
+			path = Engine;
+			sourceTree = "<group>";
+		};
 		A65CA9DF41C22A1D9FB17E02 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
 				ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */,
 			);
 			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		AC5DEF8A515F59FE513D6E41 /* CinemaComposerPro */ = {
+			isa = PBXGroup;
+			children = (
+				0D2415198DEDB50CCDB67CEF /* Assets.xcassets */,
+				B4E39FD7276BE5D765E7F51E /* CinemaComposerProApp.swift */,
+				206DEEF4DFF606DE408844AE /* README.md */,
+				97D3088EC3CB295DA54E0969 /* Engine */,
+				57D8631563FCBF495253A663 /* Extensions */,
+				3D01A6A46A0B2C361AEF13E2 /* Models */,
+				58D36A312241CD10FCC39CF1 /* Packs */,
+				2F12027918B3B7B5A9ECF722 /* Services */,
+				6411C144EF53E188D6BC80B7 /* ViewModels */,
+				DDF305F3E2290EC6A44B7280 /* Views */,
+			);
+			path = CinemaComposerPro;
+			sourceTree = "<group>";
+		};
+		DDF305F3E2290EC6A44B7280 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				7578C0C4DC2FAB154DC64452 /* AdvisorView.swift */,
+				E5857EB7DE5EF907F70B2F87 /* BugReporterView.swift */,
+				472A256CA2E514B6B3F78EB9 /* Components.swift */,
+				641BB593A84F1FA224F7259D /* ConductorView.swift */,
+				A0BAD4C19C9E8A8F4B826BA6 /* CuttingRoomView.swift */,
+				3FBBB5E9D835B374BE5A9AF6 /* EfficiencyView.swift */,
+				8AEA98090B46297139D54257 /* GetStartedView.swift */,
+				66885667E0DB3311526A3173 /* HowItWorksView.swift */,
+				9C9BE0BBD3C9989CE39B40F4 /* KeysView.swift */,
+				40AEA8007E87AB982653BE0B /* PaywallView.swift */,
+				E91F277FBF944DC0A5510537 /* ProducerView.swift */,
+				05F558026324311236ADA4CC /* ProductionCharts.swift */,
+				13961E0C1EFE014AE7B8FCD1 /* RootView.swift */,
+				8150C1F153196E330B985CA4 /* ScenariosView.swift */,
+				0641A35BD413B26D2AE33BF4 /* SetupView.swift */,
+				4D96346C72D5CDAA258F2300 /* ShotEconomicsView.swift */,
+				C8E5F40AD6E504FE92371C8E /* TimelineCanvas.swift */,
+				011314A9D94F66F7028A889D /* ToolRackView.swift */,
+				C4E91DC3690FF36119747135 /* VideoToolMarketplaceView.swift */,
+			);
+			path = Views;
 			sourceTree = "<group>";
 		};
 		F25A2F45FF1E2BA4B0C734A1 /* Shared */ = {
@@ -342,6 +587,43 @@
 			productReference = D2338BDCCF3B866E573371D8 /* SteroidOS Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		DF6E1AC3AA0FB649F3E40F12 /* CinemaComposerProTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 02E705983A5A4214BDEA79EB /* Build configuration list for PBXNativeTarget "CinemaComposerProTests" */;
+			buildPhases = (
+				FC176078FBAE0D8CBC52691B /* Sources */,
+				5421184BD31EA2E6D9CA62FA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6456AD00BFBCFD94B1D71FAB /* PBXTargetDependency */,
+			);
+			name = CinemaComposerProTests;
+			packageProductDependencies = (
+			);
+			productName = CinemaComposerProTests;
+			productReference = 8F137BB2FEEC83B94F5D0A4D /* CinemaComposerProTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		DFCA89EF07755D8B4A506F87 /* CinemaComposerPro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E038EE9E31608C4BBCCBCC1E /* Build configuration list for PBXNativeTarget "CinemaComposerPro" */;
+			buildPhases = (
+				22F7CDCA6817B0D6909B7619 /* Sources */,
+				10B9CBF8796439325E061F1A /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CinemaComposerPro;
+			packageProductDependencies = (
+			);
+			productName = CinemaComposerPro;
+			productReference = C8F16473C4015263A5FD0D22 /* CinemaComposerPro.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -356,6 +638,10 @@
 						ProvisioningStyle = Automatic;
 					};
 					C89812CB602843555C888695 = {
+						DevelopmentTeam = UDM4W27W9V;
+						ProvisioningStyle = Automatic;
+					};
+					DFCA89EF07755D8B4A506F87 = {
 						DevelopmentTeam = UDM4W27W9V;
 						ProvisioningStyle = Automatic;
 					};
@@ -375,6 +661,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				DFCA89EF07755D8B4A506F87 /* CinemaComposerPro */,
+				DF6E1AC3AA0FB649F3E40F12 /* CinemaComposerProTests */,
 				698416C02BFB24F88683D062 /* SteroidOS */,
 				C89812CB602843555C888695 /* SteroidOS Watch App */,
 			);
@@ -382,11 +670,30 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		10B9CBF8796439325E061F1A /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				426FB211073E2C7C094824F6 /* Assets.xcassets in Resources */,
+				D8569BACCD0788C1E76500D6 /* README.md in Resources */,
+				DEB03C10688E36E6988A54CC /* example-vendor-pack.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5421184BD31EA2E6D9CA62FA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FD3D314FC5D8D437BC11AD40 /* CinemaComposerPro.storekit in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		93A5A00193AE78CCC13284C4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				89DF1A14A0FDB7BC521238A0 /* Assets.xcassets in Resources */,
+				5BF3233E945A45BF91DCC7EE /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -395,12 +702,63 @@
 			buildActionMask = 2147483647;
 			files = (
 				4844595559349B8F6E6EA9FE /* Assets.xcassets in Resources */,
+				DCC648AD0D14C0366138823B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		22F7CDCA6817B0D6909B7619 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3675BCE7234EDACD5AA05AFB /* AITool.swift in Sources */,
+				18C796E3723156F9BEC52D89 /* Advisor.swift in Sources */,
+				3751C6EC3F432427A7EC33B4 /* AdvisorView.swift in Sources */,
+				A7A589DF80EB1AD4226504A8 /* BreakdownEngine.swift in Sources */,
+				64D01D7AF683026BD7674173 /* BudgetEngine.swift in Sources */,
+				2F1FE928A6230DA46CAAD49C /* BudgetModule.swift in Sources */,
+				861484E3A14621318B287978 /* BugReport.swift in Sources */,
+				608FC87DEA1B7435AC56A58A /* BugReporterView.swift in Sources */,
+				98C4EDD46C42C99C783E1AFD /* BugTracker.swift in Sources */,
+				B64D493A06EEA52FA5EF11CC /* CinemaComposerProApp.swift in Sources */,
+				83D0DBE352AF3C88BA8F59F0 /* Components.swift in Sources */,
+				6F87AB9EAB6095D187934472 /* Conductor.swift in Sources */,
+				4C952F52408569D159C0E82B /* ConductorView.swift in Sources */,
+				AAF0336C9112CD5DE17E4BBD /* CuttingRoomView.swift in Sources */,
+				598769BD4083F504E4428E89 /* DemoSequence.swift in Sources */,
+				44D66184A6E376B234CDB27C /* EfficiencyView.swift in Sources */,
+				F9111271314341ADBB6C4753 /* EntitlementManager.swift in Sources */,
+				F80AE8B39E1FECCB0F638BB4 /* Exporters.swift in Sources */,
+				C42EA22B20EB7E0D5971B35C /* FilmSpec.swift in Sources */,
+				CD755DEDC181AA3232AFE129 /* Formatters.swift in Sources */,
+				500DEDB57D2712BA1CFFED60 /* GetStartedView.swift in Sources */,
+				1BD3FE5A455CB90C43C03755 /* HowItWorksView.swift in Sources */,
+				B3B5B7277B4F0644B56B41CC /* KeychainStore.swift in Sources */,
+				0EC43C73FD3A081F9B9586D5 /* KeysView.swift in Sources */,
+				73F0F638FCD0A99BE1DF4EA8 /* PaywallView.swift in Sources */,
+				E57F429423145F51101387FC /* Planner.swift in Sources */,
+				D13CDD0ACFCF4D622326E0CA /* ProducerView.swift in Sources */,
+				D3554AB2E76E7DF66A4AFBA1 /* ProductionCharts.swift in Sources */,
+				F4FF5E50018071D2F648D971 /* ProductionViewModel.swift in Sources */,
+				14DEC0C333406B33AEE6520A /* ProjectStore.swift in Sources */,
+				2967209A675C3E8990BD8FB4 /* RootView.swift in Sources */,
+				5A0A57E91B218045A65D58F8 /* Scenario.swift in Sources */,
+				2267033AFB593A7EFF96EF20 /* ScenariosView.swift in Sources */,
+				969F7F8CFF2C98D2E541B7D9 /* SetupView.swift in Sources */,
+				7259EF25E94957E8C5931818 /* ShotEconomics.swift in Sources */,
+				DCFF7C6CA2CD98173ECB195E /* ShotEconomicsView.swift in Sources */,
+				4B1954AD175672852742149E /* Timeline.swift in Sources */,
+				1A35AF992A65FE08957E9BB0 /* TimelineCanvas.swift in Sources */,
+				3D9FC3C637278F34D94E1124 /* ToolAdapter.swift in Sources */,
+				5B92CD070D455448CDE15FAE /* ToolCatalog.swift in Sources */,
+				9E982B74EAC4C043D94E812D /* ToolRackView.swift in Sources */,
+				E3067674126A867D438BE017 /* ToolRegistry.swift in Sources */,
+				5144BD12C56C682E2B404458 /* VideoToolMarketplaceView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D18CC2E80981327DE24D8732 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -465,10 +823,22 @@
 				4BC44086F2F5AF224E4F4F24 /* WatchConnectionView.swift in Sources */,
 				C805C3C4845953B807EA6FDC /* WatchConnectivityProtocol.swift in Sources */,
 				1523764305B1E08E29961C29 /* YouTubeStreamExtractor.swift in Sources */,
-				1A2B3C4D5E6F708192A3B4C5 /* YouTubeWebExtractor.swift in Sources */,
+				BC433F78DBE47924CDDC83EA /* YouTubeWebExtractor.swift in Sources */,
 				A7A247A17A0D7F91B7916BB9 /* iPhoneBrowserView.swift in Sources */,
 				337FF2840877F2988843D93A /* iPhoneBrowserViewModel.swift in Sources */,
 				309554F67984B1A9643DE6C0 /* iPhoneWebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC176078FBAE0D8CBC52691B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				136119F75E494E2A0524A08F /* AdvisorAndInsightTests.swift in Sources */,
+				1017ED9CE6AC8FC8DDE44D86 /* BugTrackerTests.swift in Sources */,
+				37D6A218E2B9E673F3B78C0D /* EngineTests.swift in Sources */,
+				4258AE376D6EC8BD6AD453C2 /* EntitlementTests.swift in Sources */,
+				34ACDEED3115AB98C8EBB571 /* RackAndCutTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -479,6 +849,11 @@
 			isa = PBXTargetDependency;
 			target = C89812CB602843555C888695 /* SteroidOS Watch App */;
 			targetProxy = 31E8698CABDAFA35A005C3AE /* PBXContainerItemProxy */;
+		};
+		6456AD00BFBCFD94B1D71FAB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DFCA89EF07755D8B4A506F87 /* CinemaComposerPro */;
+			targetProxy = E04C20A944104B93FB04C914 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -602,6 +977,34 @@
 			};
 			name = Debug;
 		};
+		27E15D627675043C3A96D9DB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CinemaComposerPro/CinemaComposerPro.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UDM4W27W9V;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CinemaComposerPro/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.steroidos.cinemacomposer;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				StoreKitConfigurationFile = CinemaComposerPro.storekit;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		32F9867BF2859A6CF817C086 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -708,9 +1111,84 @@
 			};
 			name = Debug;
 		};
+		92EC82B01EFBF8E50098CDA0 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = CinemaComposerPro/CinemaComposerPro.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UDM4W27W9V;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CinemaComposerPro/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.steroidos.cinemacomposer;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				StoreKitConfigurationFile = CinemaComposerPro.storekit;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9A7B6D70EF2EDBBEAB96CF99 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.steroidos.cinemacomposer.tests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CinemaComposerPro.app/CinemaComposerPro";
+			};
+			name = Debug;
+		};
+		FD6062F8BBFA198D85C9115B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.steroidos.cinemacomposer.tests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/CinemaComposerPro.app/CinemaComposerPro";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		02E705983A5A4214BDEA79EB /* Build configuration list for PBXNativeTarget "CinemaComposerProTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A7B6D70EF2EDBBEAB96CF99 /* Debug */,
+				FD6062F8BBFA198D85C9115B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		0B64F0C1868D78E58FC2730A /* Build configuration list for PBXNativeTarget "SteroidOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -734,6 +1212,15 @@
 			buildConfigurations = (
 				829EE43DEB01668A12CF1826 /* Debug */,
 				5E5F0ADBEAB509DB8B80DF06 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E038EE9E31608C4BBCCBCC1E /* Build configuration list for PBXNativeTarget "CinemaComposerPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				27E15D627675043C3A96D9DB /* Debug */,
+				92EC82B01EFBF8E50098CDA0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
