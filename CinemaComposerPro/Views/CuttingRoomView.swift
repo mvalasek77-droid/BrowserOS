@@ -3,8 +3,66 @@ import SwiftUI
 /// Final Cut for AI production. A real NLE surface — lanes, clips, blade, ripple,
 /// slip — where every clip also carries what generated it and what it cost, and
 /// "regenerate this shot" is an edit like any other.
+///
+/// Pro feature: the whole tab is gated. Planning and budgeting stay free;
+/// cutting the film is what you pay for.
 struct CuttingRoomView: View {
     @EnvironmentObject private var model: ProductionViewModel
+    @ObservedObject private var entitlements = EntitlementManager.shared
+
+    var body: some View {
+        if entitlements.isPro {
+            CuttingRoomScreen()
+        } else {
+            CuttingRoomLockedView()
+        }
+    }
+}
+
+/// The locked state: what the room looks like, blurred, with the paywall CTA.
+private struct CuttingRoomLockedView: View {
+    @State private var showPaywall = false
+
+    var body: some View {
+        ZStack {
+            CuttingRoomScreen(blurredPreview: true)
+                .disabled(true)
+                .blur(radius: 6)
+                .allowsHitTesting(false)
+
+            VStack(spacing: 14) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(Palette.accent)
+                Text("The Cutting Room is Pro")
+                    .font(.title3.bold())
+                Text("Blade, ripple, slip, take stacks and cost-honest regenerations — the full NLE.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button {
+                    showPaywall = true
+                } label: {
+                    Text("Unlock the Cutting Room")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(Palette.accent)
+            }
+            .padding(24)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+            .padding(40)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
+    }
+}
+
+struct CuttingRoomScreen: View {
+    @EnvironmentObject private var model: ProductionViewModel
+    var blurredPreview: Bool = false
     @State private var pixelsPerSecond: Double = 12
     @State private var regenerationTool: String = ""
     @State private var queuedTask: PlanTask?
@@ -46,6 +104,7 @@ struct CuttingRoomView: View {
                 }
             }
             .onAppear {
+                guard !blurredPreview else { return }
                 model.seedTimeline()
                 if regenerationTool.isEmpty { regenerationTool = model.plan.toolsUsed.first ?? "" }
             }

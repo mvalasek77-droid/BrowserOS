@@ -14,6 +14,7 @@
 		14DEC0C333406B33AEE6520A /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D2A113AB28E503E6B42FA00 /* ProjectStore.swift */; };
 		1523764305B1E08E29961C29 /* YouTubeStreamExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25641B70B84B792601D4BC6A /* YouTubeStreamExtractor.swift */; };
 		18C796E3723156F9BEC52D89 /* Advisor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2796B4B2DEF107F1CFC90027 /* Advisor.swift */; };
+		1BD3FE5A455CB90C43C03755 /* HowItWorksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66885667E0DB3311526A3173 /* HowItWorksView.swift */; };
 		1BD48220DA9C4A6E42D46FAD /* MediaDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80873ED12C212A76AFDA086A /* MediaDetector.swift */; };
 		1E9B36A1B2F21B59AFFC3F03 /* SteroidOS_iOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347556B6617AC941B588045A /* SteroidOS_iOSApp.swift */; };
 		2267033AFB593A7EFF96EF20 /* ScenariosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8150C1F153196E330B985CA4 /* ScenariosView.swift */; };
@@ -35,6 +36,7 @@
 		37D6A218E2B9E673F3B78C0D /* EngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */; };
 		396B31EC986F5CAF2508543D /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
 		3D9FC3C637278F34D94E1124 /* ToolAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2FE3BBD02CCA2709B00AC2 /* ToolAdapter.swift */; };
+		4258AE376D6EC8BD6AD453C2 /* EntitlementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */; };
 		426FB211073E2C7C094824F6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0D2415198DEDB50CCDB67CEF /* Assets.xcassets */; };
 		44D66184A6E376B234CDB27C /* EfficiencyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FBBB5E9D835B374BE5A9AF6 /* EfficiencyView.swift */; };
 		4844595559349B8F6E6EA9FE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C416346CCFA67DFBABBDCE9D /* Assets.xcassets */; };
@@ -58,6 +60,7 @@
 		6FD17B021040A5F848753E80 /* SteroidComplianceViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */; };
 		7259EF25E94957E8C5931818 /* ShotEconomics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76A9AA93B31710ED3FB3F76 /* ShotEconomics.swift */; };
 		72E3ABD8EF33FA046BE595CE /* MediaHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 825650AD59C1E72672543270 /* MediaHubView.swift */; };
+		73F0F638FCD0A99BE1DF4EA8 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AEA8007E87AB982653BE0B /* PaywallView.swift */; };
 		751CE507984A3168DC2BDB3F /* ErrorLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E15088BCB756B2057ABD5334 /* ErrorLogView.swift */; };
 		83D0DBE352AF3C88BA8F59F0 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 472A256CA2E514B6B3F78EB9 /* Components.swift */; };
 		861484E3A14621318B287978 /* BugReport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F1923DF235DFB8AFC2D1C3C /* BugReport.swift */; };
@@ -113,7 +116,9 @@
 		F4FF5E50018071D2F648D971 /* ProductionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6531EF5D3CDF343340994D /* ProductionViewModel.swift */; };
 		F6F6E52475F051BDB46F4FCC /* WatchHomePage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562C197748888C64D99AEE52 /* WatchHomePage.swift */; };
 		F80AE8B39E1FECCB0F638BB4 /* Exporters.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0B2A41FF3345DA4282538E7 /* Exporters.swift */; };
+		F9111271314341ADBB6C4753 /* EntitlementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 531FF7364A44B0D883CB3289 /* EntitlementManager.swift */; };
 		F9D819C0D025E577AA99556F /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207F3C4B00312B5E5A4E5668 /* BookmarksView.swift */; };
+		FD3D314FC5D8D437BC11AD40 /* CinemaComposerPro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = EE9A1210981268DE166B0AD2 /* CinemaComposerPro.storekit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -176,6 +181,7 @@
 		3C1E329FBCDB7EE21D104ACF /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
 		3D2EDD700B86C632A5E0A9A6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		3FBBB5E9D835B374BE5A9AF6 /* EfficiencyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EfficiencyView.swift; sourceTree = "<group>"; };
+		40AEA8007E87AB982653BE0B /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		42F4E9C225EEA022B7A8F98E /* VideoPlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerViewModel.swift; sourceTree = "<group>"; };
 		43655AABE57470C7A54DB8F7 /* SteroidOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SteroidOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		439BF6F74ECA8AE8ADACB360 /* SteroidComplianceViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidComplianceViews.swift; sourceTree = "<group>"; };
@@ -188,9 +194,11 @@
 		4D96346C72D5CDAA258F2300 /* ShotEconomicsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShotEconomicsView.swift; sourceTree = "<group>"; };
 		4F3613937FB5A2A03D6AAA2E /* RackAndCutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RackAndCutTests.swift; sourceTree = "<group>"; };
 		524355602615D5C10E6CF15E /* ToolCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolCatalog.swift; sourceTree = "<group>"; };
+		531FF7364A44B0D883CB3289 /* EntitlementManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementManager.swift; sourceTree = "<group>"; };
 		562C197748888C64D99AEE52 /* WatchHomePage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchHomePage.swift; sourceTree = "<group>"; };
 		5E2A64DE560DD11AB7B77A67 /* SteroidBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidBrand.swift; sourceTree = "<group>"; };
 		641BB593A84F1FA224F7259D /* ConductorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConductorView.swift; sourceTree = "<group>"; };
+		66885667E0DB3311526A3173 /* HowItWorksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowItWorksView.swift; sourceTree = "<group>"; };
 		716A1DCAAECFC159AF432BF4 /* BrowserState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserState.swift; sourceTree = "<group>"; };
 		723AD92BE070F110EC7A4C31 /* SharedModels+SwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SharedModels+SwiftUI.swift"; sourceTree = "<group>"; };
 		738FFDB0D8ACCBE2C6E1416A /* ErrorBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ErrorBannerView.swift; sourceTree = "<group>"; };
@@ -246,7 +254,9 @@
 		E5857EB7DE5EF907F70B2F87 /* BugReporterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReporterView.swift; sourceTree = "<group>"; };
 		E91F277FBF944DC0A5510537 /* ProducerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProducerView.swift; sourceTree = "<group>"; };
 		E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewModel.swift; sourceTree = "<group>"; };
+		EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementTests.swift; sourceTree = "<group>"; };
 		ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneBrowserViewModel.swift; sourceTree = "<group>"; };
+		EE9A1210981268DE166B0AD2 /* CinemaComposerPro.storekit */ = {isa = PBXFileReference; path = CinemaComposerPro.storekit; sourceTree = "<group>"; };
 		EEC409FB208FB4072FAB822A /* PersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceStore.swift; sourceTree = "<group>"; };
 		F46227A6B44D587F55C13818 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		F52A557E2B21BBE889448533 /* AddressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBarView.swift; sourceTree = "<group>"; };
@@ -273,6 +283,7 @@
 			isa = PBXGroup;
 			children = (
 				253DDA213D5101C9DCDDEB2A /* BugTracker.swift */,
+				531FF7364A44B0D883CB3289 /* EntitlementManager.swift */,
 				81C1619590B2384634932769 /* Formatters.swift */,
 				3C1E329FBCDB7EE21D104ACF /* KeychainStore.swift */,
 				9D2A113AB28E503E6B42FA00 /* ProjectStore.swift */,
@@ -286,6 +297,7 @@
 				C380D434CA68070246D05D29 /* AdvisorAndInsightTests.swift */,
 				AC9803FB32EA07ED7068E4EF /* BugTrackerTests.swift */,
 				B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */,
+				EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */,
 				4F3613937FB5A2A03D6AAA2E /* RackAndCutTests.swift */,
 			);
 			path = CinemaComposerProTests;
@@ -412,6 +424,7 @@
 		8E22D27985B9319D61C5F9E2 = {
 			isa = PBXGroup;
 			children = (
+				EE9A1210981268DE166B0AD2 /* CinemaComposerPro.storekit */,
 				AC5DEF8A515F59FE513D6E41 /* CinemaComposerPro */,
 				3BF6965568F89FE416D8D260 /* CinemaComposerProTests */,
 				63CA5E1B75CA529F73B81B81 /* SteroidOS */,
@@ -498,7 +511,9 @@
 				A0BAD4C19C9E8A8F4B826BA6 /* CuttingRoomView.swift */,
 				3FBBB5E9D835B374BE5A9AF6 /* EfficiencyView.swift */,
 				8AEA98090B46297139D54257 /* GetStartedView.swift */,
+				66885667E0DB3311526A3173 /* HowItWorksView.swift */,
 				9C9BE0BBD3C9989CE39B40F4 /* KeysView.swift */,
+				40AEA8007E87AB982653BE0B /* PaywallView.swift */,
 				E91F277FBF944DC0A5510537 /* ProducerView.swift */,
 				05F558026324311236ADA4CC /* ProductionCharts.swift */,
 				13961E0C1EFE014AE7B8FCD1 /* RootView.swift */,
@@ -571,6 +586,7 @@
 			buildConfigurationList = 02E705983A5A4214BDEA79EB /* Build configuration list for PBXNativeTarget "CinemaComposerProTests" */;
 			buildPhases = (
 				FC176078FBAE0D8CBC52691B /* Sources */,
+				5421184BD31EA2E6D9CA62FA /* Resources */,
 			);
 			buildRules = (
 			);
@@ -658,6 +674,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5421184BD31EA2E6D9CA62FA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FD3D314FC5D8D437BC11AD40 /* CinemaComposerPro.storekit in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		93A5A00193AE78CCC13284C4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -698,12 +722,15 @@
 				4C952F52408569D159C0E82B /* ConductorView.swift in Sources */,
 				AAF0336C9112CD5DE17E4BBD /* CuttingRoomView.swift in Sources */,
 				44D66184A6E376B234CDB27C /* EfficiencyView.swift in Sources */,
+				F9111271314341ADBB6C4753 /* EntitlementManager.swift in Sources */,
 				F80AE8B39E1FECCB0F638BB4 /* Exporters.swift in Sources */,
 				C42EA22B20EB7E0D5971B35C /* FilmSpec.swift in Sources */,
 				CD755DEDC181AA3232AFE129 /* Formatters.swift in Sources */,
 				500DEDB57D2712BA1CFFED60 /* GetStartedView.swift in Sources */,
+				1BD3FE5A455CB90C43C03755 /* HowItWorksView.swift in Sources */,
 				B3B5B7277B4F0644B56B41CC /* KeychainStore.swift in Sources */,
 				0EC43C73FD3A081F9B9586D5 /* KeysView.swift in Sources */,
+				73F0F638FCD0A99BE1DF4EA8 /* PaywallView.swift in Sources */,
 				E57F429423145F51101387FC /* Planner.swift in Sources */,
 				D13CDD0ACFCF4D622326E0CA /* ProducerView.swift in Sources */,
 				D3554AB2E76E7DF66A4AFBA1 /* ProductionCharts.swift in Sources */,
@@ -802,6 +829,7 @@
 				136119F75E494E2A0524A08F /* AdvisorAndInsightTests.swift in Sources */,
 				1017ED9CE6AC8FC8DDE44D86 /* BugTrackerTests.swift in Sources */,
 				37D6A218E2B9E673F3B78C0D /* EngineTests.swift in Sources */,
+				4258AE376D6EC8BD6AD453C2 /* EntitlementTests.swift in Sources */,
 				34ACDEED3115AB98C8EBB571 /* RackAndCutTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -964,6 +992,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.9;
+				StoreKitConfigurationFile = CinemaComposerPro.storekit;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -1097,6 +1126,7 @@
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.9;
+				StoreKitConfigurationFile = CinemaComposerPro.storekit;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;

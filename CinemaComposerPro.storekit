@@ -1,0 +1,146 @@
+{
+  "identifier" : "com.cinemacomposer.storekit",
+  "type" : "Configuration",
+  "version" : 1,
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "ccp_monthly",
+      "internalDescription" : "Monthly subscription to Cinema Composer Pro — unlocks the Cutting Room, live vendor runs, and unlimited exports.",
+      "referenceName" : "Cinema Composer Pro Monthly",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+          ],
+          "codeOffers" : [
+          ],
+          "internalDescription" : "Auto-renewable monthly subscription.",
+          "internalID" : "ccp_monthly_sub",
+          "introductoryOffer" : {
+            "internalDescription" : "1 week free trial for new subscribers.",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "1 week"
+          },
+          "localizations" : [
+          ],
+          "productID" : "com.steroidos.cinemacomposer.pro.monthly",
+          "recurringSubscriptionPeriod" : "1 month",
+          "referenceName" : "Cinema Composer Pro Monthly Subscription",
+          "subscriptionGroupID" : "ccp_pro_group",
+          "winbackOffers" : [
+          ]
+        }
+      ],
+      "subscriptionGroupID" : "ccp_pro_group",
+      "type" : "AutoRenewableSubscription"
+    },
+    {
+      "displayPrice" : "59.99",
+      "familyShareable" : false,
+      "internalID" : "ccp_annual",
+      "internalDescription" : "Annual subscription to Cinema Composer Pro — best value, unlocks everything.",
+      "referenceName" : "Cinema Composer Pro Annual",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+          ],
+          "codeOffers" : [
+          ],
+          "internalDescription" : "Auto-renewable annual subscription.",
+          "internalID" : "ccp_annual_sub",
+          "introductoryOffer" : {
+            "internalDescription" : "1 month free trial for new subscribers.",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "1 month"
+          },
+          "localizations" : [
+          ],
+          "productID" : "com.steroidos.cinemacomposer.pro.annual",
+          "recurringSubscriptionPeriod" : "1 year",
+          "referenceName" : "Cinema Composer Pro Annual Subscription",
+          "subscriptionGroupID" : "ccp_pro_group",
+          "winbackOffers" : [
+          ]
+        }
+      ],
+      "subscriptionGroupID" : "ccp_pro_group",
+      "type" : "AutoRenewableSubscription"
+    },
+    {
+      "displayPrice" : "99.99",
+      "familyShareable" : false,
+      "internalID" : "ccp_lifetime",
+      "internalDescription" : "One-time lifetime purchase — unlocks the Cutting Room, live runs, and every future Pro feature.",
+      "referenceName" : "Cinema Composer Pro Lifetime",
+      "type" : "NonConsumable",
+      "productID" : "com.steroidos.cinemacomposer.pro.lifetime"
+    }
+  ],
+  "settings" : {
+    "_accessLevel" : "developer",
+    "_applyToTransactionLimit" : true,
+    "_askToBuyEnabled" : false,
+    "_locale" : "en_US",
+    "_merchandisingBackend" : "production",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "LoadProducts",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "LoadSubscriptions",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "AppStoreSync",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "SubscriptionStatus",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "AppReceipt",
+        "values" : [
+        ]
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refresh",
+        "values" : [
+        ]
+      }
+    ]
+  }
+}
