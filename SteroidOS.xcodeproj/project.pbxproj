@@ -35,6 +35,7 @@
 		3675BCE7234EDACD5AA05AFB /* AITool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BC053A7A0D714FA73C510F0 /* AITool.swift */; };
 		3751C6EC3F432427A7EC33B4 /* AdvisorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7578C0C4DC2FAB154DC64452 /* AdvisorView.swift */; };
 		37D6A218E2B9E673F3B78C0D /* EngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */; };
+		AF3DEF5BBBBA72D26072D7AB /* MagneticProTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19769B10E3B8FA744BA0D9B0 /* MagneticProTests.swift */; };
 		E9DAB2FD487B5E72F0312C09 /* MagneticTimelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F861DDA554C5C6B222042E19 /* MagneticTimelineTests.swift */; };
 		396B31EC986F5CAF2508543D /* ErrorLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 944136042A42411F60A43475 /* ErrorLog.swift */; };
 		3D9FC3C637278F34D94E1124 /* ToolAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2FE3BBD02CCA2709B00AC2 /* ToolAdapter.swift */; };
@@ -111,6 +112,8 @@
 		CD755DEDC181AA3232AFE129 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C1619590B2384634932769 /* Formatters.swift */; };
 		D080CF6C9AE42CF2D42BCBB1 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
 		D13CDD0ACFCF4D622326E0CA /* ProducerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91F277FBF944DC0A5510537 /* ProducerView.swift */; };
+		C9D085DDE2A0124117C1F561 /* ProInspectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EEF642DBFAD5CE993669774 /* ProInspectors.swift */; };
+		256B2FD34379A45543966251 /* TimelineIndexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B453E88B69EB53B53F9C80E /* TimelineIndexView.swift */; };
 		ECEE28A40EC34D2F66DB33DE /* CuttingRoomInspectors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96C52C7288CDD5C343651991 /* CuttingRoomInspectors.swift */; };
 		A4C796326F640DBDCB192ECF /* CuttingRoomProView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C179BF61B423EEBB9D7E2F1 /* CuttingRoomProView.swift */; };
 		D3554AB2E76E7DF66A4AFBA1 /* ProductionCharts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F558026324311236ADA4CC /* ProductionCharts.swift */; };
@@ -254,6 +257,7 @@
 		AC9803FB32EA07ED7068E4EF /* BugTrackerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugTrackerTests.swift; sourceTree = "<group>"; };
 		B0B2A41FF3345DA4282538E7 /* Exporters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exporters.swift; sourceTree = "<group>"; };
 		B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EngineTests.swift; sourceTree = "<group>"; };
+		19769B10E3B8FA744BA0D9B0 /* MagneticProTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagneticProTests.swift; sourceTree = "<group>"; };
 		F861DDA554C5C6B222042E19 /* MagneticTimelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagneticTimelineTests.swift; sourceTree = "<group>"; };
 		B4E39FD7276BE5D765E7F51E /* CinemaComposerProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CinemaComposerProApp.swift; sourceTree = "<group>"; };
 		B5816CCD424567C7059FC243 /* TabManagerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManagerView.swift; sourceTree = "<group>"; };
@@ -281,6 +285,8 @@
 		E4F25F228B1604F741EE6447 /* SteroidOSComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSComplication.swift; sourceTree = "<group>"; };
 		E5857EB7DE5EF907F70B2F87 /* BugReporterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugReporterView.swift; sourceTree = "<group>"; };
 		E91F277FBF944DC0A5510537 /* ProducerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProducerView.swift; sourceTree = "<group>"; };
+		1EEF642DBFAD5CE993669774 /* ProInspectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProInspectors.swift; sourceTree = "<group>"; };
+		6B453E88B69EB53B53F9C80E /* TimelineIndexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineIndexView.swift; sourceTree = "<group>"; };
 		96C52C7288CDD5C343651991 /* CuttingRoomInspectors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuttingRoomInspectors.swift; sourceTree = "<group>"; };
 		5C179BF61B423EEBB9D7E2F1 /* CuttingRoomProView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CuttingRoomProView.swift; sourceTree = "<group>"; };
 		E9E9B506C722E0C1664A6D5A /* BrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserViewModel.swift; sourceTree = "<group>"; };
@@ -327,6 +333,7 @@
 				C380D434CA68070246D05D29 /* AdvisorAndInsightTests.swift */,
 				AC9803FB32EA07ED7068E4EF /* BugTrackerTests.swift */,
 				B3800B7BD2C1AA7DF830A596 /* EngineTests.swift */,
+				19769B10E3B8FA744BA0D9B0 /* MagneticProTests.swift */,
 				F861DDA554C5C6B222042E19 /* MagneticTimelineTests.swift */,
 				EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */,
 				4F3613937FB5A2A03D6AAA2E /* RackAndCutTests.swift */,
@@ -557,6 +564,8 @@
 				9C9BE0BBD3C9989CE39B40F4 /* KeysView.swift */,
 				40AEA8007E87AB982653BE0B /* PaywallView.swift */,
 				E91F277FBF944DC0A5510537 /* ProducerView.swift */,
+				1EEF642DBFAD5CE993669774 /* ProInspectors.swift */,
+				6B453E88B69EB53B53F9C80E /* TimelineIndexView.swift */,
 				96C52C7288CDD5C343651991 /* CuttingRoomInspectors.swift */,
 				5C179BF61B423EEBB9D7E2F1 /* CuttingRoomProView.swift */,
 				05F558026324311236ADA4CC /* ProductionCharts.swift */,
@@ -779,6 +788,8 @@
 				73F0F638FCD0A99BE1DF4EA8 /* PaywallView.swift in Sources */,
 				E57F429423145F51101387FC /* Planner.swift in Sources */,
 				D13CDD0ACFCF4D622326E0CA /* ProducerView.swift in Sources */,
+				C9D085DDE2A0124117C1F561 /* ProInspectors.swift in Sources */,
+				256B2FD34379A45543966251 /* TimelineIndexView.swift in Sources */,
 				D3554AB2E76E7DF66A4AFBA1 /* ProductionCharts.swift in Sources */,
 				F4FF5E50018071D2F648D971 /* ProductionViewModel.swift in Sources */,
 				14DEC0C333406B33AEE6520A /* ProjectStore.swift in Sources */,
@@ -888,6 +899,7 @@
 				136119F75E494E2A0524A08F /* AdvisorAndInsightTests.swift in Sources */,
 				1017ED9CE6AC8FC8DDE44D86 /* BugTrackerTests.swift in Sources */,
 				37D6A218E2B9E673F3B78C0D /* EngineTests.swift in Sources */,
+				AF3DEF5BBBBA72D26072D7AB /* MagneticProTests.swift in Sources */,
 				E9DAB2FD487B5E72F0312C09 /* MagneticTimelineTests.swift in Sources */,
 				4258AE376D6EC8BD6AD453C2 /* EntitlementTests.swift in Sources */,
 				34ACDEED3115AB98C8EBB571 /* RackAndCutTests.swift in Sources */,

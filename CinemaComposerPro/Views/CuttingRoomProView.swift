@@ -17,13 +17,16 @@ struct CuttingRoomProView: View {
     @State private var hasSeeded = false
 
     enum InspectorTab: String, CaseIterable, Identifiable {
-        case info, video, audio, retime, takes
+        case info, video, color, effects, audio, mixer, retime, takes
         var id: String { rawValue }
         var label: String {
             switch self {
             case .info: return "Info"
             case .video: return "Video"
+            case .color: return "Colour"
+            case .effects: return "Effects"
             case .audio: return "Audio"
+            case .mixer: return "Mixer"
             case .retime: return "Retime"
             case .takes: return "Takes"
             }
@@ -32,7 +35,10 @@ struct CuttingRoomProView: View {
             switch self {
             case .info: return "info.circle"
             case .video: return "slider.horizontal.below.rectangle"
+            case .color: return "paintpalette"
+            case .effects: return "wand.and.rays"
             case .audio: return "waveform"
+            case .mixer: return "slider.vertical.3"
             case .retime: return "gauge.with.needle"
             case .takes: return "square.stack.3d.up"
             }
@@ -78,6 +84,16 @@ struct CuttingRoomProView: View {
     private func export(_ kind: ProductionViewModel.ExportKind) {
         model.commitCut(doc.timeline)
         exportURL = model.export(kind)
+        Haptics.tap()
+    }
+
+    /// Captions ride the timeline rather than the project, so they are written
+    /// straight from the cut on screen.
+    private func exportCaptions(_ format: CaptionFormat) {
+        let contents = CaptionExporter.export(doc.timeline, format: format)
+        guard !contents.isEmpty else { return }
+        let safeTitle = model.spec.title.replacingOccurrences(of: " ", with: "-")
+        exportURL = try? ProjectStore.stage(contents, as: "\(safeTitle).\(format.fileExtension)")
         Haptics.tap()
     }
 
@@ -188,6 +204,14 @@ struct CuttingRoomProView: View {
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
+            NavigationLink {
+                TimelineIndexView(doc: doc)
+            } label: {
+                Image(systemName: "list.bullet.indent")
+            }
+            .accessibilityLabel("Timeline index")
+        }
+        ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button("Rebuild assembly from the plan") {
                     doc.replaceTimeline(MagneticTimeline.assembly(from: model.breakdown, plan: model.plan),
@@ -197,6 +221,12 @@ struct CuttingRoomProView: View {
                 Button("Export FCPXML") { export(.fcpxml) }
                 Button("Export EDL") { export(.edl) }
                 Button("Export OTIO") { export(.otio) }
+                Divider()
+                Menu("Export captions") {
+                    ForEach(CaptionFormat.allCases) { format in
+                        Button(format.label) { exportCaptions(format) }
+                    }
+                }
             } label: {
                 Image(systemName: "ellipsis.circle")
             }
@@ -247,7 +277,10 @@ struct CuttingRoomProView: View {
                 switch inspectorTab {
                 case .info: InfoInspector(doc: doc, placed: selected)
                 case .video: VideoInspector(doc: doc, placed: selected)
+                case .color: ColorInspector(doc: doc, placed: selected)
+                case .effects: EffectsInspector(doc: doc, placed: selected)
                 case .audio: AudioInspector(doc: doc, placed: selected)
+                case .mixer: MixerInspector(doc: doc, placed: selected)
                 case .retime: RetimeInspector(doc: doc, placed: selected)
                 case .takes: TakesInspector(doc: doc, placed: selected, model: model)
                 }
