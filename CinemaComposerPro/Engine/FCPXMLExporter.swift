@@ -25,6 +25,9 @@ enum FCPXMLExporter {
             if let transition = item.transitionIn { resources.addEffect(transition) }
             if let transition = item.transitionOut { resources.addEffect(transition) }
             if case .title = item.content { resources.addTitleEffect() }
+            for effect in item.effects {
+                resources.addEffect(id: effect.effectID, name: effect.name)
+            }
         }
 
         var body = ""
@@ -116,6 +119,18 @@ enum FCPXMLExporter {
             element = "title"
             attributes.append("ref=\"\(ResourceTable.titleEffectID)\"")
             attributes.append("role=\"\(escape(item.role.fcpxmlValue))\"")
+        case .caption(let caption):
+            // Final Cut models captions as their own element with a caption
+            // role, which is what keeps them exportable as iTT or SRT later.
+            element = "caption"
+            attributes.append("role=\"\(escape(captionRole(caption)))\"")
+        case .multicam(let multicam):
+            // Only the active angles are referenced; the rest stay in the clip
+            // so the decision can be revised.
+            element = "mc-clip"
+            if let video = multicam.activeVideoAngle {
+                attributes.append("srcEnable=\"\(multicam.activeAudioAngleID == video.id ? "all" : "video")\"")
+            }
         case .compound, .gap:
             element = "gap"
         }
@@ -151,8 +166,28 @@ enum FCPXMLExporter {
         let pad = String(repeating: " ", count: indent)
         var markup = ""
 
+        if case .caption(let caption) = item.content {
+            markup += "\(pad)<text>\n"
+            for line in caption.text.split(separator: "\n", omittingEmptySubsequences: false) {
+                markup += "\(pad)  <text-style>\(escape(String(line)))</text-style>\n"
+            }
+            markup += "\(pad)</text>\n"
+        }
+        if case .multicam(let multicam) = item.content {
+            for angle in multicam.angles {
+                let active = angle.id == multicam.activeVideoAngleID
+                markup += "\(pad)<mc-angle name=\"\(escape(angle.name))\" "
+                markup += "angleID=\"\(angle.id)\" active=\"\(active ? 1 : 0)\"/>\n"
+            }
+        }
         if !item.transform.isIdentity {
             markup += transformMarkup(item.transform, pad: pad)
+        }
+        if !item.color.isNeutral {
+            markup += colorMarkup(item.color, pad: pad)
+        }
+        for effect in item.effects {
+            markup += effectMarkup(effect, resources: resources, pad: pad)
         }
         if item.hasAudio || item.audio.volumeDB.constant != 0 || item.audio.volumeDB.isAnimated {
             markup += volumeMarkup(item.audio, pad: pad)
@@ -210,6 +245,93 @@ enum FCPXMLExporter {
 
         if params.isEmpty { return markup + "/>\n" }
         return markup + ">\n" + params + "\(pad)</adjust-transform>\n"
+    }
+
+    /// Captions carry their language in the role, the way Final Cut names them
+    /// (`iTT?captionFormat=ITT.en`), so a multi-language sequence round-trips.
+    private static func captionRole(_ caption: CaptionContent) -> String {
+        switch caption.format {
+        case .itt: return "iTT?captionFormat=ITT.\(caption.language)"
+        case .srt: return "SRT?captionFormat=SRT.\(caption.language)"
+        case .vtt, .cea608: return "CEA608?captionFormat=CEA608.\(caption.language)"
+        }
+    }
+
+    /// The grade, written as Final Cut's colour adjustment plus a correction
+    /// element carrying the three-way wheels.
+    private static func colorMarkup(_ color: ColorCorrection, pad: String) -> String {
+        var markup = "\(pad)<adjust-color "
+        markup += "saturation=\"\(number(color.saturation.constant / 100))\" "
+        markup += "exposure=\"\(number(color.exposure.constant))\" "
+        markup += "contrast=\"\(number(color.contrast.constant))\" "
+        markup += "enabled=\"\(color.isEnabled ? 1 : 0)\""
+
+        var inner = ""
+        inner += wheelMarkup("master", color.master, pad: pad + "  ")
+        inner += wheelMarkup("shadows", color.shadows, pad: pad + "  ")
+        inner += wheelMarkup("midtones", color.midtones, pad: pad + "  ")
+        inner += wheelMarkup("highlights", color.highlights, pad: pad + "  ")
+        inner += scalarParam(name: "saturation", value: color.saturation, pad: pad + "  ")
+        inner += scalarParam(name: "exposure", value: color.exposure, pad: pad + "  ")
+        inner += scalarParam(name: "contrast", value: color.contrast, pad: pad + "  ")
+
+        if !color.luma.isIdentity {
+            inner += "\(pad)  <param name=\"lumaCurve\">\n"
+            for point in color.luma.points.sorted(by: { $0.input < $1.input }) {
+                inner += "\(pad)    <point x=\"\(number(point.input))\" y=\"\(number(point.output))\"/>\n"
+            }
+            inner += "\(pad)  </param>\n"
+        }
+        if !color.lutName.isEmpty {
+            inner += "\(pad)  <param name=\"lut\" value=\"\(escape(color.lutName))\"/>\n"
+        }
+
+        if inner.isEmpty { return markup + "/>\n" }
+        return markup + ">\n" + inner + "\(pad)</adjust-color>\n"
+    }
+
+    private static func wheelMarkup(_ name: String, _ wheel: ColorWheel, pad: String) -> String {
+        guard !wheel.isNeutral else { return "" }
+        return "\(pad)<param name=\"\(name)\" "
+            + "hue=\"\(number(wheel.hueAngle.constant))\" "
+            + "sat=\"\(number(wheel.saturation.constant))\" "
+            + "bright=\"\(number(wheel.brightness.constant))\"/>\n"
+    }
+
+    private static func effectMarkup(_ effect: Effect,
+                                     resources: ResourceTable,
+                                     pad: String) -> String {
+        let element = effect.category == .audio ? "filter-audio" : "filter-video"
+        var markup = "\(pad)<\(element) ref=\"\(resources.effectID(forEffectID: effect.effectID))\" "
+        markup += "name=\"\(escape(effect.name))\""
+        if !effect.isEnabled { markup += " enabled=\"0\"" }
+
+        var params = ""
+        for parameter in effect.parameters {
+            switch parameter.value {
+            case .number(let animatable):
+                if animatable.isAnimated {
+                    params += scalarParam(name: parameter.name, value: animatable, pad: pad + "  ")
+                } else {
+                    params += "\(pad)  <param name=\"\(escape(parameter.name))\" "
+                    params += "value=\"\(number(animatable.constant))\"/>\n"
+                }
+            case .toggle(let on):
+                params += "\(pad)  <param name=\"\(escape(parameter.name))\" value=\"\(on ? 1 : 0)\"/>\n"
+            case .choice(let index, let options):
+                let label = options.indices.contains(index) ? options[index] : ""
+                params += "\(pad)  <param name=\"\(escape(parameter.name))\" "
+                params += "value=\"\(index)\" key=\"\(escape(label))\"/>\n"
+            case .text(let value):
+                params += "\(pad)  <param name=\"\(escape(parameter.name))\" "
+                params += "value=\"\(escape(value))\"/>\n"
+            case .color(let red, let green, let blue):
+                params += "\(pad)  <param name=\"\(escape(parameter.name))\" "
+                params += "value=\"\(number(red.constant)) \(number(green.constant)) \(number(blue.constant))\"/>\n"
+            }
+        }
+        if params.isEmpty { return markup + "/>\n" }
+        return markup + ">\n" + params + "\(pad)</\(element)>\n"
     }
 
     private static func volumeMarkup(_ audio: AudioSettings, pad: String) -> String {
@@ -385,6 +507,19 @@ private struct ResourceTable {
         effectMarkup.append("<effect id=\"\(identifier)\" name=\"\(FCPXMLExporter.escape(transition.name))\" "
                             + "uid=\"\(transition.effectID)\"/>")
     }
+
+    /// Effects from a clip's stack get a resource of their own, keyed by the
+    /// vendor effect id so one entry serves every clip that uses it.
+    mutating func addEffect(id effectID: String, name: String) {
+        guard effectIDs[effectID] == nil else { return }
+        let identifier = "r\(nextIndex)"
+        nextIndex += 1
+        effectIDs[effectID] = identifier
+        effectMarkup.append("<effect id=\"\(identifier)\" name=\"\(FCPXMLExporter.escape(name))\" "
+                            + "uid=\"\(FCPXMLExporter.escape(effectID))\"/>")
+    }
+
+    func effectID(forEffectID effectID: String) -> String { effectIDs[effectID] ?? "r1" }
 
     mutating func addTitleEffect() {
         guard !includesTitle else { return }

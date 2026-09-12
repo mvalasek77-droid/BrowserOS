@@ -7,13 +7,29 @@ enum ItemContent: Codable, Equatable {
     case gap
     case title(text: String)
     case compound(items: [TimelineItem])
+    case caption(CaptionContent)
+    case multicam(MulticamContent)
 
     var isGap: Bool { if case .gap = self { return true }; return false }
 
     var isCompound: Bool { if case .compound = self { return true }; return false }
 
+    var isCaption: Bool { if case .caption = self { return true }; return false }
+
+    var isMulticam: Bool { if case .multicam = self { return true }; return false }
+
     var mediaRef: MediaRef? {
         if case .media(let ref) = self { return ref }
+        return nil
+    }
+
+    var caption: CaptionContent? {
+        if case .caption(let value) = self { return value }
+        return nil
+    }
+
+    var multicam: MulticamContent? {
+        if case .multicam(let value) = self { return value }
         return nil
     }
 
@@ -23,6 +39,19 @@ enum ItemContent: Codable, Equatable {
         case .gap: return "rectangle.dashed"
         case .title: return "textformat"
         case .compound: return "square.stack.3d.down.right"
+        case .caption: return "captions.bubble"
+        case .multicam: return "rectangle.3.group"
+        }
+    }
+
+    var kindLabel: String {
+        switch self {
+        case .media: return "Clip"
+        case .gap: return "Gap"
+        case .title: return "Title"
+        case .compound: return "Compound"
+        case .caption: return "Caption"
+        case .multicam: return "Multicam"
         }
     }
 }
@@ -58,6 +87,16 @@ struct TimelineItem: Codable, Equatable, Identifiable {
     var audio: AudioSettings = AudioSettings()
     var retime: Retime?
 
+    /// The effect stack, rendered top down.
+    var effects: [Effect] = []
+    var color: ColorCorrection = ColorCorrection()
+    var audioProcessing: AudioProcessing = AudioProcessing()
+
+    /// An adjustment layer passes its effects and grade down to everything
+    /// beneath it on lower lanes. Final Cut has no native equivalent — it makes
+    /// you build one as a Motion template — so this is a step past it.
+    var isAdjustmentLayer: Bool = false
+
     var transitionIn: EditTransition?
     var transitionOut: EditTransition?
 
@@ -82,6 +121,55 @@ struct TimelineItem: Codable, Equatable, Identifiable {
         self.duration = duration
         self.sourceIn = sourceIn
         self.role = role
+    }
+
+    // MARK: - Codable
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, content, duration, sourceIn, lane, offset, role
+        case isEnabled, isLocked, transform, audio, retime
+        case effects, color, audioProcessing, isAdjustmentLayer
+        case transitionIn, transitionOut
+        case markers, keywords, rating, audition, notes, connected, provenance
+    }
+
+    /// Decoded field by field with a default for anything absent.
+    ///
+    /// Swift's synthesized decoder ignores property defaults and fails outright
+    /// on a missing key, so adding one field would make every project saved
+    /// before it unreadable — and since the cut lives inside the project file,
+    /// that loses the whole document, not just the new field. Tolerating gaps
+    /// here is what makes the model safe to keep growing.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // Identity and geometry are required: an item without them is not an item.
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Clip"
+        content = try container.decode(ItemContent.self, forKey: .content)
+        duration = try container.decode(RationalTime.self, forKey: .duration)
+
+        sourceIn = try container.decodeIfPresent(RationalTime.self, forKey: .sourceIn) ?? .zero
+        lane = try container.decodeIfPresent(Int.self, forKey: .lane) ?? 0
+        offset = try container.decodeIfPresent(RationalTime.self, forKey: .offset) ?? .zero
+        role = try container.decodeIfPresent(Role.self, forKey: .role) ?? .video
+        isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+        isLocked = try container.decodeIfPresent(Bool.self, forKey: .isLocked) ?? false
+        transform = try container.decodeIfPresent(Transform.self, forKey: .transform) ?? Transform()
+        audio = try container.decodeIfPresent(AudioSettings.self, forKey: .audio) ?? AudioSettings()
+        retime = try container.decodeIfPresent(Retime.self, forKey: .retime)
+        effects = try container.decodeIfPresent([Effect].self, forKey: .effects) ?? []
+        color = try container.decodeIfPresent(ColorCorrection.self, forKey: .color) ?? ColorCorrection()
+        audioProcessing = try container.decodeIfPresent(AudioProcessing.self, forKey: .audioProcessing) ?? AudioProcessing()
+        isAdjustmentLayer = try container.decodeIfPresent(Bool.self, forKey: .isAdjustmentLayer) ?? false
+        transitionIn = try container.decodeIfPresent(EditTransition.self, forKey: .transitionIn)
+        transitionOut = try container.decodeIfPresent(EditTransition.self, forKey: .transitionOut)
+        markers = try container.decodeIfPresent([EditMarker].self, forKey: .markers) ?? []
+        keywords = try container.decodeIfPresent([Keyword].self, forKey: .keywords) ?? []
+        rating = try container.decodeIfPresent(Rating.self, forKey: .rating)
+        audition = try container.decodeIfPresent(Audition.self, forKey: .audition)
+        notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        connected = try container.decodeIfPresent([TimelineItem].self, forKey: .connected) ?? []
+        provenance = try container.decodeIfPresent(Provenance.self, forKey: .provenance) ?? Provenance()
     }
 
     // MARK: - Derived
@@ -109,6 +197,26 @@ struct TimelineItem: Codable, Equatable, Identifiable {
     var speedLabel: String? {
         guard let retime, retime.isActive else { return nil }
         return retime.displayRate
+    }
+
+    var hasEffects: Bool { !effects.isEmpty || !color.isNeutral || audioProcessing.isActive }
+
+    /// Generated media that has not been rendered yet points at no file.
+    var isMissingMedia: Bool {
+        guard let ref = content.mediaRef else { return false }
+        return (ref.url ?? "").isEmpty
+    }
+
+    /// Move every keyframe on the clip when its head moves.
+    ///
+    /// Trimming the front of a clip must carry the whole animation with the
+    /// picture — transform, audio, grade and every effect parameter alike.
+    /// Shifting only some of them is how a grade ends up one second late.
+    mutating func shiftAllKeyframes(by delta: RationalTime) {
+        transform.shiftKeyframes(by: delta)
+        audio.shiftKeyframes(by: delta)
+        color.shiftKeyframes(by: delta)
+        for index in effects.indices { effects[index].shiftKeyframes(by: delta) }
     }
 
     /// Every item under this one, this item included, depth first.
@@ -165,6 +273,10 @@ enum MagneticEditError: LocalizedError {
     case notInStoryline(String)
     case noRoomToTrim
     case cannotNestSelection
+    case laneZeroReserved
+    case insufficientHandles(String)
+    case noSuchAngle(String)
+    case notMulticam(String)
 
     var errorDescription: String? {
         switch self {
@@ -176,6 +288,11 @@ enum MagneticEditError: LocalizedError {
         case .notInStoryline(let id): return "\(id) is a connected clip, not part of the primary storyline"
         case .noRoomToTrim: return "There is no media left to trim into"
         case .cannotNestSelection: return "Select clips in the primary storyline to make a compound"
+        case .laneZeroReserved: return "Lane 0 is the primary storyline — connect above or below it"
+        case .insufficientHandles(let name):
+            return "\(name) has no spare media for a transition. Trim it back, or shorten the transition."
+        case .noSuchAngle(let id): return "No angle \(id) in this multicam clip"
+        case .notMulticam(let name): return "\(name) is not a multicam clip"
         }
     }
 }

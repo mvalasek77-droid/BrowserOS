@@ -153,7 +153,7 @@ extension MagneticTimeline {
     mutating func connect(_ item: TimelineItem,
                           at time: RationalTime,
                           lane: Int) throws -> TimelineItem {
-        guard lane != 0 else { throw MagneticEditError.nonPositiveDuration }
+        guard lane != 0 else { throw MagneticEditError.laneZeroReserved }
         guard !item.duration.isZero, !item.duration.isNegative else {
             throw MagneticEditError.nonPositiveDuration
         }
@@ -215,8 +215,7 @@ extension MagneticTimeline {
         tail.duration = item.duration - offset
         tail.sourceIn = item.sourceIn + offset
         tail.transitionIn = nil
-        tail.transform.shiftKeyframes(by: -offset)
-        tail.audio.shiftKeyframes(by: -offset)
+        tail.shiftAllKeyframes(by: -offset)
 
         // Markers and connected clips follow the half they actually sit on.
         head.markers = item.markers.filter { $0.at < offset }
@@ -269,8 +268,7 @@ extension MagneticTimeline {
             b.duration = child.duration - offset
             b.sourceIn = child.sourceIn + offset
             b.offset = child.offset + offset
-            b.transform.shiftKeyframes(by: -offset)
-            b.audio.shiftKeyframes(by: -offset)
+            b.shiftAllKeyframes(by: -offset)
             a.audio.fadeOut = Fade()
             b.audio.fadeIn = Fade()
             splitHead.append(a)
@@ -357,8 +355,7 @@ extension MagneticTimeline {
             }
             result.sourceIn = current.sourceIn + step
             result.duration = newDuration
-            result.transform.shiftKeyframes(by: -step)
-            result.audio.shiftKeyframes(by: -step)
+            result.shiftAllKeyframes(by: -step)
             result.markers = current.markers.compactMap { marker -> EditMarker? in
                 var moved = marker
                 moved.at = marker.at - step
@@ -412,8 +409,7 @@ extension MagneticTimeline {
         spine[index].duration = newLeft
         spine[index + 1].duration = newRight
         spine[index + 1].sourceIn = right.sourceIn + step
-        spine[index + 1].transform.shiftKeyframes(by: -step)
-        spine[index + 1].audio.shiftKeyframes(by: -step)
+        spine[index + 1].shiftAllKeyframes(by: -step)
     }
 
     /// Slip: change which piece of the source plays without moving the clip or
@@ -462,8 +458,7 @@ extension MagneticTimeline {
         spine[index - 1].duration = newBefore
         spine[index + 1].duration = newAfter
         spine[index + 1].sourceIn = after.sourceIn + step
-        spine[index + 1].transform.shiftKeyframes(by: -step)
-        spine[index + 1].audio.shiftKeyframes(by: -step)
+        spine[index + 1].shiftAllKeyframes(by: -step)
     }
 
     // MARK: - Compound clips

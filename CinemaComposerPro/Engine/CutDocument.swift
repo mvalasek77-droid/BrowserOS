@@ -400,4 +400,157 @@ final class CutDocument: ObservableObject {
             try timeline.addTake(take, to: itemID)
         }
     }
+
+    // MARK: - Effects & grade
+
+    func addEffect(_ effect: Effect) {
+        guard let target = primarySelection else { return }
+        perform("Add \(effect.name)") { timeline in
+            try timeline.addEffect(effect, to: target.item.id)
+        }
+    }
+
+    func removeEffect(_ effectID: String) {
+        guard let target = primarySelection else { return }
+        perform("Remove Effect") { timeline in
+            try timeline.removeEffect(effectID, from: target.item.id)
+        }
+    }
+
+    func toggleEffect(_ effectID: String, enabled: Bool) {
+        guard let target = primarySelection else { return }
+        perform(enabled ? "Enable Effect" : "Bypass Effect") { timeline in
+            try timeline.setEffectEnabled(enabled, effectID: effectID, on: target.item.id)
+        }
+    }
+
+    func moveEffect(_ effectID: String, to index: Int) {
+        guard let target = primarySelection else { return }
+        perform("Reorder Effects") { timeline in
+            try timeline.moveEffect(effectID, on: target.item.id, to: index)
+        }
+    }
+
+    func setEffectParameter(_ value: Double, parameterID: String, effectID: String) {
+        guard let target = primarySelection else { return }
+        perform("Adjust Effect") { timeline in
+            try timeline.setEffectParameter(value, parameterID: parameterID,
+                                            effectID: effectID, on: target.item.id)
+        }
+    }
+
+    func updateColor(_ change: @escaping (inout ColorCorrection) -> Void) {
+        guard let target = primarySelection else { return }
+        perform("Colour Correction") { timeline in
+            try timeline.update(id: target.item.id) { change(&$0.color) }
+        }
+    }
+
+    func resetColor() {
+        guard let target = primarySelection else { return }
+        perform("Reset Colour") { timeline in
+            try timeline.resetColor(on: target.item.id)
+        }
+    }
+
+    /// Copy the look from the selected clip onto every other selected clip.
+    func pasteAttributesFromPrimary(includeEffects: Bool = true,
+                                    includeColor: Bool = true,
+                                    includeTransform: Bool = false,
+                                    includeAudio: Bool = false) {
+        guard let source = primarySelection, selection.count > 1 else { return }
+        let targets = Array(selection).filter { $0 != source.item.id }
+        perform("Paste Attributes") { timeline in
+            try timeline.pasteAttributes(from: source.item.id,
+                                         to: targets,
+                                         includeEffects: includeEffects,
+                                         includeColor: includeColor,
+                                         includeTransform: includeTransform,
+                                         includeAudio: includeAudio)
+        }
+    }
+
+    // MARK: - Adjustment layers, captions, multicam
+
+    func addAdjustmentLayerOverSelection() {
+        let items = selectedItems.sorted { $0.start < $1.start }
+        guard let first = items.first, let last = items.last else { return }
+        let start = first.start
+        let span = last.end - first.start
+        perform("Add Adjustment Layer") { timeline in
+            _ = try timeline.addAdjustmentLayer(named: "Adjustment Layer",
+                                                start: start, duration: span)
+        }
+    }
+
+    func addCaptionAtPlayhead(_ text: String, seconds: Double = 3, language: String = "en") {
+        let start = playhead
+        let duration = RationalTime(seconds: seconds, rate: rate)
+        perform("Add Caption") { timeline in
+            _ = try timeline.addCaption(text, at: start, duration: duration, language: language)
+        }
+    }
+
+    func setCaptionText(_ text: String, on itemID: String) {
+        perform("Edit Caption") { timeline in
+            try timeline.setCaptionText(text, on: itemID)
+        }
+    }
+
+    func makeMulticamFromSelection(named name: String) {
+        let ids = selectedItems.sorted { $0.start < $1.start }.map(\.item.id)
+        guard ids.count > 1 else { return }
+        perform("New Multicam Clip") { timeline in
+            _ = try timeline.makeMulticam(from: ids, name: name)
+        }
+    }
+
+    func switchAngle(to angleID: String, audioToo: Bool) {
+        guard let target = primarySelection else { return }
+        perform("Switch Angle") { timeline in
+            try timeline.switchAngle(on: target.item.id, to: angleID, audioToo: audioToo)
+        }
+    }
+
+    func cutToAngleAtPlayhead(_ angleID: String) {
+        guard let target = primarySelection else { return }
+        let at = playhead
+        perform("Cut to Angle") { timeline in
+            try timeline.cutToAngle(on: target.item.id, at: at, angleID: angleID)
+        }
+    }
+
+    /// Blade whatever is selected, connected clips included.
+    func bladeSelectionAtPlayhead() {
+        guard let target = primarySelection else {
+            bladeAtPlayhead()
+            return
+        }
+        let at = playhead
+        perform("Blade") { timeline in
+            _ = try timeline.bladeAnywhere(target.item.id, at: at)
+        }
+    }
+
+    // MARK: - Roles & mix
+
+    func setRoleEnabled(_ enabled: Bool, roleName: String) {
+        perform(enabled ? "Unmute \(roleName)" : "Mute \(roleName)") { timeline in
+            timeline.setRoleEnabled(enabled, roleName: roleName)
+        }
+    }
+
+    func applyDucking(_ ducking: Ducking) {
+        perform("Apply Ducking") { timeline in
+            timeline.applyDucking(ducking)
+        }
+    }
+
+    func addTransitionChecked(edge: EditEdge, seconds: Double = 1) {
+        guard let target = primarySelection else { return }
+        let transition = EditTransition(duration: RationalTime(seconds: seconds, rate: rate))
+        perform("Add Cross Dissolve") { timeline in
+            try timeline.addTransitionChecked(transition, to: target.item.id, edge: edge)
+        }
+    }
 }

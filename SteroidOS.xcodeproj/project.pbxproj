@@ -44,6 +44,9 @@
 		4844595559349B8F6E6EA9FE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C416346CCFA67DFBABBDCE9D /* Assets.xcassets */; };
 		4A07FF9564DE950355AAAFB0 /* PersistenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEC409FB208FB4072FAB822A /* PersistenceStore.swift */; };
 		4B1954AD175672852742149E /* Timeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */; };
+		2EDBC849BA083B1AC63B0895 /* MagneticTimelineProEdits.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4ADA8BA2BF0949E644198FCD /* MagneticTimelineProEdits.swift */; };
+		716DBA2CE680D0983D1A473A /* ProMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894330D22DA7A4EDFEEB949C /* ProMedia.swift */; };
+		2713E7B039AB6D1494B68235 /* TimelineEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A23DF4BA5D2DA009665D062 /* TimelineEffects.swift */; };
 		A52AC792CC3079EEC67519EE /* FCPXMLExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1227907ED41B10AE52C83C3D /* FCPXMLExporter.swift */; };
 		D1F9BF3584AAA9CF0CAEBBB1 /* CutDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98E4E37267459F772757B755 /* CutDocument.swift */; };
 		CBE36FA56EBE49416BFE3208 /* MagneticAssembly.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE37594E96BCEBE289221D7B /* MagneticAssembly.swift */; };
@@ -218,6 +221,9 @@
 		7578C0C4DC2FAB154DC64452 /* AdvisorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvisorView.swift; sourceTree = "<group>"; };
 		7A7B4D283BD103AB2DE9E240 /* SteroidOSIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteroidOSIntents.swift; sourceTree = "<group>"; };
 		7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Timeline.swift; sourceTree = "<group>"; };
+		4ADA8BA2BF0949E644198FCD /* MagneticTimelineProEdits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagneticTimelineProEdits.swift; sourceTree = "<group>"; };
+		894330D22DA7A4EDFEEB949C /* ProMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProMedia.swift; sourceTree = "<group>"; };
+		6A23DF4BA5D2DA009665D062 /* TimelineEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineEffects.swift; sourceTree = "<group>"; };
 		1227907ED41B10AE52C83C3D /* FCPXMLExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FCPXMLExporter.swift; sourceTree = "<group>"; };
 		98E4E37267459F772757B755 /* CutDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CutDocument.swift; sourceTree = "<group>"; };
 		FE37594E96BCEBE289221D7B /* MagneticAssembly.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MagneticAssembly.swift; sourceTree = "<group>"; };
@@ -495,6 +501,9 @@
 				20B2197304268B33B16B1E52 /* Planner.swift */,
 				D76A9AA93B31710ED3FB3F76 /* ShotEconomics.swift */,
 				7AC5D42E11F803D7AD9AB2DC /* Timeline.swift */,
+				4ADA8BA2BF0949E644198FCD /* MagneticTimelineProEdits.swift */,
+				894330D22DA7A4EDFEEB949C /* ProMedia.swift */,
+				6A23DF4BA5D2DA009665D062 /* TimelineEffects.swift */,
 				1227907ED41B10AE52C83C3D /* FCPXMLExporter.swift */,
 				98E4E37267459F772757B755 /* CutDocument.swift */,
 				FE37594E96BCEBE289221D7B /* MagneticAssembly.swift */,
@@ -780,6 +789,9 @@
 				7259EF25E94957E8C5931818 /* ShotEconomics.swift in Sources */,
 				DCFF7C6CA2CD98173ECB195E /* ShotEconomicsView.swift in Sources */,
 				4B1954AD175672852742149E /* Timeline.swift in Sources */,
+				2EDBC849BA083B1AC63B0895 /* MagneticTimelineProEdits.swift in Sources */,
+				716DBA2CE680D0983D1A473A /* ProMedia.swift in Sources */,
+				2713E7B039AB6D1494B68235 /* TimelineEffects.swift in Sources */,
 				ECEE28A40EC34D2F66DB33DE /* CuttingRoomInspectors.swift in Sources */,
 				A4C796326F640DBDCB192ECF /* CuttingRoomProView.swift in Sources */,
 				A52AC792CC3079EEC67519EE /* FCPXMLExporter.swift in Sources */,
