@@ -2,16 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!--
-	  Cinema Composer collects nothing. API keys live in the Keychain and are
-	  never exported or transmitted anywhere except to the vendor the user
-	  chose, on the user's own key. There is no analytics SDK and no tracking.
-
-	  The only required-reason API the app touches is UserDefaults, which it
-	  uses for its own preferences: the onboarding-complete flag and the
-	  entitlement cache. That is reason CA92.1 — access limited to the app
-	  itself, with no data sent off device.
-	-->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>

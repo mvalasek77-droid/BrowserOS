@@ -1,41 +1,6 @@
 import SwiftUI
 import StoreKit
 
-/// The legal links App Review requires on any screen that sells an
-/// auto-renewable subscription (Guideline 3.1.2). Both must be reachable from
-/// the paywall itself — having them only on the App Store listing is the most
-/// common reason a subscription app is rejected.
-enum LegalLinks {
-
-    /// Apple's standard End User Licence Agreement. Correct to use unless you
-    /// upload a custom licence agreement in App Store Connect, in which case
-    /// point this at yours instead.
-    static let termsOfUse = URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!
-
-    /// ⚠️ REPLACE BEFORE SUBMITTING.
-    ///
-    /// This must be a live, publicly reachable page — App Review opens it. The
-    /// same URL also goes in App Store Connect under App Privacy. A 404 here
-    /// fails review just as surely as a missing link.
-    static let privacyPolicy = URL(string: "https://REPLACE-ME.example.com/cinema-composer/privacy")!
-
-    /// True once the placeholder above has actually been replaced.
-    static var isPrivacyPolicyConfigured: Bool {
-        !(privacyPolicy.host ?? "").localizedCaseInsensitiveContains("REPLACE-ME")
-    }
-
-    /// The disclosure Apple requires beside the purchase control: what is
-    /// charged, when it renews, and how to stop it.
-    static let subscriptionTerms = """
-        Payment is charged to your Apple Account at confirmation of purchase. \
-        A subscription renews automatically unless auto-renew is turned off at \
-        least 24 hours before the end of the current period, and your account \
-        is charged for renewal within 24 hours of the period ending. Manage or \
-        cancel in Settings › Apple Account › Subscriptions. Lifetime is a \
-        one-time purchase and does not renew.
-        """
-}
-
 /// The paywall. The Cutting Room — the actual NLE where a producer cuts their
 /// film — is the Pro feature. Planning, budgeting, and dry runs stay free so
 /// a new user can learn the whole pipeline before paying.
@@ -125,9 +90,27 @@ struct PaywallView: View {
                         .padding(.horizontal, 4)
                     }
 
-                    legalFooter
-                        .padding(.top, 4)
-                        .padding(.bottom, 24)
+                    Button("Restore purchases") {
+                        Task { await restore() }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                    // 3.1.2: auto-renewal disclosure beside the purchase button.
+                    Text("Payment is charged to your Apple ID at confirmation. Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours prior to the end of the current period. Manage or cancel in Settings → Apple ID → Media & Purchases.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 4)
+
+                    // 3.1.2: functional Terms of Use and Privacy Policy links
+                    // on the screen that sells the subscription.
+                    HStack(spacing: 24) {
+                        Link("Terms of Use", destination: URL(string: "https://mvalasek77-droid.github.io/cinema-composer-terms.html")!)
+                        Link("Privacy Policy", destination: URL(string: "https://mvalasek77-droid.github.io/cinema-composer-privacy.html")!)
+                    }
+                    .font(.caption2)
+                    .padding(.bottom, 24)
                 }
                 .padding(.horizontal, 20)
             }
@@ -147,47 +130,6 @@ struct PaywallView: View {
             Button("OK", role: .cancel) { message = nil }
         } message: {
             Text(message ?? "")
-        }
-    }
-
-    // MARK: - Legal
-
-    /// Restore, the renewal disclosure, and the two links Guideline 3.1.2
-    /// requires. Kept together so none of it can be dropped by accident.
-    private var legalFooter: some View {
-        VStack(spacing: 12) {
-            Button("Restore purchases") {
-                Task { await restore() }
-            }
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Palette.cool)
-
-            Text(LegalLinks.subscriptionTerms)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-
-            HStack(spacing: 18) {
-                Link("Terms of Use", destination: LegalLinks.termsOfUse)
-                Link("Privacy Policy", destination: LegalLinks.privacyPolicy)
-            }
-            .font(.caption.weight(.medium))
-            .tint(Palette.cool)
-
-            #if DEBUG
-            // Impossible to miss in development, and compiled out of the build
-            // that ships — so the placeholder cannot reach App Review silently.
-            if !LegalLinks.isPrivacyPolicyConfigured {
-                Label("Set LegalLinks.privacyPolicy to a live URL before submitting.",
-                      systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Palette.bad)
-                    .multilineTextAlignment(.center)
-                    .padding(8)
-                    .background(Palette.bad.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
-            }
-            #endif
         }
     }
 
@@ -221,14 +163,14 @@ struct PaywallView: View {
                     }
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 1) {
-                    // Price alone is not enough disclosure — the period has to
-                    // be visible before purchase, not implied by the plan name.
-                    Text(priceWithPeriod(for: product))
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(product.displayPrice)
                         .font(.subheadline.bold().monospacedDigit())
-                    if let equivalent = monthlyEquivalent(for: product) {
-                        Text(equivalent)
-                            .font(.caption2.monospacedDigit())
+                    // 3.1.2: term/period must be visible before purchase —
+                    // "$59.99" alone doesn't say what it buys.
+                    if let term = termSuffix(for: product) {
+                        Text(term)
+                            .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -244,35 +186,17 @@ struct PaywallView: View {
             )
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(product.displayName), \(priceWithPeriod(for: product))")
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityLabel("\(product.displayName), \(product.displayPrice)")
     }
 
-    /// "$9.99 / month", or the bare price for the one-time lifetime unlock.
-    private func priceWithPeriod(for product: Product) -> String {
-        guard let period = product.subscription?.subscriptionPeriod else {
-            return product.displayPrice
+    /// 3.1.2: the purchase row must spell out the subscription period.
+    private func termSuffix(for product: Product) -> String? {
+        switch product.id {
+        case EntitlementManager.ProductID.monthly: return "per month"
+        case EntitlementManager.ProductID.annual: return "per year"
+        case EntitlementManager.ProductID.lifetime: return "one-time purchase"
+        default: return nil
         }
-        let unit: String
-        switch period.unit {
-        case .day: unit = period.value == 1 ? "day" : "\(period.value) days"
-        case .week: unit = period.value == 1 ? "week" : "\(period.value) weeks"
-        case .month: unit = period.value == 1 ? "month" : "\(period.value) months"
-        case .year: unit = period.value == 1 ? "year" : "\(period.value) years"
-        @unknown default: return product.displayPrice
-        }
-        return "\(product.displayPrice) / \(unit)"
-    }
-
-    /// What an annual plan works out at per month, so the saving is legible
-    /// without the buyer doing the arithmetic.
-    private func monthlyEquivalent(for product: Product) -> String? {
-        guard let period = product.subscription?.subscriptionPeriod,
-              period.unit == .year, period.value == 1 else { return nil }
-        // StoreKit's own format style already carries the product's currency
-        // and the storefront's locale, so this stays correct in every region.
-        let monthly = product.price / 12
-        return "\(monthly.formatted(product.priceFormatStyle)) / month"
     }
 
     private func trialText(for product: Product) -> String? {
