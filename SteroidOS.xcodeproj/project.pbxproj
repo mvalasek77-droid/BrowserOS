@@ -137,6 +137,7 @@
 		F9111271314341ADBB6C4753 /* EntitlementManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 531FF7364A44B0D883CB3289 /* EntitlementManager.swift */; };
 		F9D819C0D025E577AA99556F /* BookmarksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 207F3C4B00312B5E5A4E5668 /* BookmarksView.swift */; };
 		FD3D314FC5D8D437BC11AD40 /* CinemaComposerPro.storekit in Resources */ = {isa = PBXBuildFile; fileRef = EE9A1210981268DE166B0AD2 /* CinemaComposerPro.storekit */; };
+		4D3BD19EB4DC349F7C8E3AE7 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8DE68E5772BC79E5E11C339A /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -293,6 +294,7 @@
 		EAC97F15335C3BE11EC8D0DA /* EntitlementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntitlementTests.swift; sourceTree = "<group>"; };
 		ECC009ECD759834CFF1F6E57 /* iPhoneBrowserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneBrowserViewModel.swift; sourceTree = "<group>"; };
 		EE9A1210981268DE166B0AD2 /* CinemaComposerPro.storekit */ = {isa = PBXFileReference; path = CinemaComposerPro.storekit; sourceTree = "<group>"; };
+		8DE68E5772BC79E5E11C339A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		EEC409FB208FB4072FAB822A /* PersistenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceStore.swift; sourceTree = "<group>"; };
 		F46227A6B44D587F55C13818 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		F52A557E2B21BBE889448533 /* AddressBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressBarView.swift; sourceTree = "<group>"; };
@@ -538,6 +540,7 @@
 			children = (
 				0D2415198DEDB50CCDB67CEF /* Assets.xcassets */,
 				B4E39FD7276BE5D765E7F51E /* CinemaComposerProApp.swift */,
+				8DE68E5772BC79E5E11C339A /* PrivacyInfo.xcprivacy */,
 				206DEEF4DFF606DE408844AE /* README.md */,
 				97D3088EC3CB295DA54E0969 /* Engine */,
 				57D8631563FCBF495253A663 /* Extensions */,
@@ -723,6 +726,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				426FB211073E2C7C094824F6 /* Assets.xcassets in Resources */,
+				4D3BD19EB4DC349F7C8E3AE7 /* PrivacyInfo.xcprivacy in Resources */,
 				D8569BACCD0788C1E76500D6 /* README.md in Resources */,
 				DEB03C10688E36E6988A54CC /* example-vendor-pack.json in Resources */,
 			);

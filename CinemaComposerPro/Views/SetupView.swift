@@ -110,6 +110,12 @@ struct SetupView: View {
                         Haptics.tap()
                     }
                 }
+                Link(destination: LegalLinks.privacyPolicy) {
+                    Label("Privacy policy", systemImage: "hand.raised")
+                }
+                Link(destination: LegalLinks.termsOfUse) {
+                    Label("Terms of use", systemImage: "doc.text")
+                }
                 versionTapLabel
             } header: {
                 Text("About")
