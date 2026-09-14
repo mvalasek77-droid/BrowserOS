@@ -280,3 +280,100 @@ final class RenderPipelineTests: XCTestCase {
         }
     }
 }
+
+// MARK: - Auditions across vendors
+
+extension RenderPipelineTests {
+
+    private func shotTimeline() -> MagneticTimeline {
+        var timeline = MagneticTimeline(format: TimelineFormat(rate: .fps24))
+        let media = MediaRef(assetID: "S001-0002", name: "S001-0002", sourceDuration: .zero)
+        try? timeline.append(TimelineItem(name: "S001-0002", content: .media(media),
+                                          duration: RationalTime(9, 1)))
+        return timeline
+    }
+
+    /// The comparison an editor actually wants: the same shot from several
+    /// vendors, each with its own footage and its own price.
+    func testTakesFromDifferentVendorsEachCarryTheirOwnFootage() throws {
+        var timeline = shotTimeline()
+        let id = timeline.spine[0].id
+
+        var runway = Take(toolID: "runway-gen", cost: 2.38, prompt: "16mm grain", quality: 0.86)
+        runway.mediaURL = "file:///m/S001-0002-take1.mp4"
+        var luma = Take(toolID: "luma-dream", cost: 1.90, prompt: "16mm grain", quality: 0.84)
+        luma.mediaURL = "file:///m/S001-0002-take2.mp4"
+        // Kling refused this one, so it has a record but no footage.
+        let kling = Take(toolID: "kling-motion", cost: 0, prompt: "16mm grain", quality: 0.78)
+
+        try timeline.addTake(runway, to: id)
+        try timeline.addTake(luma, to: id)
+        try timeline.addTake(kling, to: id)
+
+        let takes = try XCTUnwrap(timeline.item(id)?.audition?.alternatives)
+        XCTAssertEqual(takes.count, 3)
+        XCTAssertEqual(takes.filter(\.isRendered).count, 2)
+        XCTAssertFalse(kling.isRendered, "a take with no file is a price tag, not a reading")
+    }
+
+    /// Choosing a take has to change the picture, not only the bill.
+    func testChoosingATakeSwapsTheClipsMedia() throws {
+        var timeline = shotTimeline()
+        let id = timeline.spine[0].id
+
+        var runway = Take(toolID: "runway-gen", cost: 2.38, quality: 0.86)
+        runway.mediaURL = "file:///m/take1.mp4"
+        var luma = Take(toolID: "luma-dream", cost: 1.90, quality: 0.84)
+        luma.mediaURL = "file:///m/take2.mp4"
+        try timeline.addTake(runway, to: id)
+        try timeline.addTake(luma, to: id)
+
+        try timeline.selectTake(runway.id, on: id)
+        XCTAssertEqual(timeline.item(id)?.content.mediaRef?.url, "file:///m/take1.mp4")
+        XCTAssertEqual(timeline.item(id)?.cost, 2.38, accuracy: 0.001)
+
+        try timeline.selectTake(luma.id, on: id)
+        XCTAssertEqual(timeline.item(id)?.content.mediaRef?.url, "file:///m/take2.mp4",
+                       "the picture must follow the pick")
+        XCTAssertEqual(timeline.item(id)?.cost, 1.90, accuracy: 0.001)
+    }
+
+    /// What was spent on readings nobody will see stays visible.
+    func testDiscardedTakesStillCountAgainstTheBudget() throws {
+        var timeline = shotTimeline()
+        let id = timeline.spine[0].id
+        var a = Take(toolID: "runway-gen", cost: 2.38); a.mediaURL = "file:///m/a.mp4"
+        var b = Take(toolID: "luma-dream", cost: 1.90); b.mediaURL = "file:///m/b.mp4"
+        try timeline.addTake(a, to: id)
+        try timeline.addTake(b, to: id)
+
+        try timeline.selectTake(b.id, on: id)
+        XCTAssertEqual(timeline.costOfCut, 1.90, accuracy: 0.001)
+        XCTAssertEqual(timeline.costOfUnusedTakes, 2.38, accuracy: 0.001)
+    }
+
+    /// A take written before takes could carry footage must still decode.
+    func testATakeWithoutMediaStillDecodes() throws {
+        let legacy = Data(#"{"id":"t1","toolID":"vid-kling","cost":4.2}"#.utf8)
+        let take = try JSONDecoder().decode(Take.self, from: legacy)
+        XCTAssertEqual(take.toolID, "vid-kling")
+        XCTAssertNil(take.mediaURL)
+        XCTAssertFalse(take.isRendered)
+        XCTAssertNil(take.localURL)
+    }
+
+    /// Selecting an unrendered take must not blank the picture the clip has.
+    func testPickingAnUnrenderedTakeLeavesThePictureAlone() throws {
+        var timeline = shotTimeline()
+        let id = timeline.spine[0].id
+        var rendered = Take(toolID: "runway-gen", cost: 2.38)
+        rendered.mediaURL = "file:///m/a.mp4"
+        let pending = Take(toolID: "kling-motion", cost: 1.33)
+        try timeline.addTake(rendered, to: id)
+        try timeline.addTake(pending, to: id)
+
+        try timeline.selectTake(rendered.id, on: id)
+        try timeline.selectTake(pending.id, on: id)
+        XCTAssertEqual(timeline.item(id)?.content.mediaRef?.url, "file:///m/a.mp4")
+    }
+}

@@ -10,6 +10,21 @@ struct Take: Codable, Identifiable, Equatable {
     var prompt: String?
     var quality: Double?
     var createdAt: Date = Date()
+
+    /// Where this take's footage lives once it has actually been generated.
+    ///
+    /// Without this a take is only a price tag: two takes of the same shot from
+    /// two different vendors would be indistinguishable, and "compare them"
+    /// would mean comparing names. Optional, so takes written before this
+    /// existed still decode.
+    var mediaURL: String?
+
+    var isRendered: Bool { !(mediaURL ?? "").isEmpty }
+
+    var localURL: URL? {
+        guard let mediaURL, !mediaURL.isEmpty else { return nil }
+        return URL(string: mediaURL)
+    }
 }
 
 struct Provenance: Codable, Equatable {

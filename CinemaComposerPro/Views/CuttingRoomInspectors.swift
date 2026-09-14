@@ -459,8 +459,9 @@ struct RetimeInspector: View {
 struct TakesInspector: View {
     @ObservedObject var doc: CutDocument
     var placed: PlacedItem
-    var model: ProductionViewModel
-    @State private var regenerationTool: String = ""
+    @ObservedObject var model: ProductionViewModel
+    @State private var chosen: Set<String> = []
+    @State private var bakeOffDryRun = true
 
     private var item: TimelineItem { placed.item }
 
@@ -473,14 +474,24 @@ struct TakesInspector: View {
                             doc.selectTake(take.id, on: item.id)
                             Haptics.tap()
                         } label: {
-                            HStack {
+                            HStack(spacing: 10) {
                                 Image(systemName: take.id == audition.selected?.id
                                       ? "largecircle.fill.circle" : "circle")
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(take.toolID).font(.subheadline)
-                                    if let prompt = take.prompt {
-                                        Text(prompt).font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(model.registry.tool(id: take.toolID)?.name ?? take.toolID)
+                                        .font(.subheadline)
+                                    HStack(spacing: 6) {
+                                        // A take with no file is a price tag, not
+                                        // a reading — say so rather than implying
+                                        // there is something to look at.
+                                        Label(take.isRendered ? "footage" : "not generated",
+                                              systemImage: take.isRendered ? "film" : "circle.dashed")
+                                        if let quality = take.quality {
+                                            Text("q\(Int(quality * 100))")
+                                        }
                                     }
+                                    .font(.caption2)
+                                    .foregroundStyle(take.isRendered ? Palette.good : .secondary)
                                 }
                                 Spacer()
                                 Text(Money.string(take.cost))
@@ -499,40 +510,81 @@ struct TakesInspector: View {
             }
 
             Section {
-                Picker("Generator", selection: $regenerationTool) {
-                    ForEach(model.registry.tools.filter {
-                        $0.capabilities.contains(Capability.videoTextToVideo)
-                    }) { tool in
-                        Text(tool.name).tag(tool.id)
+                ForEach(model.videoGenerators) { tool in
+                    Button {
+                        if chosen.contains(tool.id) { chosen.remove(tool.id) } else { chosen.insert(tool.id) }
+                        Haptics.tap()
+                    } label: {
+                        HStack {
+                            Image(systemName: chosen.contains(tool.id) ? "checkmark.square.fill" : "square")
+                                .foregroundStyle(chosen.contains(tool.id) ? Palette.accent : .secondary)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(tool.name).font(.subheadline)
+                                HStack(spacing: 6) {
+                                    Text(tool.vendor)
+                                    Text("q\(Int(tool.quality * 100))")
+                                    if !tool.canCallLive { Text("simulated only") }
+                                    else if tool.jobProtocol == nil { Text("synchronous") }
+                                }
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Text(Money.string(tool.estimatedCost(units: item.duration.seconds)))
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    .buttonStyle(.plain)
                 }
+
+                Toggle("Dry run (simulate, bill nothing)", isOn: $bakeOffDryRun)
+
+                if let progress = model.takeProgress {
+                    HStack { ProgressView(); Text(progress).font(.caption).foregroundStyle(.secondary) }
+                }
+
                 Button {
-                    regenerate()
+                    Task { await bakeOff() }
                 } label: {
-                    Label("Send back to the orchestra", systemImage: "arrow.triangle.2.circlepath")
+                    Label(chosen.count > 1
+                          ? "Generate \(chosen.count) takes to compare"
+                          : "Generate take",
+                          systemImage: "square.stack.3d.up.badge.automatic")
                 }
-                .disabled(regenerationTool.isEmpty)
+                .disabled(chosen.isEmpty || model.isRenderingTakes)
+
+                if !estimate.isZero {
+                    KeyValueRow(key: bakeOffDryRun ? "Would cost" : "Will cost",
+                                value: Money.string(estimate))
+                }
             } header: {
-                Text("Regenerate")
+                Text("Audition across vendors")
             } footer: {
-                Text("Same slot, same length, new take. The old one stays in the audition, so what you spent on takes nobody sees stays visible.")
+                Text("Put the same shot through several generators and keep every result as a take. Each one carries its own footage and its own price, so choosing between them changes the picture as well as the bill.")
             }
         }
         .onAppear {
-            if regenerationTool.isEmpty {
-                regenerationTool = model.plan.toolsUsed.first ?? ""
+            if chosen.isEmpty, let first = model.plan.toolsUsed.first {
+                chosen.insert(first)
             }
         }
     }
 
-    private func regenerate() {
-        let tool = model.registry.tool(id: regenerationTool)
-        let seconds = item.duration.seconds
-        let cost = tool?.estimatedCost(units: seconds) ?? 0
-        let take = Take(toolID: regenerationTool,
-                        cost: cost,
-                        prompt: item.provenance.prompt ?? item.name)
-        doc.addTake(take, to: item.id)
-        Haptics.success()
+    private var estimate: Double {
+        chosen.compactMap { model.registry.tool(id: $0) }
+            .reduce(0) { $0 + $1.estimatedCost(units: item.duration.seconds) }
+    }
+
+    private func bakeOff() async {
+        let ordered = model.videoGenerators.map(\.id).filter { chosen.contains($0) }
+        let outcomes = await model.runBakeOff(on: item.id, toolIDs: ordered, dryRun: bakeOffDryRun)
+
+        // The cut the view model just committed is the authority; take it back
+        // so the inspector shows the takes that were actually created.
+        if let updated = model.cut { doc.replaceTimeline(updated, name: "Audition") }
+
+        let failures = outcomes.filter { if case .failure = $0.value { return true }; return false }
+        failures.isEmpty ? Haptics.success() : Haptics.warning()
     }
 }

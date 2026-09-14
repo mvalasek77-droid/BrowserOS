@@ -326,6 +326,71 @@ final class ProductionViewModel: ObservableObject {
         (cut ?? MagneticTimeline()).mediaCoverage
     }
 
+    // MARK: - Auditions across vendors
+
+    @Published private(set) var isRenderingTakes = false
+    @Published private(set) var takeProgress: String?
+
+    /// Generators the rack can actually put a shot through.
+    var videoGenerators: [AITool] {
+        registry.tools.filter { $0.capabilities.contains(Capability.videoTextToVideo) }
+    }
+
+    /// Put one shot through several vendors and keep every result as a take.
+    ///
+    /// This is the comparison an editor actually wants: the same three seconds
+    /// from Runway, Luma and Kling, side by side, each with what it cost. Every
+    /// take carries its own file, so picking one changes the picture — not just
+    /// the price.
+    @discardableResult
+    func runBakeOff(on itemID: String,
+                    toolIDs: [String],
+                    dryRun: Bool) async -> [String: Result<URL?, String>] {
+        guard var working = cut ?? seedCut() as MagneticTimeline?,
+              let item = working.item(itemID) else { return [:] }
+
+        isRenderingTakes = true
+        defer { isRenderingTakes = false; takeProgress = nil }
+
+        let shotID = item.content.mediaRef?.assetID ?? item.id
+        let seconds = item.duration.seconds
+        let prompt = item.provenance.prompt ?? item.name
+        let startingTake = (item.audition?.alternatives.count ?? 0)
+
+        var outcomes: [String: Result<URL?, String>] = [:]
+
+        for (offset, toolID) in toolIDs.enumerated() {
+            guard let tool = registry.tool(id: toolID) else { continue }
+            takeProgress = "Generating on \(tool.name) — \(offset + 1) of \(toolIDs.count)"
+
+            let result = await conductor.renderTake(shotID: shotID,
+                                                    seconds: seconds,
+                                                    prompt: prompt,
+                                                    tool: tool,
+                                                    keys: keys,
+                                                    dryRun: dryRun,
+                                                    takeIndex: startingTake + offset + 1)
+            switch result {
+            case .success(let output):
+                var take = Take(toolID: toolID,
+                                cost: tool.estimatedCost(units: seconds),
+                                prompt: prompt,
+                                quality: tool.quality)
+                take.mediaURL = output.localURL?.absoluteString
+                // Keep the first one selected so a bake-off never silently
+                // swaps the picture out from under the editor.
+                try? working.addTake(take, to: itemID, select: offset == 0 && startingTake == 0)
+                outcomes[toolID] = .success(output.localURL)
+            case .failure(let error):
+                outcomes[toolID] = .failure(error.localizedDescription)
+            }
+        }
+
+        commitCut(working)
+        save()
+        return outcomes
+    }
+
     // MARK: - Rack
 
     func installPack(data: Data) -> String {

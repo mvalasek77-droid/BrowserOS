@@ -558,6 +558,14 @@ extension MagneticTimeline {
             item.audition?.selectedID = takeID
             item.provenance = Provenance(takeID: take.id, toolID: take.toolID,
                                          cost: take.cost, prompt: take.prompt)
+            // Picking a take has to change the picture, not just the price.
+            // A take that has been generated carries its own file; point the
+            // clip at it so the cut shows the reading you just chose.
+            if let media = take.mediaURL, !media.isEmpty,
+               case .media(var ref) = item.content {
+                ref.url = media
+                item.content = .media(ref)
+            }
         }
     }
 

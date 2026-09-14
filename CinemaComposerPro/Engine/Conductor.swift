@@ -82,6 +82,68 @@ final class Conductor: ObservableObject {
         return missing.sorted()
     }
 
+    /// Generate one shot on one vendor, outside a full run.
+    ///
+    /// This is what an audition needs: the same shot put to several generators
+    /// so an editor can look at them side by side and keep the best. It reuses
+    /// the same adapter as a run, so a take comes back as a real file with a
+    /// real price rather than an estimate.
+    func renderTake(shotID: String,
+                    seconds: Double,
+                    prompt: String,
+                    tool: AITool,
+                    keys: KeychainStore,
+                    dryRun: Bool,
+                    takeIndex: Int,
+                    maxRetries: Int = 1) async -> Result<RenderOutput, Error> {
+        let task = PlanTask(id: "take.\(shotID)",
+                            department: .photography,
+                            label: "Take \(takeIndex) · \(shotID)",
+                            capability: Capability.videoTextToVideo,
+                            toolID: tool.id,
+                            units: seconds,
+                            unitLabel: "video seconds",
+                            billableUnits: tool.billableUnits(for: seconds),
+                            cost: tool.estimatedCost(units: seconds),
+                            workerSeconds: tool.estimatedSeconds(units: seconds),
+                            concurrency: 1,
+                            prompt: prompt)
+        let target = RenderTarget(id: shotID, seconds: seconds, prompt: prompt, take: takeIndex)
+
+        let useSimulator = dryRun || !tool.canCallLive
+        let adapter: ToolAdapter = useSimulator ? SimulatedAdapter() : HTTPToolAdapter()
+        let apiKey: String? = {
+            guard !useSimulator, let ref = tool.keyRef, !ref.isEmpty else { return nil }
+            return keys.secret(for: ref)
+        }()
+
+        log(.info, "▸ take \(takeIndex) of \(shotID) → \(tool.name) · \(Money.string(task.cost))")
+
+        var attempt = 0
+        var lastError: Error = ToolInvocationError.transport("never ran")
+        while attempt <= maxRetries {
+            attempt += 1
+            do {
+                let result = try await adapter.invoke(tool: tool, task: task, target: target,
+                                                      apiKey: apiKey, attempt: attempt)
+                spend += task.cost
+                if let local = result.localURL { renders[shotID] = local }
+                log(.success, "✓ take \(takeIndex) of \(shotID) on \(tool.name) · \(Money.string(task.cost))")
+                return .success(RenderOutput(targetID: shotID,
+                                             remoteURL: result.remoteURL,
+                                             localURL: result.localURL,
+                                             bytes: result.bytes,
+                                             simulated: result.simulated))
+            } catch {
+                lastError = error
+                let retryable = (error as? ToolInvocationError)?.isRetryable ?? false
+                if !retryable || attempt > maxRetries { break }
+            }
+        }
+        log(.failure, "✗ take \(takeIndex) of \(shotID) on \(tool.name): \(lastError.localizedDescription)")
+        return .failure(lastError)
+    }
+
     func cancel() {
         cancelled = true
         status = .cancelled
