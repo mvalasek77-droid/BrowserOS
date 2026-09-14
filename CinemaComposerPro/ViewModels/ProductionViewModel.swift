@@ -216,6 +216,18 @@ final class ProductionViewModel: ObservableObject {
         plan.tasks.contains { registry.tool(id: $0.toolID)?.canCallLive == true }
     }
 
+    /// Generators that can be called but whose work cannot be followed to a
+    /// file. Every real video API is asynchronous — it hands back a job id, not
+    /// a clip — so a pack without a job protocol will bill and produce nothing.
+    var generatorsWithoutJobProtocol: [String] {
+        let generationTasks = plan.tasks.filter { !$0.renderTargets.isEmpty }
+        return Set(generationTasks.map(\.toolID))
+            .compactMap { registry.tool(id: $0) }
+            .filter { $0.canCallLive && $0.jobProtocol == nil }
+            .map(\.name)
+            .sorted()
+    }
+
     var runtimeCurve: [BudgetEngine.CurvePoint] {
         BudgetEngine.runtimeCurve(spec: spec, tools: registry.tools, strategy: strategy, overhead: overhead)
     }
@@ -291,6 +303,27 @@ final class ProductionViewModel: ObservableObject {
         await conductor.run(plan: plan, registry: registry, keys: keys, dryRun: dryRun,
                             budgetCap: budget.total * capMultiplier, maxConcurrency: maxConcurrency,
                             latencyScale: latencyScale)
+        // A live run produces files; point the cut at them so the clips the
+        // editor trims are backed by real footage rather than a promise.
+        linkRenderedMedia()
+    }
+
+    /// Attach whatever the last run generated to the current cut.
+    @discardableResult
+    func linkRenderedMedia() -> Int {
+        let renders = conductor.renders
+        guard !renders.isEmpty else { return 0 }
+        var updated = cut ?? seedCut()
+        let linked = updated.linkMedia(renders)
+        guard linked > 0 else { return 0 }
+        commitCut(updated)
+        save()
+        return linked
+    }
+
+    /// How much of the cut is backed by footage on this device.
+    var mediaCoverage: (linked: Int, total: Int) {
+        (cut ?? MagneticTimeline()).mediaCoverage
     }
 
     // MARK: - Rack

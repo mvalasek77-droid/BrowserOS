@@ -182,6 +182,52 @@ extension MagneticTimeline {
         snapToFrames()
     }
 
+    /// Point clips at footage a run actually produced.
+    ///
+    /// This is the join between the orchestra and the cutting room: the
+    /// Conductor hands back a file per shot, and every clip generated from that
+    /// shot starts referring to it. Until this runs a clip names media that
+    /// does not exist yet, which is why `isMissingMedia` is a first-class idea.
+    ///
+    /// A shot split to fit a vendor's per-clip ceiling comes back as
+    /// `S001-0004#2`, so the lookup falls back to the part before the `#`.
+    @discardableResult
+    mutating func linkMedia(_ renders: [String: URL]) -> Int {
+        guard !renders.isEmpty else { return 0 }
+        var linked = 0
+        for index in spine.indices {
+            linked += Self.link(&spine[index], renders: renders)
+        }
+        return linked
+    }
+
+    private static func link(_ item: inout TimelineItem, renders: [String: URL]) -> Int {
+        var linked = 0
+        if case .media(var ref) = item.content {
+            let base = ref.assetID.split(separator: "#").first.map(String.init) ?? ref.assetID
+            if let url = renders[ref.assetID] ?? renders[base] {
+                ref.url = url.absoluteString
+                item.content = .media(ref)
+                linked += 1
+            }
+        }
+        for index in item.connected.indices {
+            linked += link(&item.connected[index], renders: renders)
+        }
+        if case .compound(var nested) = item.content {
+            for index in nested.indices { linked += link(&nested[index], renders: renders) }
+            item.content = .compound(items: nested)
+        }
+        return linked
+    }
+
+    /// How much of the cut is actually backed by footage.
+    var mediaCoverage: (linked: Int, total: Int) {
+        let clips = placedItems.filter { $0.item.content.mediaRef != nil }
+        let linked = clips.filter { !$0.item.isMissingMedia }.count
+        return (linked, clips.count)
+    }
+
     /// Bridge to the original track model so the existing EDL/OTIO exporters and
     /// the budget's cost-of-cut keep working while the new engine takes over.
     /// The storyline becomes V1; connected lanes flatten to A1, A2… by role.

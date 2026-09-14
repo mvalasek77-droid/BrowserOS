@@ -1,0 +1,124 @@
+{
+  "name": "async-video-vendors",
+  "version": "1.0.0",
+  "description": "Working templates for asynchronous video generators. A video API does not return a file from the POST — it returns a job id, runs for a minute or ten, and only then has something to fetch. `jobProtocol` tells the conductor how to follow that: where the id is, where the status is, which values mean done, and where the finished file sits. Placeholders: {{apiKey}}, {{prompt}}, {{seconds}}, {{shotId}}, {{take}}, {{jobId}}. IMPORTANT: endpoint paths, auth headers and API versions change often — check each against the vendor's current docs and confirm one real request before running a whole film.",
+  "tools": [
+    {
+      "id": "runway-gen",
+      "name": "Runway Gen (async)",
+      "vendor": "runway",
+      "version": "1.0.0",
+      "status": "experimental",
+      "capabilities": ["video.t2v"],
+      "pricing": { "model": "per_second", "rate": 0.25, "minUnit": 5, "granularity": 1 },
+      "quality": 0.86,
+      "speed": { "secondsPerOutputSecond": 14 },
+      "limits": { "maxShotSeconds": 10, "maxConcurrency": 3 },
+      "tiers": ["standard", "premium"],
+      "keyRef": "runway",
+      "endpoint": "https://api.dev.runwayml.com/v1/text_to_video",
+      "method": "POST",
+      "headers": {
+        "authorization": "Bearer {{apiKey}}",
+        "x-runway-version": "2024-11-06"
+      },
+      "body": {
+        "promptText": "{{prompt}}",
+        "duration": "{{seconds}}",
+        "model": "gen3a_turbo"
+      },
+      "jobProtocol": {
+        "statusEndpoint": "https://api.dev.runwayml.com/v1/tasks/{{jobId}}",
+        "jobIDPath": "id",
+        "statusPath": "status",
+        "resultURLPath": "output.0",
+        "failureMessagePath": "failure",
+        "succeededValues": ["SUCCEEDED"],
+        "failedValues": ["FAILED", "CANCELLED"],
+        "pollSeconds": 5,
+        "timeoutSeconds": 900
+      }
+    },
+    {
+      "id": "luma-dream",
+      "name": "Luma Dream Machine (async)",
+      "vendor": "luma",
+      "version": "1.0.0",
+      "status": "experimental",
+      "capabilities": ["video.t2v"],
+      "pricing": { "model": "per_second", "rate": 0.20, "minUnit": 5, "granularity": 1 },
+      "quality": 0.84,
+      "speed": { "secondsPerOutputSecond": 16 },
+      "limits": { "maxShotSeconds": 10, "maxConcurrency": 3 },
+      "keyRef": "luma",
+      "endpoint": "https://api.lumalabs.ai/dream-machine/v1/generations",
+      "method": "POST",
+      "headers": { "authorization": "Bearer {{apiKey}}" },
+      "body": {
+        "prompt": "{{prompt}}",
+        "duration": "{{seconds}}s",
+        "model": "ray-2"
+      },
+      "jobProtocol": {
+        "statusEndpoint": "https://api.lumalabs.ai/dream-machine/v1/generations/{{jobId}}",
+        "jobIDPath": "id",
+        "statusPath": "state",
+        "resultURLPath": "assets.video",
+        "failureMessagePath": "failure_reason",
+        "succeededValues": ["completed"],
+        "failedValues": ["failed"],
+        "pollSeconds": 5,
+        "timeoutSeconds": 900
+      }
+    },
+    {
+      "id": "kling-motion",
+      "name": "Kling Motion (async)",
+      "vendor": "kling",
+      "version": "1.0.0",
+      "status": "experimental",
+      "capabilities": ["video.t2v"],
+      "pricing": { "model": "per_second", "rate": 0.14, "minUnit": 5, "granularity": 1 },
+      "quality": 0.78,
+      "speed": { "secondsPerOutputSecond": 18 },
+      "limits": { "maxShotSeconds": 10, "maxConcurrency": 2 },
+      "keyRef": "kling",
+      "endpoint": "https://api.klingai.com/v1/videos/text2video",
+      "method": "POST",
+      "headers": { "authorization": "Bearer {{apiKey}}" },
+      "body": {
+        "prompt": "{{prompt}}",
+        "duration": "{{seconds}}",
+        "model_name": "kling-v1"
+      },
+      "jobProtocol": {
+        "statusEndpoint": "https://api.klingai.com/v1/videos/text2video/{{jobId}}",
+        "jobIDPath": "data.task_id",
+        "statusPath": "data.task_status",
+        "resultURLPath": "data.task_result.videos.0.url",
+        "failureMessagePath": "data.task_status_msg",
+        "succeededValues": ["succeed"],
+        "failedValues": ["failed"],
+        "pollSeconds": 6,
+        "timeoutSeconds": 1200
+      }
+    },
+    {
+      "id": "elevenlabs-voice-sync",
+      "name": "ElevenLabs Voice (synchronous)",
+      "vendor": "elevenlabs",
+      "version": "1.0.0",
+      "status": "experimental",
+      "capabilities": ["audio.voice"],
+      "pricing": { "model": "per_minute_audio", "rate": 0.30 },
+      "quality": 0.92,
+      "speed": { "unitsPerHour": 240 },
+      "limits": { "maxConcurrency": 4 },
+      "keyRef": "elevenlabs",
+      "endpoint": "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
+      "method": "POST",
+      "headers": { "xi-api-key": "{{apiKey}}", "accept": "audio/mpeg" },
+      "body": { "text": "{{prompt}}", "model_id": "eleven_multilingual_v2" }
+    }
+  ]
+}

@@ -35,10 +35,16 @@ private struct ConductorScreen: View {
                 Section("Run") {
                     Toggle("Dry run (simulated, bills nothing)", isOn: $dryRun)
                     if !dryRun && !model.canRunLive {
-                        Label("No tool on this plan has an endpoint configured, so a live run still simulates every task and bills nothing. Import a tool pack with endpoints in Setup → Tool rack to call real vendors.",
+                        Label("No tool on this plan has an endpoint configured, so a live run still simulates every task and bills nothing. Import a tool pack with endpoints — Setup → Tool rack — to call real vendors.",
                               systemImage: "info.circle")
                             .font(.caption)
                             .foregroundStyle(Palette.cool)
+                    }
+                    if !dryRun, model.canRunLive, !model.generatorsWithoutJobProtocol.isEmpty {
+                        Label("These generators have no job protocol, so the run cannot follow their work to a file: \(model.generatorsWithoutJobProtocol.joined(separator: ", ")). Video vendors are asynchronous — add a jobProtocol to the pack, or they will only ever bill.",
+                              systemImage: "exclamationmark.triangle")
+                            .font(.caption)
+                            .foregroundStyle(Palette.accent)
                     }
                     VStack(alignment: .leading) {
                         HStack {
@@ -71,6 +77,29 @@ private struct ConductorScreen: View {
                         BurnDownChart(ledger: conductor.ledger,
                                       estimate: model.budget.total,
                                       cap: model.budget.total * capMultiplier)
+                    }
+                }
+
+                if conductor.renderedShotCount > 0 {
+                    Section {
+                        let coverage = model.mediaCoverage
+                        KeyValueRow(key: "Shots generated", value: "\(conductor.renderedShotCount)")
+                        KeyValueRow(key: "Clips backed by footage",
+                                    value: "\(coverage.linked) of \(coverage.total)")
+                        let store = MediaStore.inventory()
+                        KeyValueRow(key: "On this device",
+                                    value: "\(store.count) files · \(ByteCountFormatter.string(fromByteCount: store.bytes, countStyle: .file))")
+                        Button {
+                            let linked = model.linkRenderedMedia()
+                            Haptics.success()
+                            if linked == 0 { model.lastError = "Nothing new to link." }
+                        } label: {
+                            Label("Relink footage to the cut", systemImage: "link")
+                        }
+                    } header: {
+                        Text("Footage")
+                    } footer: {
+                        Text("Generated files are stored on the device and attached to the clips they came from, so the cutting room trims real media.")
                     }
                 }
 

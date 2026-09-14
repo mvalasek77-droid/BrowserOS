@@ -62,6 +62,13 @@ final class Conductor: ObservableObject {
     @Published private(set) var completedTaskIDs: Set<String> = []
     @Published private(set) var report: RunReport?
 
+    /// Footage this run produced, keyed by shot id. The cutting room links
+    /// these onto the timeline so a clip points at a real file rather than at
+    /// a promise.
+    @Published private(set) var renders: [String: URL] = [:]
+
+    var renderedShotCount: Int { renders.count }
+
     private var cancelled = false
     private let maxLoggedEvents = 500
 
@@ -87,6 +94,7 @@ final class Conductor: ObservableObject {
         ledger = []
         events = []
         completedTaskIDs = []
+        renders = [:]
         report = nil
         status = .idle
     }
@@ -182,9 +190,13 @@ final class Conductor: ObservableObject {
                         return keys.secret(for: ref)
                     }()
                     let adapter: ToolAdapter = (dryRun || !tool.canCallLive) ? simulated : live
-                    self.log(.info, "▸ \(task.id) → \(task.toolID) · \(Units.count(task.units)) \(task.unitLabel) · \(Money.string(task.cost))")
+                    let jobCount = task.renderJobs(tool: tool).count
+                    let scope = jobCount > 1 ? " · \(jobCount) shots" : ""
+                    self.log(.info, "▸ \(task.id) → \(task.toolID) · \(Units.count(task.units)) \(task.unitLabel)\(scope) · \(Money.string(task.cost))")
                     group.addTask {
-                        await Self.perform(task: task, tool: tool, adapter: adapter, apiKey: apiKey, maxRetries: maxRetries)
+                        await Self.perform(task: task, tool: tool, adapter: adapter,
+                                           apiKey: apiKey, maxRetries: maxRetries,
+                                           maxConcurrency: maxConcurrency)
                     }
                 }
                 var collected: [TaskOutcome] = []
@@ -199,14 +211,26 @@ final class Conductor: ObservableObject {
                     log(.failure, "✗ \(task.id): \(failure)")
                     continue
                 }
-                // Retried attempts still burn money upstream — charge for each.
-                let cost = task.cost * Double(outcome.attempts)
+                // Charge for what actually came back, retries included.
+                let cost = outcome.cost
                 spend += cost
                 completedTaskIDs.insert(task.id)
                 ledger.append(LedgerEntry(taskID: task.id, toolID: task.toolID, department: task.department,
                                           label: task.label, units: task.units, attempts: outcome.attempts,
                                           cost: cost, cumulative: spend, elapsed: outcome.elapsed))
-                log(.success, "✓ \(task.id) \(Money.string(cost)) · running \(Money.string(spend))")
+
+                // Keep every file the run produced, keyed by shot.
+                for render in outcome.renders where render.localURL != nil {
+                    renders[render.targetID] = render.localURL
+                }
+
+                if let partial = outcome.partialFailure {
+                    log(.warning, "⚠ \(task.id) \(outcome.completedJobs)/\(outcome.totalJobs) shots — \(partial)")
+                } else if outcome.totalJobs > 1 {
+                    log(.success, "✓ \(task.id) \(outcome.completedJobs) shots · \(Money.string(cost)) · running \(Money.string(spend))")
+                } else {
+                    log(.success, "✓ \(task.id) \(Money.string(cost)) · running \(Money.string(spend))")
+                }
             }
         }
 
@@ -222,20 +246,118 @@ final class Conductor: ObservableObject {
         return finished
     }
 
-    /// One task, with retries. Nonisolated so a whole wave can run concurrently.
+    /// One task. Nonisolated so a whole wave can run concurrently.
+    ///
+    /// A generation task is not one call — it is one call per shot. The task is
+    /// expanded into its render jobs here and they run under the vendor's own
+    /// concurrency limit, so a bucket of 332 hero shots becomes 332 requests of
+    /// a few seconds each rather than one impossible request for half an hour
+    /// of footage.
     private nonisolated static func perform(task: PlanTask,
                                             tool: AITool,
                                             adapter: ToolAdapter,
                                             apiKey: String?,
-                                            maxRetries: Int) async -> TaskOutcome {
+                                            maxRetries: Int,
+                                            maxConcurrency: Int) async -> TaskOutcome {
         let startedAt = Date()
+        let jobs = task.renderJobs(tool: tool)
+
+        // Work that genuinely is a single call — a script pass, a QC sweep.
+        guard !jobs.isEmpty else {
+            let attempt = await attemptOne(task: task, tool: tool, target: nil,
+                                           adapter: adapter, apiKey: apiKey, maxRetries: maxRetries)
+            return TaskOutcome(task: task,
+                               attempts: attempt.attempts,
+                               elapsed: Date().timeIntervalSince(startedAt),
+                               failure: attempt.failure,
+                               cost: attempt.failure == nil ? task.cost * Double(attempt.attempts) : 0,
+                               renders: attempt.output.map { [$0] } ?? [],
+                               completedJobs: attempt.failure == nil ? 1 : 0,
+                               totalJobs: 1)
+        }
+
+        let lanes = max(1, min(tool.limits.maxConcurrency, maxConcurrency))
+        var completed = 0
+        var attempts = 0
+        var cost = 0.0
+        var renders: [RenderOutput] = []
+        var failures: [String] = []
+
+        // Slide a window of `lanes` jobs so the vendor is never over-driven.
+        var index = 0
+        while index < jobs.count {
+            if Task.isCancelled { break }
+            let slice = jobs[index..<min(index + lanes, jobs.count)]
+            index += lanes
+
+            let batch = await withTaskGroup(of: JobOutcome.self) { group -> [JobOutcome] in
+                for job in slice {
+                    group.addTask {
+                        var outcome = await attemptOne(task: task, tool: tool, target: job.target,
+                                                       adapter: adapter, apiKey: apiKey,
+                                                       maxRetries: maxRetries)
+                        outcome.cost = job.cost
+                        return outcome
+                    }
+                }
+                var collected: [JobOutcome] = []
+                for await outcome in group { collected.append(outcome) }
+                return collected
+            }
+
+            for outcome in batch {
+                attempts += outcome.attempts
+                if let failure = outcome.failure {
+                    failures.append(failure)
+                } else {
+                    completed += 1
+                    // Retried attempts still burn money upstream.
+                    cost += outcome.cost * Double(outcome.attempts)
+                    if let output = outcome.output { renders.append(output) }
+                }
+            }
+        }
+
+        // A task that produced some of its shots is a partial, not a failure —
+        // report it as such and charge only for what actually came back.
+        var summary: String?
+        if !failures.isEmpty {
+            let first = failures[0]
+            summary = failures.count == 1
+                ? first
+                : "\(failures.count) of \(jobs.count) shots failed — first: \(first)"
+        }
+        return TaskOutcome(task: task,
+                           attempts: max(1, attempts),
+                           elapsed: Date().timeIntervalSince(startedAt),
+                           failure: completed == 0 ? summary : nil,
+                           partialFailure: completed > 0 ? summary : nil,
+                           cost: cost,
+                           renders: renders,
+                           completedJobs: completed,
+                           totalJobs: jobs.count)
+    }
+
+    /// One invocation with retries and backoff.
+    private nonisolated static func attemptOne(task: PlanTask,
+                                               tool: AITool,
+                                               target: RenderTarget?,
+                                               adapter: ToolAdapter,
+                                               apiKey: String?,
+                                               maxRetries: Int) async -> JobOutcome {
         var attempt = 0
         var lastFailure = ToolInvocationError.transport("\(task.id) never ran").localizedDescription
         while attempt <= maxRetries {
             attempt += 1
             do {
-                _ = try await adapter.invoke(tool: tool, task: task, apiKey: apiKey, attempt: attempt)
-                return TaskOutcome(task: task, attempts: attempt, elapsed: Date().timeIntervalSince(startedAt), failure: nil)
+                let result = try await adapter.invoke(tool: tool, task: task, target: target,
+                                                      apiKey: apiKey, attempt: attempt)
+                let output = RenderOutput(targetID: result.targetID ?? task.id,
+                                          remoteURL: result.remoteURL,
+                                          localURL: result.localURL,
+                                          bytes: result.bytes,
+                                          simulated: result.simulated)
+                return JobOutcome(attempts: attempt, failure: nil, output: output, cost: 0)
             } catch {
                 lastFailure = error.localizedDescription
                 let retryable = (error as? ToolInvocationError)?.isRetryable ?? false
@@ -244,7 +366,15 @@ final class Conductor: ObservableObject {
                 try? await Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
             }
         }
-        return TaskOutcome(task: task, attempts: attempt, elapsed: Date().timeIntervalSince(startedAt), failure: lastFailure)
+        let label = target.map { "\($0.id): " } ?? ""
+        return JobOutcome(attempts: attempt, failure: label + lastFailure, output: nil, cost: 0)
+    }
+
+    private struct JobOutcome: Sendable {
+        var attempts: Int
+        var failure: String?
+        var output: RenderOutput?
+        var cost: Double
     }
 
     /// Sendable by construction — the failure crosses back as text, not as an
@@ -254,6 +384,25 @@ final class Conductor: ObservableObject {
         var attempts: Int
         var elapsed: Double
         var failure: String?
+        var partialFailure: String?
+        var cost: Double
+        var renders: [RenderOutput]
+        var completedJobs: Int
+        var totalJobs: Int
+
+        init(task: PlanTask, attempts: Int, elapsed: Double, failure: String?,
+             partialFailure: String? = nil, cost: Double = 0,
+             renders: [RenderOutput] = [], completedJobs: Int = 0, totalJobs: Int = 1) {
+            self.task = task
+            self.attempts = attempts
+            self.elapsed = elapsed
+            self.failure = failure
+            self.partialFailure = partialFailure
+            self.cost = cost
+            self.renders = renders
+            self.completedJobs = completedJobs
+            self.totalJobs = totalJobs
+        }
     }
 
     private func log(_ kind: ConductorEvent.Kind, _ message: String) {

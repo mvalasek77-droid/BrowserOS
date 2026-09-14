@@ -42,6 +42,27 @@ struct PlanTask: Identifiable, Equatable {
     var prompt: String? = nil
     var startsAt: Double = 0
     var endsAt: Double = 0
+
+    /// The individual shots this task generates.
+    ///
+    /// The task itself is a budgeting unit — "all the hero coverage", nearly
+    /// 1,800 seconds of it. No vendor accepts that as one request, so execution
+    /// works from these instead: one shot, one prompt, one clip back. Empty for
+    /// work that genuinely is one call, like a script pass.
+    var renderTargets: [RenderTarget] = []
+
+    /// What the orchestra will actually invoke, with shots split to fit the
+    /// vendor's per-clip ceiling. Cost is apportioned by duration so the ledger
+    /// still adds up to what the budget predicted.
+    func renderJobs(tool: AITool?) -> [(target: RenderTarget, cost: Double)] {
+        guard !renderTargets.isEmpty else { return [] }
+        let expanded = renderTargets.flatMap { $0.segments(maxSeconds: tool?.limits.maxShotSeconds) }
+        let totalSeconds = expanded.reduce(0) { $0 + $1.seconds }
+        guard totalSeconds > 0 else { return expanded.map { ($0, 0) } }
+        return expanded.map { target in
+            (target, cost * (target.seconds / totalSeconds))
+        }
+    }
 }
 
 enum EfficiencyPass: String, Codable, CaseIterable, Identifiable {
@@ -260,7 +281,8 @@ enum Planner {
                  unitLabel: String? = nil,
                  dependsOn: [String] = [],
                  shotCount: Int = 0,
-                 exploration: Bool = false) {
+                 exploration: Bool = false,
+                 targets: [RenderTarget] = []) {
             tasks.append(PlanTask(
                 id: id,
                 department: department,
@@ -275,8 +297,20 @@ enum Planner {
                 concurrency: max(1, min(tool.limits.maxConcurrency, maxConcurrency)),
                 dependsOn: dependsOn,
                 shotCount: shotCount,
-                isExplorationPass: exploration
+                isExplorationPass: exploration,
+                renderTargets: targets
             ))
+        }
+
+        /// One target per shot, carrying the prompt that shot will be generated
+        /// from. This is what turns a budget line into work a vendor can do.
+        func targets(for shots: [Shot], take: Int) -> [RenderTarget] {
+            shots.map { shot in
+                RenderTarget(id: shot.id,
+                             seconds: shot.seconds,
+                             prompt: "\(spec.style) — scene \(shot.scene), shot \(shot.index + 1)",
+                             take: take)
+            }
         }
 
         // ── Development ──────────────────────────────────────────────────────
@@ -332,19 +366,28 @@ enum Planner {
             let padding = passes.isEnabled(.granularityFit) ? 0 : paddingSeconds(shots: bucket.shots, tool: tool)
 
             if passes.isEnabled(.draftLadder), let draft = draftGenerator, draft.pricing.rate < tool.pricing.rate {
+                // Exploration burns the extra takes on the cheap generator; the
+                // keeper is generated once on the expensive one.
+                let extraTakes = max(1, Int(max(0, takes - 1).rounded()))
+                let explorationTargets = (1...extraTakes).flatMap { take in
+                    targets(for: bucket.shots, take: take + 1)
+                }
                 add("photo.\(bucket.key).explore", .photography, "\(bucket.label) — exploration takes",
                     capability: Capability.videoTextToVideo, tool: draft,
                     units: bucket.seconds * max(0, takes - 1), dependsOn: ["previs.boards"],
-                    shotCount: bucket.shots.count, exploration: true)
+                    shotCount: bucket.shots.count, exploration: true,
+                    targets: explorationTargets)
                 add("photo.\(bucket.key).final", .photography, "\(bucket.label) — finals",
                     capability: Capability.videoTextToVideo, tool: tool,
                     units: bucket.seconds + padding, dependsOn: ["photo.\(bucket.key).explore"],
-                    shotCount: bucket.shots.count)
+                    shotCount: bucket.shots.count,
+                    targets: targets(for: bucket.shots, take: 1))
             } else {
                 add("photo.\(bucket.key)", .photography, bucket.label,
                     capability: Capability.videoTextToVideo, tool: tool,
                     units: bucket.seconds * takes + padding, dependsOn: ["previs.boards"],
-                    shotCount: bucket.shots.count)
+                    shotCount: bucket.shots.count,
+                    targets: targets(for: bucket.shots, take: 1))
             }
         }
         let photographyIDs = tasks.filter { $0.department == .photography }.map(\.id)

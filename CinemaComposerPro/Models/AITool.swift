@@ -132,12 +132,16 @@ struct AITool: Codable, Identifiable, Equatable {
     var method: String?
     var headers: [String: String]?
     var body: [String: String]?
+    /// How the vendor reports on work that outlives one request. Absent means
+    /// synchronous — right for speech APIs that return audio in the reply.
+    var jobProtocol: JobProtocol?
 
     var registeredAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, name, vendor, version, status, capabilities, pricing, quality, speed, limits
-        case tiers, keyRef, ratesAsOf, notes, endpoint, method, headers, body, registeredAt
+        case tiers, keyRef, ratesAsOf, notes, endpoint, method, headers, body
+        case jobProtocol, registeredAt
     }
 
     init(id: String,
@@ -158,6 +162,7 @@ struct AITool: Codable, Identifiable, Equatable {
          method: String? = nil,
          headers: [String: String]? = nil,
          body: [String: String]? = nil,
+         jobProtocol: JobProtocol? = nil,
          registeredAt: Date? = nil) {
         self.id = id
         self.name = name
@@ -177,6 +182,7 @@ struct AITool: Codable, Identifiable, Equatable {
         self.method = method
         self.headers = headers
         self.body = body
+        self.jobProtocol = jobProtocol
         self.registeredAt = registeredAt
     }
 
@@ -202,6 +208,7 @@ struct AITool: Codable, Identifiable, Equatable {
         method = try c.decodeIfPresent(String.self, forKey: .method)
         headers = try c.decodeIfPresent([String: String].self, forKey: .headers)
         body = try c.decodeIfPresent([String: String].self, forKey: .body)
+        jobProtocol = try c.decodeIfPresent(JobProtocol.self, forKey: .jobProtocol)
         registeredAt = try c.decodeIfPresent(Date.self, forKey: .registeredAt)
     }
 
