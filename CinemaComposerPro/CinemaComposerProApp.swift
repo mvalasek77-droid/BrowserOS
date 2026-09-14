@@ -11,7 +11,14 @@ struct CinemaComposerProApp: App {
     @StateObject private var model = ProductionViewModel()
     @StateObject private var bugTracker = BugTracker()
     @StateObject private var entitlements = EntitlementManager.shared
-    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "ccp_onboarding_complete")
+    @State private var showOnboarding = !ProcessInfo.processInfo.arguments.contains("--ccp-paywall")
+        && !UserDefaults.standard.bool(forKey: "ccp_onboarding_complete")
+
+    /// IAP review-screenshot capture route (see PaywallView.paywallPreviewMode):
+    /// `simctl launch <udid> <bundle> --ccp-paywall` opens the paywall directly,
+    /// with onboarding suppressed, so the shot shows purchase rows + legal footer.
+    private static let paywallPreviewMode =
+        ProcessInfo.processInfo.arguments.contains("--ccp-paywall")
 
     var body: some Scene {
         WindowGroup {
@@ -22,6 +29,12 @@ struct CinemaComposerProApp: App {
                 .fullScreenCover(isPresented: $showOnboarding) {
                     GetStartedView(isPresented: $showOnboarding)
                         .environmentObject(model)
+                }
+                .sheet(isPresented: Binding(
+                    get: { Self.paywallPreviewMode && !showOnboarding },
+                    set: { _ in }
+                )) {
+                    PaywallView()
                 }
         }
     }
