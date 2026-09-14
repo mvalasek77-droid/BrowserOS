@@ -17,7 +17,7 @@ enum LegalLinks {
     /// This must be a live, publicly reachable page — App Review opens it. The
     /// same URL also goes in App Store Connect under App Privacy. A 404 here
     /// fails review just as surely as a missing link.
-    static let privacyPolicy = URL(string: "https://REPLACE-ME.example.com/cinema-composer/privacy")!
+    static let privacyPolicy = URL(string: "https://mvalasek77-droid.github.io/cinema-composer-privacy.html")!
 
     /// True once the placeholder above has actually been replaced.
     static var isPrivacyPolicyConfigured: Bool {
@@ -46,6 +46,14 @@ struct PaywallView: View {
     @State private var isPurchasing = false
     @State private var message: String?
     @State private var loadFailed = false
+
+    /// IAP screenshot route: simctl never injects the .storekit config, so
+    /// under `simctl launch` the product list stays empty and the paywall
+    /// renders as "Loading plans…" forever. This flag renders the rows with
+    /// fallback prices purely for the App Review screenshot capture.
+    /// Gated on a launch argument no user or reviewer will ever pass.
+    private static let paywallPreviewMode =
+        ProcessInfo.processInfo.arguments.contains("--ccp-paywall")
 
     /// Feature rows the buyer sees. Keep in sync with what the gates protect.
     private static let features: [(icon: String, title: String, detail: String)] = [
@@ -105,12 +113,16 @@ struct PaywallView: View {
                             .padding(.vertical, 8)
                     } else {
                         VStack(spacing: 10) {
-                            ForEach(products, id: \.id) { product in
-                                planRow(product)
-                            }
-                            if products.isEmpty {
-                                ProgressView("Loading plans…")
-                                    .padding(.vertical, 12)
+                            if Self.paywallPreviewMode && products.isEmpty {
+                                previewPlanRows
+                            } else {
+                                ForEach(products, id: \.id) { product in
+                                    planRow(product)
+                                }
+                                if products.isEmpty {
+                                    ProgressView("Loading plans…")
+                                        .padding(.vertical, 12)
+                                }
                             }
                             Button {
                                 Task { await purchaseSelected() }
@@ -139,7 +151,16 @@ struct PaywallView: View {
                 }
             }
         }
-        .task { await loadProducts() }
+        .task {
+            if Self.paywallPreviewMode {
+                // Deterministic screenshot state: annual pre-selected.
+                if selectedProductID == nil {
+                    selectedProductID = EntitlementManager.ProductID.annual
+                }
+                return
+            }
+            await loadProducts()
+        }
         .alert("Purchase failed", isPresented: Binding(
             get: { message != nil && !loadFailed },
             set: { if !$0 { message = nil } }
@@ -192,6 +213,53 @@ struct PaywallView: View {
     }
 
     // MARK: - Rows
+
+    /// Static preview rows for IAP review-screenshot capture (see
+    /// `paywallPreviewMode`). Mirrors planRow's layout with ASC prices.
+    private var previewPlanRows: some View {
+        ForEach(Self.previewPlans, id: \.id) { plan in
+            Button {
+                selectedProductID = plan.id
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            Text(plan.name).font(.subheadline.bold())
+                            if plan.isBestValue {
+                                Text("Best value")
+                                    .font(.caption2.bold())
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(Palette.good, in: Capsule())
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 1) {
+                        Text(plan.price).font(.subheadline.bold().monospacedDigit())
+                        Text(plan.term).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .padding(12)
+                .background(
+                    selectedProductID == plan.id ? Palette.accent.opacity(0.12) : Color(.secondarySystemBackground),
+                    in: RoundedRectangle(cornerRadius: 12)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(selectedProductID == plan.id ? Palette.accent : .clear, lineWidth: 1.5)
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private static let previewPlans: [(id: String, name: String, price: String, term: String, isBestValue: Bool)] = [
+        (id: "com.steroidos.cinemacomposer.pro.monthly", name: "Pro Monthly", price: "$9.99", term: "per month", isBestValue: false),
+        (id: "com.steroidos.cinemacomposer.pro.annual", name: "Pro Annual", price: "$59.99", term: "per year", isBestValue: true),
+        (id: "com.steroidos.cinemacomposer.pro.lifetime", name: "Pro Lifetime", price: "$99.99", term: "one-time purchase", isBestValue: false),
+    ]
 
     private func planRow(_ product: Product) -> some View {
         let isSelected = selectedProductID == product.id
@@ -298,6 +366,9 @@ struct PaywallView: View {
     // MARK: - Store actions
 
     private func loadProducts() async {
+        // In preview mode the static rows are already up; skip the network
+        // fetch so the screenshot state stays deterministic.
+        if Self.paywallPreviewMode { return }
         loadFailed = false
         do {
             products = try await Product.products(for: EntitlementManager.ProductID.all)
