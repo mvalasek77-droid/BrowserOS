@@ -139,10 +139,16 @@ enum JSONPath {
     /// The same lookup, coerced to a string — vendors return ids as both
     /// strings and numbers, and a status as either a string or a bare bool.
     static func string(_ path: String, in root: Any) -> String? {
-        switch value(path, in: root) {
+        guard let node = value(path, in: root) else { return nil }
+        // JSONSerialization bridges true/false to NSNumber, so the boolean
+        // must be picked out by type before the generic number case —
+        // otherwise a status bool stringifies as "1" instead of "true".
+        if let number = node as? NSNumber, CFGetTypeID(number) == CFBooleanGetTypeID() {
+            return number.boolValue ? "true" : "false"
+        }
+        switch node {
         case let text as String: return text
         case let number as NSNumber: return number.stringValue
-        case let bool as Bool: return bool ? "true" : "false"
         default: return nil
         }
     }

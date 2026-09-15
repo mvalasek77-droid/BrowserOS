@@ -4,6 +4,13 @@ import SwiftUI
 /// The one place the app's state lives. Views read from here; every edit runs
 /// breakdown → plan → budget again, which is cheap enough to do on every
 /// keystroke and is what makes the money move while you drag a slider.
+/// A vendor's failure in a bake-off, boxed so `Result` can carry it
+/// (`Result` requires `Failure: Error`; a bare `String` is not one).
+struct BakeOffFailure: LocalizedError {
+    let message: String
+    var errorDescription: String? { message }
+}
+
 @MainActor
 final class ProductionViewModel: ObservableObject {
 
@@ -345,7 +352,7 @@ final class ProductionViewModel: ObservableObject {
     @discardableResult
     func runBakeOff(on itemID: String,
                     toolIDs: [String],
-                    dryRun: Bool) async -> [String: Result<URL?, String>] {
+                    dryRun: Bool) async -> [String: Result<URL?, BakeOffFailure>] {
         guard var working = cut ?? seedCut() as MagneticTimeline?,
               let item = working.item(itemID) else { return [:] }
 
@@ -357,7 +364,7 @@ final class ProductionViewModel: ObservableObject {
         let prompt = item.provenance.prompt ?? item.name
         let startingTake = (item.audition?.alternatives.count ?? 0)
 
-        var outcomes: [String: Result<URL?, String>] = [:]
+        var outcomes: [String: Result<URL?, BakeOffFailure>] = [:]
 
         for (offset, toolID) in toolIDs.enumerated() {
             guard let tool = registry.tool(id: toolID) else { continue }
@@ -382,7 +389,7 @@ final class ProductionViewModel: ObservableObject {
                 try? working.addTake(take, to: itemID, select: offset == 0 && startingTake == 0)
                 outcomes[toolID] = .success(output.localURL)
             case .failure(let error):
-                outcomes[toolID] = .failure(error.localizedDescription)
+                outcomes[toolID] = .failure(BakeOffFailure(message: error.localizedDescription))
             }
         }
 

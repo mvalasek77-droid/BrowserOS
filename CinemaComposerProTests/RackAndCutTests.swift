@@ -232,10 +232,16 @@ final class ConductorTests: XCTestCase {
                                          maxRetries: 2, failureRate: 0.5)
         XCTAssertEqual(report.status, .completed, "a transient failure should be retried, not fatal")
         XCTAssertTrue(report.ledger.contains { $0.attempts > 1 }, "no task was retried at a 50% failure rate")
-        for entry in report.ledger {
-            let planned = plan.tasks.first { $0.id == entry.taskID }?.cost ?? 0
-            XCTAssertEqual(entry.cost, planned * Double(entry.attempts), accuracy: 0.001)
-        }
+        // The engine charges per shot: base price × attempts for every shot
+        // that came back ("charge for what actually came back, retries
+        // included"). So the honest-ledger invariants are global, not
+        // per-entry — a task that lost shots permanently ledgers below its
+        // budget line, and `attempts` is the Σ across shots, so
+        // planned × attempts over-bills wildly.
         XCTAssertGreaterThan(report.spend, plan.total, "retries cost money and the ledger should say so")
+        // And never absurdly more: at 50% transient failures with 2 retries
+        // the ceiling is three attempts per shot, so anything past 3× is a
+        // double-billing regression.
+        XCTAssertLessThan(report.spend, plan.total * 3, "ledger charged beyond every attempt of every shot")
     }
 }

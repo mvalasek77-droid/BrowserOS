@@ -61,7 +61,7 @@ final class RenderPipelineTests: XCTestCase {
     /// The headline fix. A photography task is a budgeting unit covering
     /// hundreds of shots; execution has to be one request per shot, or the app
     /// asks a vendor for half an hour of footage in a single call.
-    func testAPhotographyTaskExpandsIntoOneJobPerShot() {
+    func testAPhotographyTaskExpandsIntoOneJobPerShot() throws {
         let tool = AITool(id: "v", name: "V", vendor: "v", version: "1.0.0",
                           capabilities: [Capability.videoTextToVideo],
                           pricing: ToolPricing(model: .perSecond, rate: 0.25),
@@ -83,7 +83,8 @@ final class RenderPipelineTests: XCTestCase {
         XCTAssertTrue(jobs.allSatisfy { $0.target.seconds <= 10 })
         // Cost is apportioned by duration and still sums to the budget line.
         XCTAssertEqual(jobs.reduce(0) { $0 + $1.cost }, 100, accuracy: 0.001)
-        XCTAssertEqual(jobs.first { $0.target.id == "A" }?.cost, 25, accuracy: 0.001)
+        let costA = try XCTUnwrap(jobs.first { $0.target.id == "A" }?.cost)
+        XCTAssertEqual(costA, 25, accuracy: 0.001)
     }
 
     func testNonGenerationWorkStaysASingleCall() {
@@ -330,12 +331,14 @@ extension RenderPipelineTests {
 
         try timeline.selectTake(runway.id, on: id)
         XCTAssertEqual(timeline.item(id)?.content.mediaRef?.url, "file:///m/take1.mp4")
-        XCTAssertEqual(timeline.item(id)?.cost, 2.38, accuracy: 0.001)
+        let runwayCost = try XCTUnwrap(timeline.item(id)?.cost)
+        XCTAssertEqual(runwayCost, 2.38, accuracy: 0.001)
 
         try timeline.selectTake(luma.id, on: id)
         XCTAssertEqual(timeline.item(id)?.content.mediaRef?.url, "file:///m/take2.mp4",
                        "the picture must follow the pick")
-        XCTAssertEqual(timeline.item(id)?.cost, 1.90, accuracy: 0.001)
+        let lumaCost = try XCTUnwrap(timeline.item(id)?.cost)
+        XCTAssertEqual(lumaCost, 1.90, accuracy: 0.001)
     }
 
     /// What was spent on readings nobody will see stays visible.

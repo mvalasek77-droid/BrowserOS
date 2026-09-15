@@ -25,6 +25,37 @@ struct Take: Codable, Identifiable, Equatable {
         guard let mediaURL, !mediaURL.isEmpty else { return nil }
         return URL(string: mediaURL)
     }
+
+    enum CodingKeys: String, CodingKey { case id, toolID, cost, prompt, quality, createdAt, mediaURL }
+
+    /// Takes written before `createdAt` (and `mediaURL`) existed must still
+    /// decode — a decoding failure would take the whole cut down with it.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        toolID = try c.decode(String.self, forKey: .toolID)
+        cost = try c.decode(Double.self, forKey: .cost)
+        prompt = try c.decodeIfPresent(String.self, forKey: .prompt)
+        quality = try c.decodeIfPresent(Double.self, forKey: .quality)
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        mediaURL = try c.decodeIfPresent(String.self, forKey: .mediaURL)
+    }
+
+    init(id: String = UUID().uuidString,
+         toolID: String,
+         cost: Double,
+         prompt: String? = nil,
+         quality: Double? = nil,
+         createdAt: Date = Date(),
+         mediaURL: String? = nil) {
+        self.id = id
+        self.toolID = toolID
+        self.cost = cost
+        self.prompt = prompt
+        self.quality = quality
+        self.createdAt = createdAt
+        self.mediaURL = mediaURL
+    }
 }
 
 struct Provenance: Codable, Equatable {
