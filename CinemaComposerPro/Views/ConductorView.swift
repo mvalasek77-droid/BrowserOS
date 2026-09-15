@@ -20,6 +20,11 @@ private struct ConductorScreen: View {
     @State private var showLiveConfirmation = false
     @State private var isRunning = false
 
+    /// Verification route: `--ccp-autorun` starts a DRY run on appear —
+    /// the flag can never start a live run, so it can't spend anything.
+    private static let autorunDry =
+        ProcessInfo.processInfo.arguments.contains("--ccp-autorun")
+
     var body: some View {
         NavigationStack {
             List {
@@ -148,6 +153,7 @@ private struct ConductorScreen: View {
                 }
             }
             .navigationTitle("Conductor")
+            .onAppear(perform: autorunOnce)
             .confirmationDialog(model.canRunLive ? "This spends real money" : "Nothing on this plan can bill",
                                 isPresented: $showLiveConfirmation,
                                 titleVisibility: .visible) {
@@ -174,6 +180,13 @@ private struct ConductorScreen: View {
             isRunning = false
             Haptics.success()
         }
+    }
+
+    /// Verification route (`--ccp-autorun`): starts a DRY run on appear.
+    /// The flag is never consulted for live runs, so it cannot spend.
+    private func autorunOnce() {
+        guard Self.autorunDry, !isRunning, conductor.status == .idle else { return }
+        start()
     }
 
     private func color(for kind: ConductorEvent.Kind) -> Color {
