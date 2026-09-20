@@ -146,13 +146,6 @@ class iPhoneBrowserViewModel: ObservableObject {
             addToHistory(url: urlText, title: pageTitle)
         }
 
-        // FAST PREVIEW: immediately extract a quick snapshot (title + first
-        // elements) and send it to the watch so the user sees content while
-        // the full extraction pipeline runs. This runs in the background and
-        // does not block the heavier extractAndSendPageData() call that the
-        // iPhoneWebView coordinator triggers after content stability.
-        sendFastPreviewToWatch()
-
         // MIRROR MODE: render the final URL at watch width and send a
         // full-page snapshot. Resources are already warm in the shared cache
         // from the main load, so the mirror render is fast.
@@ -169,7 +162,6 @@ class iPhoneBrowserViewModel: ObservableObject {
     /// lightweight preview to the Watch. This gives the watch something to show
     /// within ~100ms of page load, before the full extraction pipeline runs.
     private func sendFastPreviewToWatch() {
-        guard EntitlementManager.shared.isPro else { return }
         guard let webView = webView else { return }
         // Lightweight JS: grab headings + first paragraphs + links only.
         let previewJS = """
@@ -244,10 +236,6 @@ class iPhoneBrowserViewModel: ObservableObject {
     /// All users receive the full page content on the Watch. Pro-only
     /// advanced features are gated elsewhere.
     func extractAndSendPageData() {
-        guard EntitlementManager.shared.isPro else {
-            sessionManager?.sendLockedPageToWatch(tabId: currentTabId, url: urlText, title: pageTitle)
-            return
-        }
         extractDOM { [weak self] elementsJSON in
             guard let self else { return }
 
@@ -537,10 +525,6 @@ class iPhoneBrowserViewModel: ObservableObject {
     func sendMirrorSnapshotToWatch() {
         let pageURL = urlText
         guard !pageURL.isEmpty, sessionManager != nil else { return }
-        guard EntitlementManager.shared.isPro else {
-            sessionManager?.sendLockedPageToWatch(tabId: currentTabId, url: pageURL, title: pageTitle)
-            return
-        }
         mirrorRenderer.render(urlString: pageURL) { [weak self] imageData, pixelWidth, pixelHeight, links in
             guard let self, let imageData else { return }
             // The user may have navigated on while the mirror rendered.

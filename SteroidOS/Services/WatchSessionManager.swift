@@ -532,9 +532,6 @@ class WatchSessionManager: NSObject, WCSessionDelegate, ObservableObject {
             elements = deserializeNativeWebElements(from: data)
         }
 
-        if !elements.isEmpty {
-            self.pageDisplay = PageDisplay(content: .elements(elements), url: url, title: title)
-        }
         NotificationCenter.default.post(
             name: .pageLoaded,
             object: nil,

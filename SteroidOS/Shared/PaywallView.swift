@@ -75,7 +75,7 @@ struct PaywallView: View {
                 .font(.title2.bold())
                 .foregroundStyle(.primary)
 
-            Text("Full watch mirroring, site-specific extractors, reader mode, media detection, and every future feature.")
+            Text("Site-specific extractors, reader mode, media detection, and every future feature.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -85,7 +85,6 @@ struct PaywallView: View {
 
     private var featureList: some View {
         VStack(alignment: .leading, spacing: SteroidBrand.Spacing.sm) {
-            PaywallFeatureRow(icon: "applewatch", title: "Watch Mirroring", subtitle: "Full page content on your wrist")
             PaywallFeatureRow(icon: "doc.text.magnifyingglass", title: "Reader Mode", subtitle: "Distraction-free articles")
             PaywallFeatureRow(icon: "play.rectangle.fill", title: "Media Detection", subtitle: "YouTube & video player")
             PaywallFeatureRow(icon: "bookmark.fill", title: "Sync Everything", subtitle: "Bookmarks, history & settings")
@@ -180,7 +179,6 @@ struct PaywallView: View {
                     .multilineTextAlignment(.center)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    PaywallFeatureRow(icon: "applewatch", title: "Mirroring", subtitle: nil)
                     PaywallFeatureRow(icon: "doc.text", title: "Reader Mode", subtitle: nil)
                     PaywallFeatureRow(icon: "play.fill", title: "Media", subtitle: nil)
                 }
