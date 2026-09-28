@@ -58,9 +58,16 @@ struct BrowserPageView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 case .mirror(let imageData, let links):
-                    MirrorPageView(imageData: imageData, links: links) { url in
-                        viewModel.addressBarText = url
-                        browserState.navigate(to: url)
+                    // Full-page snapshots are tall (captured up to 2600pt at
+                    // watch width). Without a scroll container the bounded
+                    // content area forces scaledToFit to shrink the whole page
+                    // into an unreadable sliver; scroll vertically so the
+                    // image renders fit-to-width at readable size.
+                    ScrollView(.vertical, showsIndicators: false) {
+                        MirrorPageView(imageData: imageData, links: links) { url in
+                            viewModel.addressBarText = url
+                            browserState.navigate(to: url)
+                        }
                     }
 
                 case .elements(let elements):
@@ -276,7 +283,11 @@ struct BrowserPageView: View {
                 isZoomed = false
                 dragOffset = .zero
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Width-only sizing: inside a ScrollView the height proposal is
+            // unbounded, so scaledToFit keys off the proposed width and the
+            // image renders fit-to-width (its natural scaled height), then
+            // scrolls vertically. maxHeight here would re-collapse it.
+            .frame(maxWidth: .infinity)
         }
 
         private func clampedOffset(_ translation: CGSize) -> CGSize {
