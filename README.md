@@ -1,117 +1,67 @@
-# SteroidOS
+# BrowserOS 2
 
-The most capable native browser experience for Apple Watch — built from the ground up for the wrist.
+A live 1:1 mirror of the iPhone browser on Apple Watch.
 
-## Why It's Different
-
-Every other watch "browser" either takes screenshots on a server and ships pixels to the watch, or runs JavaScript on an iPhone and mirrors the result as an image. SteroidOS does neither: pages are fetched and parsed on the paired iPhone, then sent to the watch as **structured data** that the watch renders as first-class SwiftUI — real `Text`, real `Button`, real `List`. Every element gets Digital Crown scrolling, haptics, Dynamic Type, and VoiceOver for free.
-
-There is no `WKWebView` on watchOS. So the watch app isn't running a browser engine; it's running a native content viewer that speaks the same protocol as the iPhone fetcher.
-
-## What You Can Do
-
-**Browse**
-- Real tabs (create, switch, close) — no other watch browser ships this
-- Bookmarks with persistent storage, browsing history with search
-- Four search engines: DuckDuckGo, Google, Ecosia, Brave
-- Forward / back navigation
-
-**Read**
-- Reader Mode — Mozilla Readability-inspired extraction into clean, distraction-free native text
-- Adjustable font size
-- Optimized typography for the watch screen
-
-**Watch**
-- Direct video playback (Vimeo, MP4, HLS, WebM, MOV) via AVPlayer with Digital Crown scrubbing, haptic feedback, and quality picker
-- One-tap "Open in App" Handoff to TikTok, Netflix, Facebook, X, and Truth Social for content best viewed in their dedicated iOS apps
-- *Experimental:* opt-in YouTube stream extraction via Invidious in Settings (off by default; see notes below)
-
-**Discover**
-- Categorized speed-dial home page: AI assistants (Claude, ChatGPT), Social (Reddit, Facebook, X, TikTok, Hacker News, Truth Social), Media (Vimeo, Internet Archive, NASA TV), Knowledge (Wikipedia, GitHub)
-- Recent history surfaced inline
-
-**Watch-native**
-- Watch face complication for quick launch
-- Smart Stack widget
-- Dynamic Type + VoiceOver throughout
-
-## Architecture
+The iPhone app is a normal `WKWebView` browser. While the watch app is open, the
+iPhone photographs the top of its web view several times a second, compresses
+each picture to fit a single WatchConnectivity message, and sends it. The watch
+shows the picture full-screen and sends taps, scrolls and URLs back, which the
+iPhone applies to the real page. Nothing is parsed, extracted or re-rendered:
+what you see on the watch is what is on the iPhone.
 
 ```
-┌───────────────────────────────┐         ┌──────────────────────────────┐
-│  iPhone Companion             │         │  Apple Watch App             │
-│                               │         │                              │
-│  WKWebView (offscreen)        │   ──→   │  Native SwiftUI Renderer     │
-│   ├ fetch URL                 │   WC    │   ├ Headings, Text, Lists    │
-│   ├ JS executes, DOM settles  │  msg    │   ├ Images (compressed)      │
-│   ├ DOMParser extracts:       │ (proto) │   ├ Buttons, Forms           │
-│   │   • structured elements   │   ←──   │   ├ Tables, Blockquotes      │
-│   │   • reader content        │  taps   │   └ Media tiles → AVPlayer   │
-│   │   • detected media URLs   │         │                              │
-│   └ pushes to watch           │         │  Reader Mode + Media Hub     │
-└───────────────────────────────┘         └──────────────────────────────┘
+iPhone                                  Apple Watch
+WKWebView ──takeSnapshot──► JPEG ≤56KB ──sendMessage──► Image (full screen)
+   ▲                                                        │
+   └── click / scroll / load ◄──────── tap / crown / URL ◄──┘
 ```
 
-The watch issues navigation intents (load URL, go back, tap link); the iPhone returns rendered representations. The watch also has direct network fallback for permitted media URLs so video plays without round-tripping bytes through WatchConnectivity.
+## Watch controls
 
-## Content Policy
-
-SteroidOS is a **content viewer**, not a redistributor. On iPhone it presents a full WKWebView browser experience, including YouTube's mobile site. On Apple Watch, services that do not fit native wrist rendering can still be handed off to their official apps rather than scraped or re-streamed. This keeps the app aligned with each platform's terms of service and Apple's App Review guidelines (5.2.1, 5.2.5).
-
-For YouTube specifically: stream extraction via third-party Invidious instances is included as an off-by-default experimental setting. Enabling it accepts the risk that YouTube's terms of service may be violated, that extraction may break at any time, and that the feature may be removed in a future release.
+| Gesture | Action |
+|---|---|
+| Tap | Clicks that spot on the iPhone page |
+| Digital Crown / vertical drag | Scrolls the iPhone page |
+| Double-tap | Zooms the picture in/out locally (drag to pan while zoomed) |
+| Long-press | Back / forward / reload and the address field |
 
 ## Requirements
 
-- watchOS 10.0+ (paired iPhone running iOS 17.0+)
-- Xcode 16+
-- Swift 5.9+
+- iOS 17 / watchOS 10, Xcode 16
+- Both apps must be in the foreground: WatchConnectivity interactive messaging
+  and web view snapshots only work while the apps are on screen.
 
 ## Building
 
+Open `BrowserOS.xcodeproj` directly (it uses Xcode 16 synchronized folders, so
+every file under `iPhone/`, `Watch/` and `Shared/` is picked up automatically),
+or regenerate it from `project.yml`:
+
 ```bash
 xcodegen generate
-xcodebuild -project SteroidOS.xcodeproj -scheme "SteroidOS Watch App" \
-  -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)' build
 ```
 
-## Project Layout
+Run the **BrowserOS** scheme on the iPhone and the **BrowserOS Watch App**
+scheme on the paired watch.
+
+## Layout
 
 ```
-SteroidOS/                     # watchOS app
-  SteroidOSApp.swift           — Watch app entry
-  SteroidOSComplication.swift  — Watch face complication + Smart Stack widget
-  Services/
-    BrowserState.swift         — Tabs, bookmarks, history, settings
-    HTMLNativeRenderer.swift   — HTML → NativeWebElement parser
-    MediaDetector.swift        — YouTube / Vimeo / HLS detection
-    PersistenceStore.swift     — UserDefaults persistence
-    WatchSessionManager.swift  — WatchConnectivity client
-    WebFetcher.swift           — Direct-from-watch fallback fetcher
-  ViewModels/
-    VideoPlayerViewModel.swift — AVPlayer control
-  Views/
-    MainNavigationView.swift   — Root tab navigation
-    WatchHomePage.swift        — Speed-dial tiles
-    BrowserPageView.swift      — Main browsing surface
-    WatchVideoPlayerView.swift — Full-screen player
-    MediaHubView.swift         — Detected-media browser
-    BookmarksView.swift / HistoryView.swift / SettingsView.swift / TabManagerView.swift
-    Components/                — AddressBar, NativeWebContentRenderer, ReaderModeView, VideoControls
-  Shared/
-    SharedModels.swift         — Codable models shared with iPhone
-    WatchConnectivityProtocol.swift — message-type enum + keys
-
-SteroidOS-iOS/                 # iPhone companion
-  SteroidOS_iOSApp.swift       — iPhone app entry
-  Services/
-    DOMParser.swift            — JS injected into WKWebView, extracts structured data
-    PhoneSessionManager.swift  — WatchConnectivity host
-  ViewModels/
-  Views/
-    iPhoneBrowserView.swift    — iPhone-side browser UI (also functional standalone)
-    iPhoneWebView.swift        — WKWebView host
+Shared/MirrorProtocol.swift   message keys + MirrorFrame
+iPhone/BrowserModel.swift     owns the web view, applies watch commands
+iPhone/MirrorStreamer.swift   capture → encode → send, one frame in flight
+iPhone/PhoneSession.swift     WCSession (iPhone side)
+iPhone/WebView.swift          WKWebView host + navigation delegate
+iPhone/BrowserView.swift      address bar, toolbar, watch status sheet
+Watch/WatchSession.swift      WCSession (watch side)
+Watch/MirrorView.swift        full-screen picture + gestures + crown
+Watch/ControlsView.swift      long-press sheet
 ```
 
-## License
+## Tuning
 
-Private — All rights reserved.
+- `MirrorStreamer.minInterval` — minimum time between captures (0.12 s)
+- `MirrorStreamer` heartbeat — a capture every 1 s catches page changes with no event
+- `Wire.maxFrameBytes` — JPEG budget per frame (56 KB)
+- `MirrorView.crownStep` — page fraction scrolled per crown unit (0.004)
+- `MirrorView.zoomScale` — local zoom factor (2.2)
