@@ -38,9 +38,17 @@ struct MirrorView: View {
 
                 Color.clear
                     .contentShape(Rectangle())
-                    .gesture(tapGestures(in: geo.size))
-                    .simultaneousGesture(longPress)
-                    .simultaneousGesture(drag(in: geo.size))
+                    .onTapGesture(count: 2) { location in
+                        toggleZoom(at: location, in: geo.size)
+                    }
+                    .onTapGesture { location in
+                        sendTap(at: location, in: geo.size)
+                    }
+                    .onLongPressGesture(minimumDuration: 0.6) {
+                        WKInterfaceDevice.current().play(.click)
+                        showControls = true
+                    }
+                    .gesture(drag(in: geo.size))
 
                 overlays
             }
@@ -66,7 +74,7 @@ struct MirrorView: View {
             Image(systemName: session.isPhoneReachable ? "iphone" : "iphone.slash")
                 .font(.system(size: 30))
                 .foregroundStyle(.secondary)
-            Text(session.isPhoneReachable ? "Waiting for the iPhone…" : "Open BrowserOS on your iPhone")
+            Text(session.isPhoneReachable ? "Waiting for the iPhone…" : "Open SteroidOS on your iPhone")
                 .font(.footnote)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
@@ -99,25 +107,8 @@ struct MirrorView: View {
 
     // MARK: - Gestures
 
-    private func tapGestures(in size: CGSize) -> some Gesture {
-        let doubleTap = SpatialTapGesture(count: 2).onEnded { value in
-            toggleZoom(at: value.location, in: size)
-        }
-        let singleTap = SpatialTapGesture().onEnded { value in
-            sendTap(at: value.location, in: size)
-        }
-        return doubleTap.exclusively(before: singleTap)
-    }
-
-    private var longPress: some Gesture {
-        LongPressGesture(minimumDuration: 0.6).onEnded { _ in
-            WKInterfaceDevice.current().play(.click)
-            showControls = true
-        }
-    }
-
     private func drag(in size: CGSize) -> some Gesture {
-        DragGesture(minimumDistance: 10)
+        DragGesture(minimumDistance: 12)
             .onChanged { value in
                 if zoom > 1 {
                     pan = clampedPan(CGSize(width: panStart.width + value.translation.width,

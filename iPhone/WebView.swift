@@ -55,15 +55,42 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        // Open target="_blank" links in the same view instead of dropping them.
-        if navigationAction.targetFrame == nil,
-           let scheme = navigationAction.request.url?.scheme?.lowercased(),
-           scheme == "http" || scheme == "https" {
-            webView.load(navigationAction.request)
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.allow)
+            return
+        }
+        let scheme = url.scheme?.lowercased() ?? ""
+
+        if scheme == "http" || scheme == "https" {
+            // A user's link tap is handed to WebKit as "user initiated", which lets
+            // it open universal links in other apps. Re-issuing the same request
+            // ourselves keeps every link inside this view. Same for target="_blank".
+            let isMainFrameLinkTap = navigationAction.navigationType == .linkActivated
+                && navigationAction.targetFrame?.isMainFrame == true
+            if navigationAction.targetFrame == nil || isMainFrameLinkTap {
+                webView.load(navigationAction.request)
+                decisionHandler(.cancel)
+                return
+            }
+            decisionHandler(.allow)
+            return
+        }
+
+        if scheme == "about" || scheme == "blob" || scheme == "data" || scheme == "javascript" {
+            decisionHandler(.allow)
+            return
+        }
+
+        // "x-safari-https://…" is a request to open Safari; open it here instead.
+        if scheme.hasPrefix("x-safari-"),
+           let fixed = URL(string: String(url.absoluteString.dropFirst("x-safari-".count))) {
+            webView.load(URLRequest(url: fixed))
             decisionHandler(.cancel)
             return
         }
-        decisionHandler(.allow)
+
+        // tel:, mailto:, itms-apps:, app schemes… never leave the app.
+        decisionHandler(.cancel)
     }
 
     // MARK: WKUIDelegate

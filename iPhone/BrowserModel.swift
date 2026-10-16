@@ -29,6 +29,8 @@ final class BrowserModel: ObservableObject {
         config.defaultWebpagePreferences.allowsContentJavaScript = true
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsBackForwardNavigationGestures = true
+        // The link preview sheet offers "Open in Safari"; keep everything in-app.
+        webView.allowsLinkPreview = false
         webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
         self.webView = webView
 
@@ -130,18 +132,30 @@ final class BrowserModel: ObservableObject {
         guard rect.width > 0, rect.height > 0 else { return }
         let px = Double(rect.minX) + Double(rect.width) * x
         let py = Double(rect.minY) + Double(rect.height) * y
+        // px/py are points in the web view. Pages laid out wider than the screen
+        // (no viewport meta) are scaled down, so convert through visualViewport
+        // into CSS pixels before hit-testing.
         let js = """
-        (function(x, y) {
+        (function(px, py) {
+          var vv = window.visualViewport;
+          var x = vv ? (vv.offsetLeft + px / vv.scale) : px;
+          var y = vv ? (vv.offsetTop + py / vv.scale) : py;
           var el = document.elementFromPoint(x, y);
           if (!el) { return 'none'; }
           var target = el.closest('a,button,input,select,textarea,summary,label,[role="button"],[role="link"],[onclick]') || el;
+          var before = location.href;
           var opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
-          try { target.dispatchEvent(new PointerEvent('pointerdown', opts)); } catch (e) {}
-          try { target.dispatchEvent(new MouseEvent('mousedown', opts)); } catch (e) {}
-          try { target.dispatchEvent(new PointerEvent('pointerup', opts)); } catch (e) {}
-          try { target.dispatchEvent(new MouseEvent('mouseup', opts)); } catch (e) {}
+          ['pointerdown', 'mousedown', 'pointerup', 'mouseup'].forEach(function(type) {
+            try {
+              target.dispatchEvent(type.indexOf('pointer') === 0 ? new PointerEvent(type, opts) : new MouseEvent(type, opts));
+            } catch (e) {}
+          });
           if (typeof target.focus === 'function') { try { target.focus(); } catch (e) {} }
-          if (typeof target.click === 'function') { target.click(); } else { target.dispatchEvent(new MouseEvent('click', opts)); }
+          if (typeof target.click === 'function') { target.click(); } else { try { target.dispatchEvent(new MouseEvent('click', opts)); } catch (e) {} }
+          var link = target.closest ? target.closest('a[href]') : null;
+          if (link && link.href && /^https?:/i.test(link.href)) {
+            setTimeout(function() { if (location.href === before) { location.assign(link.href); } }, 500);
+          }
           return target.tagName;
         })(\(px), \(py));
         """

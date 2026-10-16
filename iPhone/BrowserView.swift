@@ -107,7 +107,7 @@ struct WatchStatusView: View {
                 Section {
                     Text(session.isWatchReachable
                          ? "The watch shows the top of this page live. Tap on the watch to click, turn the Digital Crown to scroll, double-tap to zoom, long-press for the address bar."
-                         : "Open BrowserOS on your Apple Watch. The mirror streams only while both apps are on screen.")
+                         : "Open SteroidOS on your Apple Watch. The mirror streams only while both apps are on screen.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 }
