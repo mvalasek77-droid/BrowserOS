@@ -122,47 +122,127 @@ final class BrowserModel: ObservableObject {
             goForward()
         case .reload:
             webView.reload()
+        case .fillInput(let text, let submit):
+            fillActiveInput(text: text, submit: submit)
         }
     }
 
-    /// Clicks whatever is under the given point of the mirrored region, the
-    /// same way a finger on the iPhone would.
+    /// Clicks whatever is under the given point of the mirrored region. If the
+    /// hit element is an editable field, reports back to the watch so it can
+    /// open its own text-entry sheet (the iPhone's keyboard is useless to the
+    /// user, who is looking at the watch).
     private func tap(normalizedX x: Double, normalizedY y: Double) {
         let rect = mirror.captureRect
         guard rect.width > 0, rect.height > 0 else { return }
         let px = Double(rect.minX) + Double(rect.width) * x
         let py = Double(rect.minY) + Double(rect.height) * y
-        // px/py are points in the web view. Pages laid out wider than the screen
-        // (no viewport meta) are scaled down, so convert through visualViewport
-        // into CSS pixels before hit-testing.
         let js = """
         (function(px, py) {
           var vv = window.visualViewport;
           var x = vv ? (vv.offsetLeft + px / vv.scale) : px;
           var y = vv ? (vv.offsetTop + py / vv.scale) : py;
           var el = document.elementFromPoint(x, y);
-          if (!el) { return 'none'; }
+          if (!el) { return JSON.stringify({ hit: false }); }
           var target = el.closest('a,button,input,select,textarea,summary,label,[role="button"],[role="link"],[onclick]') || el;
+          var editable = el.closest('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]), textarea, [contenteditable=""], [contenteditable="true"]');
+          var clickTarget = editable || target;
           var before = location.href;
           var opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
           ['pointerdown', 'mousedown', 'pointerup', 'mouseup'].forEach(function(type) {
             try {
-              target.dispatchEvent(type.indexOf('pointer') === 0 ? new PointerEvent(type, opts) : new MouseEvent(type, opts));
+              clickTarget.dispatchEvent(type.indexOf('pointer') === 0 ? new PointerEvent(type, opts) : new MouseEvent(type, opts));
             } catch (e) {}
           });
-          if (typeof target.focus === 'function') { try { target.focus(); } catch (e) {} }
-          if (typeof target.click === 'function') { target.click(); } else { try { target.dispatchEvent(new MouseEvent('click', opts)); } catch (e) {} }
+          if (typeof clickTarget.focus === 'function') { try { clickTarget.focus(); } catch (e) {} }
+          if (!editable) {
+            if (typeof target.click === 'function') { target.click(); }
+            else { try { target.dispatchEvent(new MouseEvent('click', opts)); } catch (e) {} }
+          }
           var link = target.closest ? target.closest('a[href]') : null;
-          if (link && link.href && /^https?:/i.test(link.href)) {
+          if (!editable && link && link.href && /^https?:/i.test(link.href)) {
             setTimeout(function() { if (location.href === before) { location.assign(link.href); } }, 500);
           }
-          return target.tagName;
+          if (editable) {
+            window.__sosActive = editable;
+            var ce = editable.getAttribute && editable.getAttribute('contenteditable');
+            var tag = editable.tagName;
+            var type = (tag === 'TEXTAREA') ? 'textarea'
+                     : (ce === '' || ce === 'true') ? 'editable'
+                     : (editable.type || 'text').toLowerCase();
+            var val = (tag === 'INPUT' || tag === 'TEXTAREA') ? (editable.value || '')
+                                                              : (editable.innerText || editable.textContent || '');
+            var ph = editable.placeholder
+                  || (editable.getAttribute && (editable.getAttribute('aria-label') || editable.getAttribute('title')))
+                  || '';
+            var inForm = !!(editable.form || (editable.closest && editable.closest('form')));
+            var submitLike = inForm || type === 'search' || type === 'url' || type === 'email';
+            return JSON.stringify({
+              hit: true, input: true, type: type,
+              placeholder: String(ph || '').slice(0, 120),
+              value: String(val || '').slice(0, 1000),
+              submitOnReturn: submitLike
+            });
+          }
+          return JSON.stringify({ hit: true, input: false });
         })(\(px), \(py));
         """
-        webView.evaluateJavaScript(js) { [weak self] _, _ in
+        webView.evaluateJavaScript(js) { [weak self] result, _ in
             Task { @MainActor [weak self] in
-                self?.mirror.pageDidFinish()
+                guard let self else { return }
+                self.mirror.pageDidFinish()
+                guard let text = result as? String,
+                      let data = text.data(using: .utf8),
+                      let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      dict["input"] as? Bool == true else { return }
+                let prompt = InputPrompt(
+                    inputType: dict["type"] as? String ?? "text",
+                    placeholder: dict["placeholder"] as? String ?? "",
+                    currentValue: dict["value"] as? String ?? "",
+                    submitOnReturn: dict["submitOnReturn"] as? Bool ?? false
+                )
+                self.session.send(message: prompt.message)
             }
+        }
+    }
+
+    /// The watch typed something — put it in the input the user tapped and,
+    /// if the field is in a form or submit-like (search/url/email), press Enter.
+    private func fillActiveInput(text: String, submit: Bool) {
+        let dict: [String: Any] = ["t": text, "s": submit]
+        guard let data = try? JSONSerialization.data(withJSONObject: dict),
+              let json = String(data: data, encoding: .utf8) else { return }
+        let js = """
+        (function(data) {
+          var el = window.__sosActive || document.activeElement;
+          if (!el || el === document.body) { return; }
+          var tag = el.tagName;
+          if (tag === 'INPUT' || tag === 'TEXTAREA') {
+            // React/Vue track value via the native setter — using the native
+            // setter and dispatching 'input' makes them notice.
+            var proto = tag === 'INPUT' ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+            var setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+            setter.call(el, data.t);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          } else if (el.isContentEditable) {
+            el.textContent = data.t;
+            el.dispatchEvent(new InputEvent('input', { bubbles: true }));
+          }
+          if (data.s) {
+            var form = el.form || (el.closest ? el.closest('form') : null);
+            var kd = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13 });
+            var ku = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13 });
+            el.dispatchEvent(kd);
+            el.dispatchEvent(ku);
+            if (form) {
+              if (typeof form.requestSubmit === 'function') { try { form.requestSubmit(); } catch (e) { try { form.submit(); } catch (e2) {} } }
+              else { try { form.submit(); } catch (e) {} }
+            }
+          }
+        })(\(json));
+        """
+        webView.evaluateJavaScript(js) { [weak self] _, _ in
+            Task { @MainActor [weak self] in self?.mirror.pageDidFinish() }
         }
     }
 

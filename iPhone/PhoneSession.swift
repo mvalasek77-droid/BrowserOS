@@ -11,6 +11,7 @@ enum WatchCommand {
     case back
     case forward
     case reload
+    case fillInput(text: String, submit: Bool)
 
     init?(message: [String: Any]) {
         guard let raw = message[Wire.kind] as? String, let kind = Wire.Kind(rawValue: raw) else { return nil }
@@ -30,7 +31,10 @@ enum WatchCommand {
         case .back: self = .back
         case .forward: self = .forward
         case .reload: self = .reload
-        case .frame: return nil
+        case .fillInput:
+            guard let text = message[Wire.text] as? String else { return nil }
+            self = .fillInput(text: text, submit: message[Wire.submitOnReturn] as? Bool ?? false)
+        case .frame, .inputFocus: return nil
         }
     }
 }
@@ -61,6 +65,15 @@ final class PhoneSession: NSObject, ObservableObject {
     var canSend: Bool {
         guard let session else { return false }
         return session.activationState == .activated && session.isReachable
+    }
+
+    /// Fire-and-forget message that doesn't block the frame queue. Used for
+    /// side-channel notifications like `inputFocus`.
+    func send(message: [String: Any]) {
+        guard let session, canSend else { return }
+        session.sendMessage(message, replyHandler: nil, errorHandler: { [weak self] error in
+            Task { @MainActor in self?.lastError = error.localizedDescription }
+        })
     }
 
     /// Sends one frame and waits for the watch's reply so the caller can pace

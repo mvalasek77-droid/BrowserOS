@@ -7,6 +7,10 @@ enum Wire {
 
     enum Kind: String {
         case hello, frame, navigate, tap, scroll, back, forward, reload
+        /// iPhone → watch: the user tapped an input, open text entry.
+        case inputFocus
+        /// Watch → iPhone: fill the input the tap focused with this text.
+        case fillInput
     }
 
     static let jpeg = "jpg"
@@ -25,10 +29,50 @@ enum Wire {
     static let y = "y"
     static let deltaY = "dy"
     static let text = "txt"
+    static let inputType = "it"
+    static let placeholder = "pl"
+    static let currentValue = "cv"
+    static let submitOnReturn = "sr"
 
     /// WatchConnectivity rejects interactive messages above ~65 KB, so a frame
     /// is always encoded to fit under this with room for the header.
     static let maxFrameBytes = 56_000
+}
+
+/// A request from the iPhone to open a text-entry sheet on the watch for the
+/// input the user just tapped. The watch sends the entered text back via
+/// `WatchCommand.fillInput`.
+struct InputPrompt: Identifiable {
+    let id = UUID()
+    let inputType: String
+    let placeholder: String
+    let currentValue: String
+    let submitOnReturn: Bool
+
+    init(inputType: String, placeholder: String, currentValue: String, submitOnReturn: Bool) {
+        self.inputType = inputType
+        self.placeholder = placeholder
+        self.currentValue = currentValue
+        self.submitOnReturn = submitOnReturn
+    }
+
+    init?(message: [String: Any]) {
+        guard (message[Wire.kind] as? String) == Wire.Kind.inputFocus.rawValue else { return nil }
+        inputType = message[Wire.inputType] as? String ?? "text"
+        placeholder = message[Wire.placeholder] as? String ?? ""
+        currentValue = message[Wire.currentValue] as? String ?? ""
+        submitOnReturn = message[Wire.submitOnReturn] as? Bool ?? false
+    }
+
+    var message: [String: Any] {
+        [
+            Wire.kind: Wire.Kind.inputFocus.rawValue,
+            Wire.inputType: inputType,
+            Wire.placeholder: placeholder,
+            Wire.currentValue: currentValue,
+            Wire.submitOnReturn: submitOnReturn
+        ]
+    }
 }
 
 /// One mirrored picture of the iPhone's web view plus the page state shown

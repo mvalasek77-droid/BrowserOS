@@ -17,8 +17,9 @@ struct MirrorView: View {
     @State private var crownLast: Double = 0
 
     private let zoomScale: CGFloat = 2.2
-    /// Fraction of the mirrored height scrolled per crown unit.
-    private let crownStep = 0.004
+    /// Fraction of the mirrored height scrolled per crown unit. Tuned so a
+    /// casual flick of the crown moves roughly one screen on a typical page.
+    private let crownStep = 0.035
 
     var body: some View {
         GeometryReader { geo in
@@ -56,7 +57,7 @@ struct MirrorView: View {
         .ignoresSafeArea()
         .focusable()
         .digitalCrownRotation($crown, from: -1_000_000, through: 1_000_000, by: 1,
-                              sensitivity: .medium, isContinuous: true, isHapticFeedbackEnabled: false)
+                              sensitivity: .high, isContinuous: true, isHapticFeedbackEnabled: false)
         .onChange(of: crown) { _, value in
             let delta = value - crownLast
             crownLast = value
@@ -64,6 +65,9 @@ struct MirrorView: View {
         }
         .sheet(isPresented: $showControls) {
             ControlsView().environmentObject(session)
+        }
+        .sheet(item: $session.activeInput) { prompt in
+            InputSheet(prompt: prompt).environmentObject(session)
         }
     }
 
@@ -116,7 +120,9 @@ struct MirrorView: View {
                 } else {
                     let delta = value.translation.height - dragLastY
                     dragLastY = value.translation.height
-                    session.scroll(deltaY: Double(-delta / max(size.height, 1)))
+                    // Multiplier > 1 so a swipe moves more than its finger
+                    // distance, which feels right for a tiny screen.
+                    session.scroll(deltaY: Double(-delta * 2.2 / max(size.height, 1)))
                 }
             }
             .onEnded { _ in

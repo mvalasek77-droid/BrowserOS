@@ -12,15 +12,44 @@ final class WatchSession: NSObject, ObservableObject {
     @Published private(set) var isPhoneReachable = false
     @Published private(set) var isActivated = false
     @Published private(set) var lastError: String?
+    @Published private(set) var lastFrameAt: Date?
+    /// Set by the iPhone when a tap focused an editable field. SwiftUI binds
+    /// this to a text-entry sheet via `.sheet(item:)`.
+    @Published var activeInput: InputPrompt?
 
     private let session: WCSession? = WCSession.isSupported() ? WCSession.default : nil
     private var pendingScroll = 0.0
     private var scrollFlushScheduled = false
+    private var wakeTimer: Timer?
 
     override init() {
         super.init()
         session?.delegate = self
         session?.activate()
+        // Nudge the iPhone every few seconds if no frames are coming through,
+        // in case reachability flapped or the iPhone side missed a hello.
+        wakeTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.pokeIfStale() }
+        }
+    }
+
+    private func pokeIfStale() {
+        guard isPhoneReachable else { return }
+        let stale = lastFrameAt.map { Date().timeIntervalSince($0) > 2.5 } ?? true
+        if stale { sendHello() }
+    }
+
+    /// Called from the SwiftUI `App` when the scene becomes active. Fire a
+    /// burst of hellos because WCSession is often still activating at this
+    /// point and a single hello would be dropped on the floor.
+    func sceneDidActivate() {
+        sendHello()
+        for delay in [0.3, 1.0, 2.0] {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                self?.sendHello()
+            }
+        }
     }
 
     // MARK: - Commands to the iPhone
@@ -52,7 +81,7 @@ final class WatchSession: NSObject, ObservableObject {
         guard !scrollFlushScheduled else { return }
         scrollFlushScheduled = true
         Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 80_000_000)
+            try? await Task.sleep(nanoseconds: 40_000_000)
             guard let self else { return }
             self.scrollFlushScheduled = false
             let delta = self.pendingScroll
@@ -65,6 +94,15 @@ final class WatchSession: NSObject, ObservableObject {
     func goBack() { send([Wire.kind: Wire.Kind.back.rawValue]) }
     func goForward() { send([Wire.kind: Wire.Kind.forward.rawValue]) }
     func reload() { send([Wire.kind: Wire.Kind.reload.rawValue]) }
+
+    /// Fills the input the user tapped and (if submit) presses Enter.
+    func fillInput(text: String, submit: Bool) {
+        send([
+            Wire.kind: Wire.Kind.fillInput.rawValue,
+            Wire.text: text,
+            Wire.submitOnReturn: submit
+        ])
+    }
 
     private func send(_ message: [String: Any]) {
         guard let session, session.activationState == .activated, session.isReachable else { return }
@@ -80,6 +118,11 @@ final class WatchSession: NSObject, ObservableObject {
         guard let decoded = UIImage(data: newFrame.jpeg) else { return }
         frame = newFrame
         image = decoded
+        lastFrameAt = Date()
+    }
+
+    private func receiveInputPrompt(_ prompt: InputPrompt) {
+        activeInput = prompt
     }
 
     private func updateReachability(_ reachable: Bool) {
@@ -105,14 +148,23 @@ extension WatchSession: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        guard let frame = MirrorFrame(message: message) else { return }
-        Task { @MainActor in self.receive(frame) }
+        route(message)
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         // Reply first so the iPhone can start on the next frame immediately.
         replyHandler(["ok": true])
-        guard let frame = MirrorFrame(message: message) else { return }
-        Task { @MainActor in self.receive(frame) }
+        route(message)
+    }
+
+    nonisolated private func route(_ message: [String: Any]) {
+        if let frame = MirrorFrame(message: message) {
+            Task { @MainActor in self.receive(frame) }
+            return
+        }
+        if let prompt = InputPrompt(message: message) {
+            Task { @MainActor in self.receiveInputPrompt(prompt) }
+            return
+        }
     }
 }
