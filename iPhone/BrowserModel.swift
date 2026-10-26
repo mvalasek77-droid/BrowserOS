@@ -119,6 +119,9 @@ final class BrowserModel: ObservableObject {
         switch command {
         case .hello(let width, let height):
             mirror.setWatchScreen(pixelWidth: width, pixelHeight: height)
+            // Replay the last frame so the watch sees content immediately,
+            // even if WebKit can't paint right now (phone backgrounded).
+            mirror.sendLastKnownFrameIfBackgrounded()
         case .navigate(let text):
             load(text)
         case .tap(let x, let y):
@@ -145,9 +148,13 @@ final class BrowserModel: ObservableObject {
             }
             fillSavedLogin(login)
         case .wake:
-            // The watch poked us; make sure frames are flowing again. iOS will
-            // resurface us when the user's hello arrives if we were suspended.
-            mirror.forceCapture()
+            // Open the "watch is actively looking" window so follow-up frames
+            // skip dedup and the user sees fresh pixels as soon as the phone
+            // can paint; replay the last known frame right now so the watch
+            // isn't left on a stale picture while we wait for the webview to
+            // come back from the background.
+            mirror.openWatchActiveWindow()
+            mirror.sendLastKnownFrameIfBackgrounded()
             mirror.flash(status: "iPhone woken by watch")
         }
     }

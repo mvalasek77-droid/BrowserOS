@@ -14,6 +14,11 @@ final class WatchSession: NSObject, ObservableObject {
     @Published private(set) var isActivated = false
     @Published private(set) var lastError: String?
     @Published private(set) var lastFrameAt: Date?
+    /// True when no frame has arrived for a while — the user should be given a
+    /// Wake iPhone affordance. Independent of `isPhoneReachable`, which only
+    /// reports WCSession daemon state and can be `true` even while frames
+    /// have stopped (phone suspended, WebKit backgrounded, etc).
+    @Published private(set) var isFrameStreamStale = true
     /// Set by the iPhone when a tap focused an editable field. SwiftUI binds
     /// this to a text-entry sheet via `.sheet(item:)`.
     @Published var activeInput: InputPrompt?
@@ -21,23 +26,30 @@ final class WatchSession: NSObject, ObservableObject {
     private let session: WCSession? = WCSession.isSupported() ? WCSession.default : nil
     private var pendingScroll = 0.0
     private var scrollFlushScheduled = false
-    private var wakeTimer: Timer?
+    private var tickTimer: Timer?
+    private var lastHelloAt: Date = .distantPast
+    /// How long without a frame counts as stale.
+    private let staleThreshold: TimeInterval = 4.0
+    /// Minimum gap between unprompted hellos.
+    private let helloCooldown: TimeInterval = 2.5
 
     override init() {
         super.init()
         session?.delegate = self
         session?.activate()
-        // Nudge the iPhone every few seconds if no frames are coming through,
-        // in case reachability flapped or the iPhone side missed a hello.
-        wakeTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.pokeIfStale() }
+        // Tick fast enough to flip the stale flag soon after frames stop; the
+        // hello cooldown keeps the actual nudges cadence low.
+        tickTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.tick() }
         }
     }
 
-    private func pokeIfStale() {
-        guard isPhoneReachable else { return }
-        let stale = lastFrameAt.map { Date().timeIntervalSince($0) > 2.5 } ?? true
-        if stale { sendHello() }
+    private func tick() {
+        let stale = lastFrameAt.map { Date().timeIntervalSince($0) > staleThreshold } ?? true
+        if isFrameStreamStale != stale { isFrameStreamStale = stale }
+        if stale, isPhoneReachable, Date().timeIntervalSince(lastHelloAt) >= helloCooldown {
+            sendHello()
+        }
     }
 
     /// Called from the SwiftUI `App` when the scene becomes active. Fire a
@@ -60,6 +72,7 @@ final class WatchSession: NSObject, ObservableObject {
         let device = WKInterfaceDevice.current()
         let bounds = device.screenBounds
         let scale = device.screenScale
+        lastHelloAt = Date()
         send([
             Wire.kind: Wire.Kind.hello.rawValue,
             Wire.screenWidth: Int(bounds.width * scale),
@@ -141,6 +154,7 @@ final class WatchSession: NSObject, ObservableObject {
         frame = newFrame
         image = decoded
         lastFrameAt = Date()
+        if isFrameStreamStale { isFrameStreamStale = false }
     }
 
     /// iPhone → watch transient status ("Login saved", "Filled saved login").

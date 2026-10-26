@@ -108,6 +108,7 @@ struct MirrorView: View {
                     .tint(.blue)
                     .frame(height: 2)
                     .padding(.top, 1)
+                    .allowsHitTesting(false)
             }
             Spacer()
             if let status = session.statusLine {
@@ -118,17 +119,31 @@ struct MirrorView: View {
                     .background(.blue.opacity(0.9), in: Capsule())
                     .padding(.bottom, 4)
                     .transition(.opacity)
+                    .allowsHitTesting(false)
             }
-            if !session.isPhoneReachable, session.image != nil {
+            // Prefer the Wake button over the generic "disconnected" pill when
+            // we have a stale image to show the user *something* actionable.
+            if session.image != nil, session.isFrameStreamStale {
+                Button {
+                    session.wakeIPhone()
+                } label: {
+                    Label("Wake iPhone", systemImage: "iphone.radiowaves.left.and.right")
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                }
+                .buttonStyle(.borderedProminent)
+                .padding(.bottom, 6)
+            } else if !session.isPhoneReachable, session.image != nil {
                 Text("iPhone disconnected")
                     .font(.caption2)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(.orange.opacity(0.85), in: Capsule())
                     .padding(.bottom, 6)
+                    .allowsHitTesting(false)
             }
         }
-        .allowsHitTesting(false)
     }
 
     // MARK: - Gestures

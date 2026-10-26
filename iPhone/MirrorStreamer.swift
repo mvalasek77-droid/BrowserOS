@@ -35,6 +35,33 @@ final class MirrorStreamer {
     private var lastSentStateKey = ""
     private var heartbeat: Timer?
 
+    /// The last frame successfully handed to the watch. Kept across captures
+    /// so a WC-woken but background phone (where WebKit can't paint, so
+    /// `takeSnapshot` returns nothing) can replay the last good picture
+    /// instead of leaving the watch on a black screen.
+    private struct LastFrame {
+        let jpeg: Data
+        let url: String
+        let title: String
+        let pixelWidth: Int
+        let pixelHeight: Int
+        let canGoBack: Bool
+        let canGoForward: Bool
+        let isLoading: Bool
+        let progress: Double
+    }
+    private var lastSentFrameInfo: LastFrame?
+
+    /// A short "the watch is actively looking" window opened on `.wake`.
+    /// While it's open, dedup is bypassed so a heartbeat always produces a
+    /// visible frame even if the content hasn't changed — makes sure the
+    /// watch sees fresh pixels right after a wake.
+    private var watchActiveUntil: Date?
+    private var watchActive: Bool {
+        guard let until = watchActiveUntil else { return false }
+        return Date() < until
+    }
+
     private var url = ""
     private var title = ""
     private var isLoading = false
@@ -93,10 +120,56 @@ final class MirrorStreamer {
         }
     }
 
-    /// Capture even if the picture has not changed.
+    /// Request a capture at the next opportunity. The dedup cache is left
+    /// intact: if the picture is unchanged we don't waste bandwidth, and the
+    /// watch's locally cached frame is still accurate. Use
+    /// `sendLastKnownFrameIfBackgrounded()` when the goal is specifically to
+    /// get something onto the watch (e.g. after a wake).
     func forceCapture() {
-        lastSentJPEG = nil
         requestCapture()
+    }
+
+    /// Open the "watch is actively looking" window so the next few frames
+    /// bypass dedup. Called by `.wake` so a tap on the Wake iPhone button
+    /// shows the user a fresh frame immediately.
+    func openWatchActiveWindow(seconds: TimeInterval = 20) {
+        watchActiveUntil = Date().addingTimeInterval(seconds)
+        requestCapture()
+    }
+
+    /// Ship the cached last frame to the watch so it has something to show
+    /// when the webview can't paint (phone backgrounded, suspended, or just
+    /// not mounted). If the webview CAN paint, just kick off a normal
+    /// capture — the resulting fresh frame is better than a stale replay.
+    /// Safe to call on any wake/hello: no-op if we have never captured.
+    func sendLastKnownFrameIfBackgrounded() {
+        if canRenderNow {
+            requestCapture()
+            return
+        }
+        guard let cached = lastSentFrameInfo else { return }
+        sequence += 1
+        var message = MirrorFrame(
+            jpeg: cached.jpeg,
+            url: cached.url,
+            title: cached.title,
+            sequence: sequence,
+            pixelWidth: cached.pixelWidth,
+            pixelHeight: cached.pixelHeight,
+            canGoBack: cached.canGoBack,
+            canGoForward: cached.canGoForward,
+            isLoading: cached.isLoading,
+            progress: cached.progress
+        ).message
+        if let status = watchStatus { message[Wire.status] = status }
+        session.send(message: message) { _ in }
+    }
+
+    /// True when a `takeSnapshot` is likely to succeed. WebKit refuses to
+    /// render when the view isn't in a window or the host app is in the
+    /// background.
+    private var canRenderNow: Bool {
+        isAppActive && webView.window != nil
     }
 
     func requestCapture() {
@@ -166,7 +239,9 @@ final class MirrorStreamer {
         }
         let (jpeg, pixelWidth, pixelHeight) = encoded
         let key = stateKey
-        if jpeg == lastSentJPEG, key == lastSentStateKey {
+        // Dedup unchanged frames to save link bandwidth — unless the watch
+        // is actively looking (just woken), in which case always send.
+        if jpeg == lastSentJPEG, key == lastSentStateKey, !watchActive {
             finish(token: token)
             return
         }
@@ -191,6 +266,12 @@ final class MirrorStreamer {
         }
         lastSentJPEG = jpeg
         lastSentStateKey = key
+        lastSentFrameInfo = LastFrame(
+            jpeg: jpeg, url: url, title: title,
+            pixelWidth: pixelWidth, pixelHeight: pixelHeight,
+            canGoBack: canGoBack, canGoForward: canGoForward,
+            isLoading: isLoading, progress: progress
+        )
         session.send(message: frameMessage) { [weak self] _ in
             self?.finish(token: token)
         }
