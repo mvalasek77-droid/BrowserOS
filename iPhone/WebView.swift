@@ -13,6 +13,15 @@ struct WebView: UIViewRepresentable {
 final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     weak var model: BrowserModel?
     private var observations: [NSKeyValueObservation] = []
+    /// Lets the model force the native keyboard for a field the user just
+    /// tapped on the PHONE itself (programmatic .focus() alone won't).
+    var keyboardFocusRequest: (() -> Void)?
+
+    /// Called by BrowserModel right after a phone-side tap focuses an editable
+    /// element: makes the WKWebView first responder so iOS raises the keyboard.
+    @MainActor func showKeyboard() {
+        model?.webView.becomeFirstResponder()
+    }
 
     func observe(_ webView: WKWebView) {
         observations = [
@@ -51,6 +60,27 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         webView.reload()
+    }
+
+    func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
+        guard let url = webView.url else { return }
+        if Self.isChallengeURL(url) {
+            // Bot-detection redirect (e.g. claude.ai/api/challenge_redirect).
+            // The challenge page may already be visible; just surfacing it here
+            // so the user knows sign-in is happening through a challenge.
+            // A future escape hatch could offer ASWebAuthenticationSession.
+        }
+    }
+
+    /// Heuristic: a URL that carries the site through a known anti-bot
+    /// challenge before it reaches the real login form.
+    static func isChallengeURL(_ url: URL) -> Bool {
+        let path = url.path.lowercased()
+        return path.contains("/api/challenge_redirect")
+            || path.contains("/challenge")
+            || path.contains("/cdn-cgi/challenge")
+            || path.contains("/verify")
+            || path.contains("/checkpoint")
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,

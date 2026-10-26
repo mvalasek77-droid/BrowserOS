@@ -78,11 +78,24 @@ struct MirrorView: View {
             Image(systemName: session.isPhoneReachable ? "iphone" : "iphone.slash")
                 .font(.system(size: 30))
                 .foregroundStyle(.secondary)
-            Text(session.isPhoneReachable ? "Waiting for the iPhone…" : "Open SteroidOS on your iPhone")
+            Text(session.isPhoneReachable ? "Waiting for the iPhone…" : "iPhone app is closed")
                 .font(.footnote)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
-            if session.isPhoneReachable { ProgressView() }
+            if session.isPhoneReachable {
+                ProgressView()
+            } else {
+                // Poking the phone restarts frames if it's merely suspended,
+                // and haptic-confirms; the user may still need to tap the icon
+                // if iOS fully froze the app in the background.
+                Button {
+                    session.wakeIPhone()
+                } label: {
+                    Label("Wake iPhone", systemImage: "iphone.radiowaves.left.and.right")
+                        .font(.footnote.weight(.semibold))
+                }
+                .buttonStyle(.borderedProminent)
+            }
         }
         .padding(.horizontal, 12)
     }
@@ -97,6 +110,15 @@ struct MirrorView: View {
                     .padding(.top, 1)
             }
             Spacer()
+            if let status = session.statusLine {
+                Text(status)
+                    .font(.caption2.weight(.semibold))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(.blue.opacity(0.9), in: Capsule())
+                    .padding(.bottom, 4)
+                    .transition(.opacity)
+            }
             if !session.isPhoneReachable, session.image != nil {
                 Text("iPhone disconnected")
                     .font(.caption2)

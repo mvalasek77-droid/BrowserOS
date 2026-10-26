@@ -7,6 +7,16 @@ import WebKit
 /// always converges on the latest picture without a backlog.
 @MainActor
 final class MirrorStreamer {
+    /// Transient one-line status shown on the watch between frames ("Login saved", etc).
+    @Published var watchStatus: String?
+
+    func flash(status: String) {
+        watchStatus = status
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if self?.watchStatus == status { self?.watchStatus = nil }
+        }
+    }
     private let webView: WKWebView
     private let session: PhoneSession
 
@@ -162,7 +172,7 @@ final class MirrorStreamer {
         }
 
         sequence += 1
-        let frame = MirrorFrame(
+        var frameMessage = MirrorFrame(
             jpeg: jpeg,
             url: url,
             title: title,
@@ -173,10 +183,15 @@ final class MirrorStreamer {
             canGoForward: canGoForward,
             isLoading: isLoading,
             progress: progress
-        )
+        ).message
+        // Piggy-back a one-line status ("Login saved for x.com") onto the next
+        // frame so the watch can show it without an extra message.
+        if let status = watchStatus {
+            frameMessage[Wire.status] = status
+        }
         lastSentJPEG = jpeg
         lastSentStateKey = key
-        session.send(frame: frame) { [weak self] _ in
+        session.send(message: frameMessage) { [weak self] _ in
             self?.finish(token: token)
         }
     }

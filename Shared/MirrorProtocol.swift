@@ -11,6 +11,12 @@ enum Wire {
         case inputFocus
         /// Watch → iPhone: fill the input the tap focused with this text.
         case fillInput
+        /// Watch → iPhone: store these credentials for the current host.
+        case saveLogin
+        /// Watch → iPhone: fill the saved credentials for the current host.
+        case fillLogin
+        /// Watch → iPhone: bring the app forward (iPhone presents itself if possible).
+        case wake
     }
 
     static let jpeg = "jpg"
@@ -33,10 +39,28 @@ enum Wire {
     static let placeholder = "pl"
     static let currentValue = "cv"
     static let submitOnReturn = "sr"
+    static let username = "un"
+    static let password = "pw"
+    static let host = "hs"
+    static let status = "st"
 
     /// WatchConnectivity rejects interactive messages above ~65 KB, so a frame
     /// is always encoded to fit under this with room for the header.
     static let maxFrameBytes = 56_000
+}
+
+/// One saved login, keyed by host. Stored in the iPhone's Keychain; the watch
+/// asks the iPhone to save or fill them — credentials never cross to the watch.
+struct SavedLogin: Identifiable, Equatable {
+    let id: String   // host
+    let username: String
+    let password: String
+
+    init(host: String, username: String, password: String) {
+        self.id = host
+        self.username = username
+        self.password = password
+    }
 }
 
 /// A request from the iPhone to open a text-entry sheet on the watch for the

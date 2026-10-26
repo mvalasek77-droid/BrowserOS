@@ -7,8 +7,9 @@ import WatchKit
 /// Watch side of WatchConnectivity: receives frames and sends commands.
 @MainActor
 final class WatchSession: NSObject, ObservableObject {
-    @Published private(set) var frame: MirrorFrame?
-    @Published private(set) var image: UIImage?
+    @Published var frame: MirrorFrame?
+    @Published var image: UIImage?
+    @Published var statusLine: String?
     @Published private(set) var isPhoneReachable = false
     @Published private(set) var isActivated = false
     @Published private(set) var lastError: String?
@@ -104,6 +105,27 @@ final class WatchSession: NSObject, ObservableObject {
         ])
     }
 
+    /// Tells the iPhone to store `username`/`password` for the current site in
+    /// its Keychain. Never sends credentials anywhere else.
+    func saveLogin(username: String, password: String) {
+        send([
+            Wire.kind: Wire.Kind.saveLogin.rawValue,
+            Wire.username: username,
+            Wire.password: password
+        ])
+    }
+
+    /// Asks the iPhone to fill the saved username+password for the current site.
+    func fillSavedLogin() {
+        send([Wire.kind: Wire.Kind.fillLogin.rawValue])
+    }
+
+    /// Asks the iPhone to bring itself forward / resume frame flow.
+    func wakeIPhone() {
+        send([Wire.kind: Wire.Kind.wake.rawValue])
+        WKInterfaceDevice.current().play(.success)
+    }
+
     private func send(_ message: [String: Any]) {
         guard let session, session.activationState == .activated, session.isReachable else { return }
         session.sendMessage(message, replyHandler: nil) { [weak self] error in
@@ -119,6 +141,16 @@ final class WatchSession: NSObject, ObservableObject {
         frame = newFrame
         image = decoded
         lastFrameAt = Date()
+    }
+
+    /// iPhone → watch transient status ("Login saved", "Filled saved login").
+    func receiveStatus(_ text: String) {
+        statusLine = text
+        WKInterfaceDevice.current().play(.notification)
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 3_500_000_000)
+            if self?.statusLine == text { self?.statusLine = nil }
+        }
     }
 
     private func receiveInputPrompt(_ prompt: InputPrompt) {
@@ -159,7 +191,11 @@ extension WatchSession: WCSessionDelegate {
 
     nonisolated private func route(_ message: [String: Any]) {
         if let frame = MirrorFrame(message: message) {
-            Task { @MainActor in self.receive(frame) }
+            let status = message[Wire.status] as? String
+            Task { @MainActor in
+                self.receive(frame)
+                if let status { self.receiveStatus(status) }
+            }
             return
         }
         if let prompt = InputPrompt(message: message) {

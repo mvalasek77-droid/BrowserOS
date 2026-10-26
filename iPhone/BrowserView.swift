@@ -4,6 +4,7 @@ struct BrowserView: View {
     @ObservedObject var model: BrowserModel
     @ObservedObject var session: PhoneSession
     @State private var showWatchStatus = false
+    @State private var showTutorial = false
     @FocusState private var addressFocused: Bool
 
     var body: some View {
@@ -21,6 +22,18 @@ struct BrowserView: View {
         }
         .sheet(isPresented: $showWatchStatus) {
             WatchStatusView(session: session, model: model)
+        }
+        .sheet(isPresented: $showTutorial, onDismiss: { TutorialGate.markSeen() }) {
+            TutorialView()
+        }
+        .onAppear {
+            if TutorialGate.shouldShow {
+                // Give the web view a beat to settle so the tutorial overlays
+                // a live page rather than a white flash.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    showTutorial = true
+                }
+            }
         }
     }
 
@@ -103,6 +116,11 @@ struct WatchStatusView: View {
                     }
                     Button("Send frame now") { model.mirror.forceCapture() }
                         .disabled(!session.isWatchReachable)
+                }
+                Section("Get started") {
+                    NavigationLink("View tutorial") {
+                        TutorialView()
+                    }
                 }
                 Section {
                     Text(session.isWatchReachable

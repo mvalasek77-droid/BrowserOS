@@ -12,6 +12,9 @@ enum WatchCommand {
     case forward
     case reload
     case fillInput(text: String, submit: Bool)
+    case saveLogin(username: String, password: String)
+    case fillLogin
+    case wake
 
     init?(message: [String: Any]) {
         guard let raw = message[Wire.kind] as? String, let kind = Wire.Kind(rawValue: raw) else { return nil }
@@ -34,6 +37,12 @@ enum WatchCommand {
         case .fillInput:
             guard let text = message[Wire.text] as? String else { return nil }
             self = .fillInput(text: text, submit: message[Wire.submitOnReturn] as? Bool ?? false)
+        case .saveLogin:
+            guard let username = message[Wire.username] as? String,
+                  let password = message[Wire.password] as? String else { return nil }
+            self = .saveLogin(username: username, password: password)
+        case .fillLogin: self = .fillLogin
+        case .wake: self = .wake
         case .frame, .inputFocus: return nil
         }
     }
@@ -69,10 +78,18 @@ final class PhoneSession: NSObject, ObservableObject {
 
     /// Fire-and-forget message that doesn't block the frame queue. Used for
     /// side-channel notifications like `inputFocus`.
-    func send(message: [String: Any]) {
-        guard let session, canSend else { return }
-        session.sendMessage(message, replyHandler: nil, errorHandler: { [weak self] error in
-            Task { @MainActor in self?.lastError = error.localizedDescription }
+    func send(message: [String: Any], completion: (@MainActor (Bool) -> Void)? = nil) {
+        guard let session, canSend else {
+            completion?(false)
+            return
+        }
+        session.sendMessage(message, replyHandler: { _ in
+            Task { @MainActor in completion?(true) }
+        }, errorHandler: { [weak self] error in
+            Task { @MainActor in
+                self?.lastError = error.localizedDescription
+                completion?(false)
+            }
         })
     }
 

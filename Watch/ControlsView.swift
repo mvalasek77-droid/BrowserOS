@@ -39,6 +39,17 @@ struct ControlsView: View {
                     .autocorrectionDisabled()
                     .onSubmit(go)
 
+                Button {
+                    session.fillSavedLogin()
+                    dismiss()
+                } label: {
+                    Label("Fill saved login", systemImage: "key.horizontal.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                // Only meaningful when there's a page to fill on.
+                .disabled(session.image == nil)
+
                 Button("Go", action: go)
                     .buttonStyle(.borderedProminent)
                     .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

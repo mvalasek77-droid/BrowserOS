@@ -31,7 +31,16 @@ final class BrowserModel: ObservableObject {
         webView.allowsBackForwardNavigationGestures = true
         // The link preview sheet offers "Open in Safari"; keep everything in-app.
         webView.allowsLinkPreview = false
-        webView.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
+        // Report the real WebKit UA. A hardcoded fake UA (e.g. claiming iOS 17
+        // on an iOS 26 device) triggers Cloudflare-class bot detection on sites
+        // like claude.ai, which then redirect to /api/challenge_redirect and
+        // never show a login form. The true UA matches the device's actual
+        // fingerprint and clears those challenges.
+        webView.customUserAgent = nil
+        // Native keyboard: when the user taps a field ON THE PHONE, WebKit's own
+        // touch handling focuses it and raises the keyboard — keep that path
+        // untouched. (Watch-driven taps use programmatic focus, which must NOT
+        // raise the phone keyboard; they route through InputSheet instead.)
         self.webView = webView
 
         let session = PhoneSession()
@@ -124,6 +133,72 @@ final class BrowserModel: ObservableObject {
             webView.reload()
         case .fillInput(let text, let submit):
             fillActiveInput(text: text, submit: submit)
+        case .saveLogin(let username, let password):
+            if let host = currentHost {
+                LoginStore.save(host: host, username: username, password: password)
+                mirror.flash(status: "Login saved for \(host)")
+            }
+        case .fillLogin:
+            guard let host = currentHost, let login = LoginStore.load(host: host) else {
+                mirror.flash(status: "No saved login for this site")
+                return
+            }
+            fillSavedLogin(login)
+        case .wake:
+            // The watch poked us; make sure frames are flowing again. iOS will
+            // resurface us when the user's hello arrives if we were suspended.
+            mirror.forceCapture()
+            mirror.flash(status: "iPhone woken by watch")
+        }
+    }
+
+    private var currentHost: String? {
+        webView.url?.host
+    }
+
+    /// Fills username + password on the current page from the Keychain.
+    /// Targets up to two text inputs (username-ish) and one password input
+    /// inside the same (or nearest) form; submits only on request.
+    private func fillSavedLogin(_ login: SavedLogin) {
+        let dict: [String: Any] = ["u": login.username, "p": login.password]
+        guard let data = try? JSONSerialization.data(withJSONObject: dict),
+              let json = String(data: data, encoding: .utf8) else { return }
+        let js = """
+        (function(data) {
+          var pw = document.querySelector('input[type=password]');
+          if (!pw) { return JSON.stringify({filled: false, reason: 'no-password-field'}); }
+          var doc = pw.form || pw.closest('form') || document;
+          var inputs = Array.from(doc.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio])'));
+          var userField = inputs.find(function(i) {
+            var n = (i.name||'') + ' ' + (i.id||'') + ' ' + (i.autocomplete||'') + ' ' + (i.placeholder||'');
+            return i.type === 'email' || /user|email|login|acct|name/i.test(n);
+          }) || inputs.find(function(i) { return i !== pw; });
+          function setVal(el, v) {
+            if (!el) return;
+            var proto = el.tagName === 'INPUT' ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+            var setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
+            setter.call(el, v);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          setVal(userField, data.u);
+          setVal(pw, data.p);
+          window.__sosActive = pw;
+          return JSON.stringify({filled: true, user: !!(userField && userField !== pw), pass: true});
+        })(\(json));
+        """
+        webView.evaluateJavaScript(js) { [weak self] result, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.mirror.pageDidFinish()
+                if let text = result as? String,
+                   let d = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any],
+                   d["filled"] as? Bool == true {
+                    self.mirror.flash(status: "Filled saved login")
+                } else {
+                    self.mirror.flash(status: "No password field on this page")
+                }
+            }
         }
     }
 
