@@ -73,8 +73,26 @@ final class MirrorStreamer {
         self.webView = webView
         self.session = session
         heartbeat = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.requestCapture() }
+            Task { @MainActor [weak self] in self?.heartbeatTick() }
         }
+    }
+
+    /// Last time the watch heard from us (frame or alive), used to pace alives.
+    private var lastSignalAt = Date.distantPast
+
+    private func heartbeatTick() {
+        // An unchanged page produces no frames (dedup), so without this the
+        // watch can't tell a static page from a sleeping phone.
+        if session.canSend, !inFlight, Date().timeIntervalSince(lastSignalAt) >= 1.0 {
+            sendAlive()
+        }
+        requestCapture()
+    }
+
+    /// Tell the watch we're here and whether WebKit can paint right now.
+    func sendAlive() {
+        lastSignalAt = Date()
+        session.send(message: [Wire.kind: Wire.Kind.alive.rawValue, Wire.rendering: canRenderNow])
     }
 
     /// The region of the web view (in points) that the watch shows: the full
@@ -147,6 +165,9 @@ final class MirrorStreamer {
             requestCapture()
             return
         }
+        // Say so explicitly, so the watch shows "iPhone asleep" right away
+        // instead of guessing from silence.
+        sendAlive()
         guard let cached = lastSentFrameInfo else { return }
         sequence += 1
         var message = MirrorFrame(
@@ -159,7 +180,8 @@ final class MirrorStreamer {
             canGoBack: cached.canGoBack,
             canGoForward: cached.canGoForward,
             isLoading: cached.isLoading,
-            progress: cached.progress
+            progress: cached.progress,
+            isReplay: true
         ).message
         if let status = watchStatus { message[Wire.status] = status }
         session.send(message: message) { _ in }
@@ -168,7 +190,7 @@ final class MirrorStreamer {
     /// True when a `takeSnapshot` is likely to succeed. WebKit refuses to
     /// render when the view isn't in a window or the host app is in the
     /// background.
-    private var canRenderNow: Bool {
+    var canRenderNow: Bool {
         isAppActive && webView.window != nil
     }
 
@@ -266,6 +288,7 @@ final class MirrorStreamer {
         }
         lastSentJPEG = jpeg
         lastSentStateKey = key
+        lastSignalAt = Date()
         lastSentFrameInfo = LastFrame(
             jpeg: jpeg, url: url, title: title,
             pixelWidth: pixelWidth, pixelHeight: pixelHeight,

@@ -20,6 +20,13 @@ struct BrowserView: View {
             WebView(webView: model.webView)
             toolbar
         }
+        .overlay {
+            if showCurtain {
+                WatchModeCurtain { model.curtainDismissed = true }
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: showCurtain)
         .sheet(isPresented: $showWatchStatus) {
             WatchStatusView(session: session, model: model)
         }
@@ -89,11 +96,47 @@ struct BrowserView: View {
         if session.isWatchAppInstalled { return .orange }
         return .red
     }
+
+    /// Only while the user is actually driving from the watch — not just
+    /// because the watch app happens to be open.
+    private var showCurtain: Bool {
+        model.watchKeepsPhoneAwake && model.watchIsDriving && !model.curtainDismissed
+    }
+}
+
+/// Dark cover shown while the watch is driving the page. The phone has to stay
+/// unlocked and on screen for WebKit to render, so auto-lock is off; this
+/// keeps the (OLED) screen nearly black to save battery and hides the page
+/// from onlookers. The web view keeps rendering underneath, so the mirror
+/// is unaffected.
+private struct WatchModeCurtain: View {
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.94).ignoresSafeArea()
+            VStack(spacing: 14) {
+                Image(systemName: "applewatch.radiowaves.left.and.right")
+                    .font(.system(size: 44))
+                    .foregroundStyle(.green)
+                Text("Mirroring to Apple Watch")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                Text("iPhone stays awake while you use the watch.\nTap anywhere to use iPhone.")
+                    .font(.footnote)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+            .padding(.horizontal, 32)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(perform: onDismiss)
+    }
 }
 
 struct WatchStatusView: View {
     @ObservedObject var session: PhoneSession
-    let model: BrowserModel
+    @ObservedObject var model: BrowserModel
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -104,6 +147,7 @@ struct WatchStatusView: View {
                     row("Watch paired", session.isPaired ? "Yes" : "No", session.isPaired)
                     row("Watch app installed", session.isWatchAppInstalled ? "Yes" : "No", session.isWatchAppInstalled)
                     row("Watch app open", session.isWatchReachable ? "Yes" : "No", session.isWatchReachable)
+                    row("Keeping iPhone awake", model.watchKeepsPhoneAwake ? "Yes" : "No", model.watchKeepsPhoneAwake)
                 }
                 Section("Mirror") {
                     LabeledContent("Frames sent", value: "\(session.framesSent)")

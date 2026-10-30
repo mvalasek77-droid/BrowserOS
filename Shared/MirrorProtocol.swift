@@ -17,6 +17,12 @@ enum Wire {
         case fillLogin
         /// Watch → iPhone: bring the app forward (iPhone presents itself if possible).
         case wake
+        /// iPhone → watch, ~1 Hz: "I'm here", plus whether WebKit can render
+        /// right now. Lets the watch tell a static page from a sleeping phone.
+        case alive
+        /// Watch → iPhone, every ~10 s while the watch app is in use: keeps
+        /// the iPhone's auto-lock disabled.
+        case keepAlive
     }
 
     static let jpeg = "jpg"
@@ -43,6 +49,8 @@ enum Wire {
     static let password = "pw"
     static let host = "hs"
     static let status = "st"
+    static let rendering = "rnd"
+    static let replay = "rp"
 
     /// WatchConnectivity rejects interactive messages above ~65 KB, so a frame
     /// is always encoded to fit under this with room for the header.
@@ -112,9 +120,12 @@ struct MirrorFrame: Sendable {
     let canGoForward: Bool
     let isLoading: Bool
     let progress: Double
+    /// A cached picture resent while the iPhone can't render. Shown on the
+    /// watch, but not proof that the iPhone is live.
+    let isReplay: Bool
 
     init(jpeg: Data, url: String, title: String, sequence: Int, pixelWidth: Int, pixelHeight: Int,
-         canGoBack: Bool, canGoForward: Bool, isLoading: Bool, progress: Double) {
+         canGoBack: Bool, canGoForward: Bool, isLoading: Bool, progress: Double, isReplay: Bool = false) {
         self.jpeg = jpeg
         self.url = url
         self.title = title
@@ -125,6 +136,7 @@ struct MirrorFrame: Sendable {
         self.canGoForward = canGoForward
         self.isLoading = isLoading
         self.progress = progress
+        self.isReplay = isReplay
     }
 
     init?(message: [String: Any]) {
@@ -140,11 +152,13 @@ struct MirrorFrame: Sendable {
         canGoForward = message[Wire.canGoForward] as? Bool ?? false
         isLoading = message[Wire.isLoading] as? Bool ?? false
         progress = message[Wire.progress] as? Double ?? 0
+        isReplay = message[Wire.replay] as? Bool ?? false
     }
 
     var message: [String: Any] {
         [
             Wire.kind: Wire.Kind.frame.rawValue,
+            Wire.replay: isReplay,
             Wire.jpeg: jpeg,
             Wire.url: url,
             Wire.title: title,

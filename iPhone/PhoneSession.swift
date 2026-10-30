@@ -15,6 +15,7 @@ enum WatchCommand {
     case saveLogin(username: String, password: String)
     case fillLogin
     case wake
+    case keepAlive
 
     init?(message: [String: Any]) {
         guard let raw = message[Wire.kind] as? String, let kind = Wire.Kind(rawValue: raw) else { return nil }
@@ -43,7 +44,8 @@ enum WatchCommand {
             self = .saveLogin(username: username, password: password)
         case .fillLogin: self = .fillLogin
         case .wake: self = .wake
-        case .frame, .inputFocus: return nil
+        case .keepAlive: self = .keepAlive
+        case .frame, .inputFocus, .alive: return nil
         }
     }
 }

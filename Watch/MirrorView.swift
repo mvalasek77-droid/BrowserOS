@@ -33,8 +33,9 @@ struct MirrorView: View {
                         .scaleEffect(zoom, anchor: zoomAnchor)
                         .offset(pan)
                         .clipped()
-                } else {
-                    placeholder
+                        // Dim a picture that isn't live so it doesn't look current.
+                        .opacity(isPictureLive ? 1 : 0.4)
+                        .animation(.easeInOut(duration: 0.3), value: isPictureLive)
                 }
 
                 Color.clear
@@ -50,6 +51,11 @@ struct MirrorView: View {
                         showControls = true
                     }
                     .gesture(drag(in: geo.size))
+
+                // Above the gesture layer, or its button can never be tapped.
+                if session.image == nil {
+                    placeholder
+                }
 
                 overlays
             }
@@ -73,31 +79,67 @@ struct MirrorView: View {
 
     // MARK: - Pieces
 
+    private var isPictureLive: Bool {
+        session.phoneState == .live || session.phoneState == .connecting
+    }
+
+    @ViewBuilder
     private var placeholder: some View {
-        VStack(spacing: 10) {
-            Image(systemName: session.isPhoneReachable ? "iphone" : "iphone.slash")
-                .font(.system(size: 30))
-                .foregroundStyle(.secondary)
-            Text(session.isPhoneReachable ? "Waiting for the iPhone…" : "iPhone app is closed")
-                .font(.footnote)
+        switch session.phoneState {
+        case .asleep:
+            asleepCard
+        case .unreachable:
+            VStack(spacing: 8) {
+                Image(systemName: "iphone.slash")
+                    .font(.system(size: 30))
+                    .foregroundStyle(.secondary)
+                Text("iPhone not connected")
+                    .font(.footnote.weight(.semibold))
+                Text("Keep it nearby with Bluetooth on.")
+                    .font(.caption2)
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .allowsHitTesting(false) // long-press for Controls still works
+        case .connecting, .live:
+            VStack(spacing: 10) {
+                Image(systemName: "iphone")
+                    .font(.system(size: 30))
+                    .foregroundStyle(.secondary)
+                Text("Connecting to iPhone…")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                ProgressView()
+            }
+            .allowsHitTesting(false)
+        }
+    }
+
+    /// Stays on screen for as long as the phone is asleep (no flicker), and
+    /// tells the user the one thing that actually fixes it: unlock the iPhone.
+    private var asleepCard: some View {
+        VStack(spacing: 6) {
+            Label("iPhone is asleep", systemImage: "iphone.slash")
+                .font(.footnote.weight(.semibold))
+            Text("Unlock it and open SteroidOS to resume.")
+                .font(.caption2)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
-            if session.isPhoneReachable {
-                ProgressView()
-            } else {
-                // Poking the phone restarts frames if it's merely suspended,
-                // and haptic-confirms; the user may still need to tap the icon
-                // if iOS fully froze the app in the background.
-                Button {
-                    session.wakeIPhone()
-                } label: {
-                    Label("Wake iPhone", systemImage: "iphone.radiowaves.left.and.right")
-                        .font(.footnote.weight(.semibold))
-                }
-                .buttonStyle(.borderedProminent)
+            Button {
+                session.wakeIPhone()
+            } label: {
+                Label(session.wakeSentAt == nil ? "Notify iPhone" : "Sent — check iPhone",
+                      systemImage: session.wakeSentAt == nil ? "bell.badge" : "checkmark")
+                    .font(.caption2.weight(.semibold))
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .disabled(session.wakeSentAt != nil)
         }
-        .padding(.horizontal, 12)
+        .padding(10)
+        .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, 8)
     }
 
     @ViewBuilder
@@ -121,21 +163,11 @@ struct MirrorView: View {
                     .transition(.opacity)
                     .allowsHitTesting(false)
             }
-            // Prefer the Wake button over the generic "disconnected" pill when
-            // we have a stale image to show the user *something* actionable.
-            if session.image != nil, session.isFrameStreamStale {
-                Button {
-                    session.wakeIPhone()
-                } label: {
-                    Label("Wake iPhone", systemImage: "iphone.radiowaves.left.and.right")
-                        .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                }
-                .buttonStyle(.borderedProminent)
-                .padding(.bottom, 6)
-            } else if !session.isPhoneReachable, session.image != nil {
-                Text("iPhone disconnected")
+            if session.image != nil, session.phoneState == .asleep {
+                asleepCard
+                    .padding(.bottom, 6)
+            } else if session.image != nil, session.phoneState == .unreachable {
+                Text("iPhone not connected")
                     .font(.caption2)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -183,6 +215,12 @@ struct MirrorView: View {
 
     private func sendTap(at point: CGPoint, in size: CGSize) {
         guard session.image != nil else { return }
+        // A tap on a sleeping phone's old picture would be lost (or worse,
+        // replayed later on a different page) — say so with a haptic.
+        guard session.phoneState != .asleep, session.phoneState != .unreachable else {
+            WKInterfaceDevice.current().play(.failure)
+            return
+        }
         let rect = imageRect(in: size)
         // Undo the local zoom/pan: screen = anchor + (content - anchor) * zoom + pan
         let anchor = CGPoint(x: zoomAnchor.x * size.width, y: zoomAnchor.y * size.height)

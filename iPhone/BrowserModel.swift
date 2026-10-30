@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 import WebKit
 
 /// Owns the one real web view, the watch session and the mirror stream, and
@@ -16,6 +17,26 @@ final class BrowserModel: ObservableObject {
     @Published private(set) var progress: Double = 0
     @Published private(set) var canGoBack = false
     @Published private(set) var canGoForward = false
+
+    /// True while the watch is in use: iOS auto-lock is disabled, because a
+    /// locked phone stops WebKit rendering and the mirror dies.
+    @Published private(set) var watchKeepsPhoneAwake = false
+    /// The user is actually driving the page from the watch (tapped,
+    /// scrolled, typed), not just glancing at it.
+    @Published private(set) var watchIsDriving = false
+    /// The user tapped the "Mirroring to Apple Watch" screen to use the phone.
+    @Published var curtainDismissed = false
+
+    private var lastWatchActivity = Date.distantPast
+    /// Extended while the watch is collecting text, which can take a while
+    /// (dictation, Scribble) and may background the watch app briefly.
+    private var keepAwakeUntil = Date.distantPast
+    private var awakeTimer: Timer?
+    /// Text the watch sent while WebKit couldn't run (phone locked); applied
+    /// as soon as the app is back on screen.
+    private var pendingWhileAsleep: [WatchCommand] = []
+    private var lastWakeNotificationAt = Date.distantPast
+    private static let wakeNotificationID = "sos.wake"
 
     let webView: WKWebView
     let session: PhoneSession
@@ -56,10 +77,85 @@ final class BrowserModel: ObservableObject {
             self?.handle(command)
         }
         session.onReachabilityChanged = { [weak self] reachable in
-            if reachable { self?.mirror.forceCapture() }
+            guard let self else { return }
+            if reachable {
+                self.mirror.forceCapture()
+                self.requestNotificationPermissionIfActive()
+            }
+            self.updateKeepAwake()
+        }
+
+        awakeTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.updateKeepAwake() }
         }
 
         load(UserDefaults.standard.string(forKey: Self.lastURLKey) ?? Self.homeURL)
+    }
+
+    // MARK: - App lifecycle
+
+    func setAppActive(_ active: Bool) {
+        mirror.setAppActive(active)
+        guard active else { return }
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [Self.wakeNotificationID])
+        requestNotificationPermissionIfActive()
+        // Give the web content process a moment to resume before replaying.
+        let queued = pendingWhileAsleep
+        pendingWhileAsleep = []
+        guard !queued.isEmpty else { return }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            queued.forEach { self?.handle($0) }
+        }
+    }
+
+    // MARK: - Keep the phone awake while the watch is in use
+
+    private func updateKeepAwake() {
+        let now = Date()
+        let watchInUse = session.isWatchReachable && now.timeIntervalSince(lastWatchActivity) < 45
+        let awake = watchInUse || now < keepAwakeUntil
+        guard awake != watchKeepsPhoneAwake else { return }
+        watchKeepsPhoneAwake = awake
+        UIApplication.shared.isIdleTimerDisabled = awake
+        if !awake {
+            watchIsDriving = false
+            curtainDismissed = false
+        }
+    }
+
+    private func noteWatchActivity(_ command: WatchCommand) {
+        lastWatchActivity = Date()
+        switch command {
+        case .hello, .keepAlive, .wake:
+            break
+        default:
+            watchIsDriving = true
+        }
+        updateKeepAwake()
+    }
+
+    // MARK: - Waking the phone
+
+    private func requestNotificationPermissionIfActive() {
+        guard UIApplication.shared.applicationState == .active, session.isWatchAppInstalled else { return }
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    /// iOS never lets an app bring itself to the foreground, so the best we
+    /// can do is a notification the user taps (or sees on the lock screen).
+    private func postWakeNotification() {
+        guard UIApplication.shared.applicationState != .active else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastWakeNotificationAt) > 20 else { return }
+        lastWakeNotificationAt = now
+        let content = UNMutableNotificationContent()
+        content.title = "Apple Watch is waiting"
+        content.body = "Tap to resume mirroring this page to your watch."
+        content.sound = .default
+        content.interruptionLevel = .active
+        let request = UNNotificationRequest(identifier: Self.wakeNotificationID, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 
     // MARK: - Navigation
@@ -116,6 +212,22 @@ final class BrowserModel: ObservableObject {
     // MARK: - Watch commands
 
     private func handle(_ command: WatchCommand) {
+        noteWatchActivity(command)
+
+        // Phone locked / app in background: WebKit is suspended, so page
+        // commands can't run. Keep what the user typed (it's expensive to
+        // redo on a watch) and drop taps/scrolls aimed at a stale picture.
+        if !mirror.canRenderNow, command.needsLivePage {
+            if command.isWorthReplaying {
+                pendingWhileAsleep.append(command)
+                if pendingWhileAsleep.count > 10 { pendingWhileAsleep.removeFirst() }
+                mirror.flash(status: "Saved — unlock iPhone to apply")
+            }
+            mirror.sendLastKnownFrameIfBackgrounded()
+            postWakeNotification()
+            return
+        }
+
         switch command {
         case .hello(let width, let height):
             mirror.setWatchScreen(pixelWidth: width, pixelHeight: height)
@@ -155,7 +267,9 @@ final class BrowserModel: ObservableObject {
             // come back from the background.
             mirror.openWatchActiveWindow()
             mirror.sendLastKnownFrameIfBackgrounded()
-            mirror.flash(status: "iPhone woken by watch")
+            postWakeNotification()
+        case .keepAlive:
+            break
         }
     }
 
@@ -282,6 +396,10 @@ final class BrowserModel: ObservableObject {
                     currentValue: dict["value"] as? String ?? "",
                     submitOnReturn: dict["submitOnReturn"] as? Bool ?? false
                 )
+                // Dictation / Scribble on the watch can take a while; don't
+                // let auto-lock kill the page before the text comes back.
+                self.keepAwakeUntil = Date().addingTimeInterval(180)
+                self.updateKeepAwake()
                 self.session.send(message: prompt.message)
             }
         }
@@ -338,5 +456,25 @@ final class BrowserModel: ObservableObject {
         let y = min(max(target, minY), maxY)
         scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: y), animated: false)
         mirror.requestCapture()
+    }
+}
+
+private extension WatchCommand {
+    /// Commands that act on the page and so need WebKit running.
+    var needsLivePage: Bool {
+        switch self {
+        case .hello, .wake, .keepAlive: return false
+        default: return true
+        }
+    }
+
+    /// Typed input is costly to redo on a watch, so it's kept and applied
+    /// once the phone is back. Taps and scrolls aimed at a stale picture are
+    /// not — replaying them later could click the wrong thing.
+    var isWorthReplaying: Bool {
+        switch self {
+        case .fillInput, .fillLogin, .saveLogin, .navigate: return true
+        default: return false
+        }
     }
 }

@@ -10,7 +10,11 @@ struct BrowserOSWatchApp: App {
             MirrorView()
                 .environmentObject(session)
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active { session.sceneDidActivate() }
+                    if phase == .active {
+                        session.sceneDidActivate()
+                    } else {
+                        session.sceneDidDeactivate()
+                    }
                 }
         }
     }
