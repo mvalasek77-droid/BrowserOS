@@ -23,6 +23,10 @@ enum Wire {
         /// Watch → iPhone, every ~10 s while the watch app is in use: keeps
         /// the iPhone's auto-lock disabled.
         case keepAlive
+        /// Watch → iPhone: scroll to an absolute position (`scrollY`, in
+        /// watch-screen heights from the top of the page). Absolute, so a
+        /// lost message never leaves the two sides out of step.
+        case scrollTo
     }
 
     static let jpeg = "jpg"
@@ -51,6 +55,10 @@ enum Wire {
     static let status = "st"
     static let rendering = "rnd"
     static let replay = "rp"
+    static let scrollY = "sy"
+    static let maxScroll = "ms"
+    static let windowTop = "wt"
+    static let windowHeight = "wh"
 
     /// WatchConnectivity rejects interactive messages above ~65 KB, so a frame
     /// is always encoded to fit under this with room for the header.
@@ -124,8 +132,22 @@ struct MirrorFrame: Sendable {
     /// watch, but not proof that the iPhone is live.
     let isReplay: Bool
 
+    // Scroll geometry, all in "windows" (one watch screen of page height),
+    // measured when the picture was taken. The watch uses it to scroll the
+    // picture locally at full frame rate and slot new frames in seamlessly.
+    /// Page scroll position of the window's top edge (0 = top of the page).
+    let scrollY: Double
+    /// Largest `scrollY` the page allows.
+    let maxScroll: Double
+    /// While scrolling, the picture includes page above/below the window.
+    /// Where the window starts in the picture, as a fraction of its height…
+    let windowTop: Double
+    /// …and how much of the picture's height the window takes up.
+    let windowHeight: Double
+
     init(jpeg: Data, url: String, title: String, sequence: Int, pixelWidth: Int, pixelHeight: Int,
-         canGoBack: Bool, canGoForward: Bool, isLoading: Bool, progress: Double, isReplay: Bool = false) {
+         canGoBack: Bool, canGoForward: Bool, isLoading: Bool, progress: Double, isReplay: Bool = false,
+         scrollY: Double = 0, maxScroll: Double = 0, windowTop: Double = 0, windowHeight: Double = 1) {
         self.jpeg = jpeg
         self.url = url
         self.title = title
@@ -137,6 +159,10 @@ struct MirrorFrame: Sendable {
         self.isLoading = isLoading
         self.progress = progress
         self.isReplay = isReplay
+        self.scrollY = scrollY
+        self.maxScroll = maxScroll
+        self.windowTop = windowTop
+        self.windowHeight = windowHeight
     }
 
     init?(message: [String: Any]) {
@@ -153,12 +179,21 @@ struct MirrorFrame: Sendable {
         isLoading = message[Wire.isLoading] as? Bool ?? false
         progress = message[Wire.progress] as? Double ?? 0
         isReplay = message[Wire.replay] as? Bool ?? false
+        scrollY = message[Wire.scrollY] as? Double ?? 0
+        maxScroll = message[Wire.maxScroll] as? Double ?? 0
+        windowTop = message[Wire.windowTop] as? Double ?? 0
+        let height = message[Wire.windowHeight] as? Double ?? 1
+        windowHeight = height > 0 ? height : 1
     }
 
     var message: [String: Any] {
         [
             Wire.kind: Wire.Kind.frame.rawValue,
             Wire.replay: isReplay,
+            Wire.scrollY: scrollY,
+            Wire.maxScroll: maxScroll,
+            Wire.windowTop: windowTop,
+            Wire.windowHeight: windowHeight,
             Wire.jpeg: jpeg,
             Wire.url: url,
             Wire.title: title,

@@ -2,8 +2,10 @@ import SwiftUI
 import WatchKit
 
 /// Full-screen live picture of the iPhone's page.
-/// Tap = click on the iPhone. Crown or drag = scroll the iPhone page.
-/// Double-tap = zoom in/out locally (drag pans while zoomed). Long-press = controls.
+/// Tap = click on the iPhone. Crown or vertical swipe = scroll (the picture
+/// moves instantly; the iPhone follows). Swipe right/left = back/forward.
+/// Double-tap = zoom in/out locally (drag pans while zoomed).
+/// 🔍 = search Google or open a URL. ☰ or long-press = navigation menu.
 struct MirrorView: View {
     @EnvironmentObject private var session: WatchSession
 
@@ -13,29 +15,20 @@ struct MirrorView: View {
     @State private var pan: CGSize = .zero
     @State private var panStart: CGSize = .zero
     @State private var dragLastY: CGFloat = 0
+    @State private var dragAxis: Axis?
     @State private var crown: Double = 0
     @State private var crownLast: Double = 0
 
     private let zoomScale: CGFloat = 2.2
-    /// Fraction of the mirrored height scrolled per crown unit. Tuned so a
-    /// casual flick of the crown moves roughly one screen on a typical page.
+    /// Watch-screens scrolled per crown unit. A casual flick moves roughly one screen.
     private let crownStep = 0.035
 
     var body: some View {
         GeometryReader { geo in
             ZStack {
                 Color.black
-                if let image = session.image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .scaleEffect(zoom, anchor: zoomAnchor)
-                        .offset(pan)
-                        .clipped()
-                        // Dim a picture that isn't live so it doesn't look current.
-                        .opacity(isPictureLive ? 1 : 0.4)
-                        .animation(.easeInOut(duration: 0.3), value: isPictureLive)
+                if let image = session.image, let frame = session.frame {
+                    mirrorPicture(image, frame, in: geo.size)
                 }
 
                 Color.clear
@@ -67,7 +60,7 @@ struct MirrorView: View {
         .onChange(of: crown) { _, value in
             let delta = value - crownLast
             crownLast = value
-            session.scroll(deltaY: delta * crownStep)
+            session.scrollBy(delta * crownStep)
         }
         .sheet(isPresented: $showControls) {
             ControlsView().environmentObject(session)
@@ -77,10 +70,54 @@ struct MirrorView: View {
         }
     }
 
+    // MARK: - Picture
+
+    /// The picture is drawn at screen width and shifted so that the part the
+    /// iPhone calls the "window" lines up with the screen, then shifted again
+    /// by however far the watch has scrolled past the frame's own position.
+    /// That second shift is what makes scrolling instant and smooth.
+    private func mirrorPicture(_ image: UIImage, _ frame: MirrorFrame, in size: CGSize) -> some View {
+        let imageHeight = displayedImageHeight(frame, width: size.width, fallback: size.height)
+        let windowHeight = CGFloat(frame.windowHeight) * imageHeight
+        let lead = CGFloat(session.viewScroll - frame.scrollY) * windowHeight
+        let top = -CGFloat(frame.windowTop) * imageHeight - lead
+        return ZStack(alignment: .top) {
+            // Shows briefly at the edge if you scroll past what has arrived.
+            Color(white: 0.1)
+            Image(uiImage: image)
+                .resizable()
+                .frame(width: size.width, height: imageHeight)
+                .offset(y: top)
+        }
+        .frame(width: size.width, height: size.height, alignment: .top)
+        .clipped()
+        .scaleEffect(zoom, anchor: zoomAnchor)
+        .offset(pan)
+        // Dim a picture that isn't live so it doesn't look current.
+        .opacity(isPictureLive ? 1 : 0.4)
+        .animation(.easeInOut(duration: 0.3), value: isPictureLive)
+    }
+
+    private func displayedImageHeight(_ frame: MirrorFrame, width: CGFloat, fallback: CGFloat) -> CGFloat {
+        guard frame.pixelWidth > 0, frame.pixelHeight > 0 else { return fallback }
+        return width * CGFloat(frame.pixelHeight) / CGFloat(frame.pixelWidth)
+    }
+
+    /// Height on screen of one "window" (one watch-screen of page).
+    private func windowDisplayHeight(in size: CGSize) -> CGFloat {
+        guard let frame = session.frame else { return max(size.height, 1) }
+        let imageHeight = displayedImageHeight(frame, width: size.width, fallback: size.height)
+        return max(CGFloat(frame.windowHeight) * imageHeight, 1)
+    }
+
     // MARK: - Pieces
 
     private var isPictureLive: Bool {
         session.phoneState == .live || session.phoneState == .connecting
+    }
+
+    private var showsNavButtons: Bool {
+        session.phoneState == .live || (session.phoneState == .connecting && session.image != nil)
     }
 
     @ViewBuilder
@@ -174,8 +211,47 @@ struct MirrorView: View {
                     .background(.orange.opacity(0.85), in: Capsule())
                     .padding(.bottom, 6)
                     .allowsHitTesting(false)
+            } else if showsNavButtons {
+                navButtons
             }
         }
+    }
+
+    /// Two small buttons tucked into the bottom corners (which the round
+    /// screen mostly hides anyway): the menu, and one-tap Google search.
+    private var navButtons: some View {
+        HStack {
+            Button {
+                WKInterfaceDevice.current().play(.click)
+                showControls = true
+            } label: {
+                navIcon("list.bullet")
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            TextFieldLink(prompt: Text("Search Google or enter URL")) {
+                navIcon("magnifyingglass")
+            } onSubmit: { query in
+                let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return }
+                WKInterfaceDevice.current().play(.click)
+                session.navigate(to: trimmed)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 6)
+    }
+
+    private func navIcon(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: 32, height: 32)
+            .background(.black.opacity(0.6), in: Circle())
+            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
     }
 
     // MARK: - Gestures
@@ -186,32 +262,49 @@ struct MirrorView: View {
                 if zoom > 1 {
                     pan = clampedPan(CGSize(width: panStart.width + value.translation.width,
                                             height: panStart.height + value.translation.height), in: size)
-                } else {
-                    let delta = value.translation.height - dragLastY
-                    dragLastY = value.translation.height
-                    // Multiplier > 1 so a swipe moves more than its finger
-                    // distance, which feels right for a tiny screen.
-                    session.scroll(deltaY: Double(-delta * 2.2 / max(size.height, 1)))
+                    return
+                }
+                // Decide once per swipe: vertical scrolls, horizontal navigates.
+                if dragAxis == nil {
+                    dragAxis = abs(value.translation.width) > abs(value.translation.height) ? .horizontal : .vertical
+                }
+                guard dragAxis == .vertical else { return }
+                let delta = value.translation.height - dragLastY
+                dragLastY = value.translation.height
+                // 1:1 with the finger — the picture moves locally, so there's no lag to make up for.
+                session.scrollBy(Double(-delta / windowDisplayHeight(in: size)))
+            }
+            .onEnded { value in
+                defer {
+                    panStart = pan
+                    dragLastY = 0
+                    dragAxis = nil
+                }
+                guard zoom <= 1 else { return }
+                if dragAxis == .horizontal {
+                    let dx = value.translation.width
+                    guard abs(dx) > 40 else { return }
+                    if dx > 0, session.frame?.canGoBack == true {
+                        WKInterfaceDevice.current().play(.directionDown)
+                        session.goBack()
+                    } else if dx < 0, session.frame?.canGoForward == true {
+                        WKInterfaceDevice.current().play(.directionUp)
+                        session.goForward()
+                    }
+                    return
+                }
+                // Fling: keep gliding in the direction of the swipe.
+                let fling = value.predictedEndTranslation.height - value.translation.height
+                let extra = Double(-fling / windowDisplayHeight(in: size))
+                if abs(extra) > 0.05 {
+                    withAnimation(.easeOut(duration: 0.45)) {
+                        session.scrollBy(extra)
+                    }
                 }
             }
-            .onEnded { _ in
-                panStart = pan
-                dragLastY = 0
-            }
     }
 
-    // MARK: - Geometry
-
-    /// Where the picture sits inside the screen when not zoomed.
-    private func imageRect(in size: CGSize) -> CGRect {
-        guard let frame = session.frame, frame.pixelWidth > 0, frame.pixelHeight > 0 else {
-            return CGRect(origin: .zero, size: size)
-        }
-        let scale = min(size.width / CGFloat(frame.pixelWidth), size.height / CGFloat(frame.pixelHeight))
-        let width = CGFloat(frame.pixelWidth) * scale
-        let height = CGFloat(frame.pixelHeight) * scale
-        return CGRect(x: (size.width - width) / 2, y: (size.height - height) / 2, width: width, height: height)
-    }
+    // MARK: - Taps and zoom
 
     private func sendTap(at point: CGPoint, in size: CGSize) {
         guard session.image != nil else { return }
@@ -221,13 +314,14 @@ struct MirrorView: View {
             WKInterfaceDevice.current().play(.failure)
             return
         }
-        let rect = imageRect(in: size)
         // Undo the local zoom/pan: screen = anchor + (content - anchor) * zoom + pan
         let anchor = CGPoint(x: zoomAnchor.x * size.width, y: zoomAnchor.y * size.height)
         let content = CGPoint(x: anchor.x + (point.x - pan.width - anchor.x) / zoom,
                               y: anchor.y + (point.y - pan.height - anchor.y) / zoom)
-        let nx = (content.x - rect.minX) / rect.width
-        let ny = (content.y - rect.minY) / rect.height
+        // The screen always shows the page from `viewScroll` down, and the
+        // tap first scrolls the iPhone there, so screen position = window position.
+        let nx = content.x / max(size.width, 1)
+        let ny = content.y / windowDisplayHeight(in: size)
         guard nx >= 0, nx <= 1, ny >= 0, ny <= 1 else { return }
         WKInterfaceDevice.current().play(.click)
         session.tap(x: Double(nx), y: Double(ny))

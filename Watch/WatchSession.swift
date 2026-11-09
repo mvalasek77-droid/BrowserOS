@@ -32,9 +32,15 @@ final class WatchSession: NSObject, ObservableObject {
     /// Set by the iPhone when a tap focused an editable field. SwiftUI binds
     /// this to a text-entry sheet via `.sheet(item:)`.
     @Published var activeInput: InputPrompt?
+    /// Where the watch is scrolled to, in watch-screens from the top of the
+    /// page (same unit as `MirrorFrame.scrollY`). Moves instantly with the
+    /// crown/finger; the picture is offset by `viewScroll - frame.scrollY`
+    /// until the iPhone's next frame (taken at the new position) catches up.
+    @Published private(set) var viewScroll: Double = 0
 
     private let session: WCSession? = WCSession.isSupported() ? WCSession.default : nil
-    private var pendingScroll = 0.0
+    private var lastSentScroll: Double?
+    private var lastScrollInputAt = Date.distantPast
     private var scrollFlushScheduled = false
     private var tickTimer: Timer?
     private var lastHelloAt = Date.distantPast
@@ -163,26 +169,45 @@ final class WatchSession: NSObject, ObservableObject {
     }
 
     func tap(x: Double, y: Double) {
+        // The tap is mapped against where the watch is scrolled to, so make
+        // sure the iPhone is scrolled there first.
+        flushScroll()
         send([Wire.kind: Wire.Kind.tap.rawValue, Wire.x: x, Wire.y: y])
     }
 
-    /// Scrolls the iPhone page by a fraction of the mirrored height. Calls are
-    /// coalesced so crown ticks don't flood the link.
-    func scroll(deltaY: Double) {
+    /// Scroll by `delta` watch-screens. The picture moves on the next render;
+    /// the iPhone is told the new absolute position at most every 40 ms.
+    func scrollBy(_ delta: Double) {
+        scrollTo(viewScroll + delta)
+    }
+
+    func scrollTo(_ position: Double) {
         // Scrolling a sleeping phone does nothing visible; don't pile it up.
-        guard phoneState != .asleep, phoneState != .unreachable else { return }
-        pendingScroll += deltaY
+        guard phoneState != .asleep, phoneState != .unreachable, frame != nil else { return }
+        let upper = max(0, frame?.maxScroll ?? 0)
+        let clamped = min(max(position, 0), upper)
+        lastScrollInputAt = Date()
+        guard clamped != viewScroll else { return }
+        viewScroll = clamped
         guard !scrollFlushScheduled else { return }
         scrollFlushScheduled = true
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 40_000_000)
-            guard let self else { return }
-            self.scrollFlushScheduled = false
-            let delta = self.pendingScroll
-            self.pendingScroll = 0
-            guard abs(delta) > 0.0005 else { return }
-            self.send([Wire.kind: Wire.Kind.scroll.rawValue, Wire.deltaY: delta])
+            self?.flushScroll()
         }
+    }
+
+    private func flushScroll() {
+        scrollFlushScheduled = false
+        if let sent = lastSentScroll, abs(sent - viewScroll) < 0.0005 { return }
+        lastSentScroll = viewScroll
+        send([Wire.kind: Wire.Kind.scrollTo.rawValue, Wire.scrollY: viewScroll])
+    }
+
+    /// True while the user is (or just was) scrolling on the watch, so
+    /// incoming frames must not yank the scroll position back.
+    private var isScrollingLocally: Bool {
+        scrollFlushScheduled || Date().timeIntervalSince(lastScrollInputAt) < 0.6
     }
 
     func goBack() { send([Wire.kind: Wire.Kind.back.rawValue]) }
@@ -252,8 +277,24 @@ final class WatchSession: NSObject, ObservableObject {
     private func receive(_ newFrame: MirrorFrame) {
         if let current = frame, newFrame.sequence < current.sequence { return }
         guard let decoded = UIImage(data: newFrame.jpeg) else { return }
+        let pageChanged = frame?.url != newFrame.url
         frame = newFrame
         image = decoded
+        // Follow the iPhone's scroll position unless the user is scrolling
+        // here right now. After a scroll, a frame captured just before the
+        // last move can still be in flight; only adopt the phone's position
+        // once it agrees with what we asked for, or after a quiet spell
+        // (the user scrolled on the phone itself, or the phone clamped).
+        if pageChanged {
+            viewScroll = newFrame.scrollY
+            lastSentScroll = newFrame.scrollY
+        } else if !isScrollingLocally {
+            let agrees = abs(newFrame.scrollY - (lastSentScroll ?? newFrame.scrollY)) < 0.01
+            if agrees || Date().timeIntervalSince(lastScrollInputAt) > 1.5 {
+                viewScroll = newFrame.scrollY
+                lastSentScroll = newFrame.scrollY
+            }
+        }
         // A replayed picture is better than black, but it is not proof the
         // phone is live — counting it as live caused the Wake button to flicker.
         if !newFrame.isReplay { markLive() }

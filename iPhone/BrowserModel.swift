@@ -118,9 +118,25 @@ final class BrowserModel: ObservableObject {
         guard awake != watchKeepsPhoneAwake else { return }
         watchKeepsPhoneAwake = awake
         UIApplication.shared.isIdleTimerDisabled = awake
+        updateWatchScrollInset()
         if !awake {
             watchIsDriving = false
             curtainDismissed = false
+        }
+    }
+
+    /// The watch shows only the top part of the phone's web view, so at the
+    /// page's normal maximum scroll the last bit of the page sits below the
+    /// watch's view and can never be reached. While the watch is in use, let
+    /// the page scroll further by that amount.
+    private func updateWatchScrollInset() {
+        let scrollView = webView.scrollView
+        let window = mirror.captureRect
+        let extra = watchKeepsPhoneAwake && window.height > 0
+            ? max(0, webView.bounds.height - window.height)
+            : 0
+        if abs(scrollView.contentInset.bottom - extra) > 0.5 {
+            scrollView.contentInset.bottom = extra
         }
     }
 
@@ -240,6 +256,8 @@ final class BrowserModel: ObservableObject {
             tap(normalizedX: x, normalizedY: y)
         case .scroll(let deltaY):
             scroll(byViewportFraction: deltaY)
+        case .scrollTo(let y):
+            scroll(toWindowUnits: y)
         case .back:
             goBack()
         case .forward:
@@ -447,15 +465,26 @@ final class BrowserModel: ObservableObject {
     }
 
     private func scroll(byViewportFraction deltaY: Double) {
+        let rect = mirror.captureRect
+        guard rect.height > 0 else { return }
+        let current = (webView.scrollView.contentOffset.y + webView.scrollView.adjustedContentInset.top) / rect.height
+        scroll(toWindowUnits: Double(current) + deltaY)
+    }
+
+    /// Scroll so the top of the watch's view is `y` watch-screens below the
+    /// top of the page — the same unit frames report in `scrollY`.
+    private func scroll(toWindowUnits y: Double) {
+        updateWatchScrollInset()
         let scrollView = webView.scrollView
         let rect = mirror.captureRect
         guard rect.height > 0 else { return }
         let minY = -scrollView.adjustedContentInset.top
         let maxY = max(minY, scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom)
-        let target = scrollView.contentOffset.y + rect.height * CGFloat(deltaY)
-        let y = min(max(target, minY), maxY)
-        scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: y), animated: false)
-        mirror.requestCapture()
+        let target = min(max(CGFloat(y) * rect.height + minY, minY), maxY)
+        let direction = target - scrollView.contentOffset.y
+        guard abs(direction) > 0.25 else { return }
+        scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: target), animated: false)
+        mirror.noteScrollMotion(direction: direction)
     }
 }
 

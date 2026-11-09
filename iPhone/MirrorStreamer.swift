@@ -29,8 +29,37 @@ final class MirrorStreamer {
     private var needsAnother = false
     private var retryScheduled = false
     private var lastCaptureStart = Date.distantPast
-    private let minInterval: TimeInterval = 0.12
+    /// Capture faster while scrolling so the watch's margin refills quickly.
+    private var minInterval: TimeInterval { isScrolling ? 0.08 : 0.12 }
     private var sequence = 0
+
+    // Scrolling: while the watch is scrolling, frames include extra page in
+    // the direction of travel (at slightly lower resolution so they still fit
+    // one message). The watch scrolls into that margin instantly while the
+    // next frame is on its way. Once scrolling stops, one crisp frame follows.
+    private var scrollingUntil = Date.distantPast
+    private var scrollDirection: CGFloat = 1
+    private var settleTask: Task<Void, Never>?
+    private var isScrolling: Bool { Date() < scrollingUntil }
+
+    /// Where the window (what the watch screen shows at rest) sits within a
+    /// capture, plus the page scroll position when it was taken.
+    private struct CaptureLayout {
+        let rectWidth: CGFloat
+        let rectHeight: CGFloat
+        let above: CGFloat
+        let windowHeight: CGFloat
+        let scrollY: Double
+        let maxScroll: Double
+    }
+
+    /// Final, per-frame geometry sent to the watch.
+    private struct FrameGeometry {
+        var scrollY: Double = 0
+        var maxScroll: Double = 0
+        var windowTop: Double = 0
+        var windowHeight: Double = 1
+    }
     private var lastSentJPEG: Data?
     private var lastSentStateKey = ""
     private var heartbeat: Timer?
@@ -49,6 +78,7 @@ final class MirrorStreamer {
         let canGoForward: Bool
         let isLoading: Bool
         let progress: Double
+        let geometry: FrameGeometry
     }
     private var lastSentFrameInfo: LastFrame?
 
@@ -103,6 +133,19 @@ final class MirrorStreamer {
         let aspect = watchPixelSize.height / watchPixelSize.width
         let height = min(bounds.height, (bounds.width * aspect).rounded())
         return CGRect(x: 0, y: 0, width: bounds.width, height: height)
+    }
+
+    /// The watch just scrolled the page. Positive direction = down the page.
+    func noteScrollMotion(direction: CGFloat) {
+        scrollingUntil = Date().addingTimeInterval(0.45)
+        if direction != 0 { scrollDirection = direction > 0 ? 1 : -1 }
+        requestCapture()
+        settleTask?.cancel()
+        settleTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled else { return }
+            self?.requestCapture() // the crisp, at-rest frame
+        }
     }
 
     func setWatchScreen(pixelWidth: Int, pixelHeight: Int) {
@@ -181,7 +224,11 @@ final class MirrorStreamer {
             canGoForward: cached.canGoForward,
             isLoading: cached.isLoading,
             progress: cached.progress,
-            isReplay: true
+            isReplay: true,
+            scrollY: cached.geometry.scrollY,
+            maxScroll: cached.geometry.maxScroll,
+            windowTop: cached.geometry.windowTop,
+            windowHeight: cached.geometry.windowHeight
         ).message
         if let status = watchStatus { message[Wire.status] = status }
         session.send(message: message) { _ in }
@@ -219,18 +266,50 @@ final class MirrorStreamer {
     }
 
     private func captureNow() {
-        let rect = captureRect
-        guard rect.width > 0, rect.height > 0, webView.window != nil else { return }
+        let window = captureRect
+        guard window.width > 0, window.height > 0, webView.window != nil else { return }
 
         let token = UUID()
         inFlight = true
         inFlightToken = token
         lastCaptureStart = Date()
 
+        // Scroll position in "windows" from the top of the page.
+        let scrollView = webView.scrollView
+        let minY = -scrollView.adjustedContentInset.top
+        let maxY = max(minY, scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom)
+        let offsetY = scrollView.contentOffset.y
+
+        // While scrolling, grab one extra window of page ahead of the motion
+        // and a little behind it, clamped to what the page actually has.
+        var above: CGFloat = 0
+        var below: CGFloat = 0
+        let scrolling = isScrolling
+        if scrolling {
+            let ahead = window.height
+            let behind = window.height * 0.3
+            above = min(scrollDirection < 0 ? ahead : behind, max(0, offsetY))
+            below = min(scrollDirection > 0 ? ahead : behind,
+                        max(0, scrollView.contentSize.height - offsetY - window.height))
+        }
+        let rect = CGRect(x: window.minX, y: window.minY - above,
+                          width: window.width, height: window.height + above + below)
+        let layout = CaptureLayout(
+            rectWidth: rect.width,
+            rectHeight: rect.height,
+            above: above,
+            windowHeight: window.height,
+            scrollY: Double((offsetY - minY) / window.height),
+            maxScroll: Double((maxY - minY) / window.height)
+        )
+
         let config = WKSnapshotConfiguration()
         config.rect = rect
         let scale = max(webView.traitCollection.displayScale, 1)
-        config.snapshotWidth = NSNumber(value: Double(watchPixelSize.width) / Double(scale))
+        // Taller pictures while scrolling: trade some sharpness to stay
+        // within one message. Nobody reads mid-scroll.
+        let pixelWidth = Double(watchPixelSize.width) * (scrolling ? 0.75 : 1)
+        config.snapshotWidth = NSNumber(value: pixelWidth / Double(scale))
 
         webView.takeSnapshot(with: config) { [weak self] image, _ in
             Task { @MainActor [weak self] in
@@ -239,7 +318,7 @@ final class MirrorStreamer {
                     self.finish(token: token)
                     return
                 }
-                await self.encodeAndSend(image, token: token)
+                await self.encodeAndSend(image, layout: layout, token: token)
             }
         }
 
@@ -250,7 +329,24 @@ final class MirrorStreamer {
         }
     }
 
-    private func encodeAndSend(_ image: UIImage, token: UUID) async {
+    /// Works out where the window sits in the picture WebKit actually
+    /// returned. If WebKit clipped the part above the visible view (it renders
+    /// below it reliably), the window simply starts nearer the top.
+    private static func geometry(for image: UIImage, layout: CaptureLayout) -> FrameGeometry {
+        var geometry = FrameGeometry(scrollY: layout.scrollY, maxScroll: layout.maxScroll)
+        guard image.size.width > 0, layout.rectWidth > 0, layout.rectHeight > 0 else { return geometry }
+        // Height of the returned picture, in capture-rect points.
+        let returnedHeight = layout.rectWidth * image.size.height / image.size.width
+        let missing = max(0, layout.rectHeight - returnedHeight)
+        let effectiveHeight = layout.rectHeight - missing
+        guard effectiveHeight > 0 else { return geometry }
+        let effectiveAbove = max(0, layout.above - missing)
+        geometry.windowTop = Double(effectiveAbove / effectiveHeight)
+        geometry.windowHeight = Double(min(1, layout.windowHeight / effectiveHeight))
+        return geometry
+    }
+
+    private func encodeAndSend(_ image: UIImage, layout: CaptureLayout, token: UUID) async {
         let encoded = await Task.detached(priority: .userInitiated) {
             MirrorStreamer.encode(image, maxBytes: Wire.maxFrameBytes)
         }.value
@@ -260,7 +356,11 @@ final class MirrorStreamer {
             return
         }
         let (jpeg, pixelWidth, pixelHeight) = encoded
-        let key = stateKey
+        let geometry = Self.geometry(for: image, layout: layout)
+        // Position is part of identity: a repeated-looking spot on the page at
+        // a different scroll offset must still reach the watch, or its taps
+        // would be mapped against the wrong position.
+        let key = stateKey + "|\(Int(geometry.scrollY * 1000))|\(Int(geometry.windowTop * 1000))"
         // Dedup unchanged frames to save link bandwidth — unless the watch
         // is actively looking (just woken), in which case always send.
         if jpeg == lastSentJPEG, key == lastSentStateKey, !watchActive {
@@ -279,7 +379,11 @@ final class MirrorStreamer {
             canGoBack: canGoBack,
             canGoForward: canGoForward,
             isLoading: isLoading,
-            progress: progress
+            progress: progress,
+            scrollY: geometry.scrollY,
+            maxScroll: geometry.maxScroll,
+            windowTop: geometry.windowTop,
+            windowHeight: geometry.windowHeight
         ).message
         // Piggy-back a one-line status ("Login saved for x.com") onto the next
         // frame so the watch can show it without an extra message.
@@ -293,7 +397,8 @@ final class MirrorStreamer {
             jpeg: jpeg, url: url, title: title,
             pixelWidth: pixelWidth, pixelHeight: pixelHeight,
             canGoBack: canGoBack, canGoForward: canGoForward,
-            isLoading: isLoading, progress: progress
+            isLoading: isLoading, progress: progress,
+            geometry: geometry
         )
         session.send(message: frameMessage) { [weak self] _ in
             self?.finish(token: token)

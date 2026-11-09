@@ -16,6 +16,7 @@ enum WatchCommand {
     case fillLogin
     case wake
     case keepAlive
+    case scrollTo(y: Double)
 
     init?(message: [String: Any]) {
         guard let raw = message[Wire.kind] as? String, let kind = Wire.Kind(rawValue: raw) else { return nil }
@@ -45,6 +46,9 @@ enum WatchCommand {
         case .fillLogin: self = .fillLogin
         case .wake: self = .wake
         case .keepAlive: self = .keepAlive
+        case .scrollTo:
+            guard let y = message[Wire.scrollY] as? Double else { return nil }
+            self = .scrollTo(y: y)
         case .frame, .inputFocus, .alive: return nil
         }
     }
