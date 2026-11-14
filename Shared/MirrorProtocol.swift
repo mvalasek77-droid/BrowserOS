@@ -16,6 +16,8 @@ enum Wire {
         /// A video the watch can play natively (or, without a URL, notice
         /// that the iPhone is playing it and mirroring it fast instead).
         case videoOffer
+        /// Open tabs, bookmarks and recent history.
+        case library
 
         // watch → iPhone
         case hello, keepAlive, navigate, tap, back, forward, reload
@@ -30,6 +32,12 @@ enum Wire {
         case playVideo
         /// Turn fast video mirroring on or off (`on`).
         case videoMirror
+        /// Open a new tab (optionally at `url`).
+        case newTab
+        /// Switch to / close the tab with id `tabID`.
+        case switchTab, closeTab
+        /// Bookmark the current page, or remove its bookmark.
+        case toggleBookmark
     }
 
     static let jpeg = "jpg"
@@ -67,6 +75,11 @@ enum Wire {
     static let videoURL = "vu"
     static let startTime = "vt"
     static let on = "on"
+    static let tabID = "tid"
+    static let tabs = "tbs"
+    static let activeTab = "atb"
+    static let bookmarks = "bms"
+    static let history = "his"
 
     /// WatchConnectivity rejects interactive messages above ~65 KB, so a frame
     /// is always encoded to fit under this with room for the header.
@@ -156,6 +169,78 @@ struct VideoOffer: Identifiable {
     }
 }
 
+/// A tab, bookmark or history entry, as listed on the watch.
+struct LibraryItem: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let url: String
+
+    init(id: String, title: String, url: String) {
+        self.id = id
+        self.title = title
+        self.url = url
+    }
+
+    init?(dict: [String: Any]) {
+        guard let url = dict["u"] as? String else { return nil }
+        self.url = url
+        id = dict["i"] as? String ?? url
+        title = dict["t"] as? String ?? ""
+    }
+
+    var dict: [String: Any] { ["i": id, "t": title, "u": url] }
+
+    /// "wikipedia.org" rather than "en.m.wikipedia.org/wiki/…".
+    var host: String {
+        guard let host = URL(string: url)?.host else { return url }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    var displayTitle: String { title.isEmpty ? host : title }
+}
+
+/// What the watch needs to behave like a browser: open tabs, bookmarks
+/// (Favorites) and recently visited pages. The iPhone keeps them and sends a
+/// fresh copy whenever they change.
+struct Library {
+    let tabs: [LibraryItem]
+    let activeTabID: String
+    let bookmarks: [LibraryItem]
+    let history: [LibraryItem]
+
+    init(tabs: [LibraryItem], activeTabID: String, bookmarks: [LibraryItem], history: [LibraryItem]) {
+        self.tabs = tabs
+        self.activeTabID = activeTabID
+        self.bookmarks = bookmarks
+        self.history = history
+    }
+
+    init?(message: [String: Any]) {
+        guard (message[Wire.kind] as? String) == Wire.Kind.library.rawValue else { return nil }
+        func items(_ key: String) -> [LibraryItem] {
+            (message[key] as? [[String: Any]] ?? []).compactMap { LibraryItem(dict: $0) }
+        }
+        tabs = items(Wire.tabs)
+        activeTabID = message[Wire.activeTab] as? String ?? ""
+        bookmarks = items(Wire.bookmarks)
+        history = items(Wire.history)
+    }
+
+    var message: [String: Any] {
+        [
+            Wire.kind: Wire.Kind.library.rawValue,
+            Wire.tabs: tabs.map(\.dict),
+            Wire.activeTab: activeTabID,
+            Wire.bookmarks: bookmarks.map(\.dict),
+            Wire.history: history.map(\.dict)
+        ]
+    }
+
+    func isBookmarked(_ url: String) -> Bool {
+        bookmarks.contains { $0.url == url }
+    }
+}
+
 /// One mirrored picture of the iPhone's web view plus the page state shown
 /// alongside it on the watch.
 struct MirrorFrame: Sendable {
@@ -190,11 +275,13 @@ struct MirrorFrame: Sendable {
     let hasVideo: Bool
     /// The iPhone is playing a video and mirroring it as fast as it can.
     let boost: Bool
+    /// Which tab the picture is of (for the watch's tab thumbnails).
+    let tabID: String
 
     init(jpeg: Data, url: String, title: String, sequence: Int, pixelWidth: Int, pixelHeight: Int,
          canGoBack: Bool, canGoForward: Bool, isLoading: Bool, progress: Double, isReplay: Bool = false,
          scrollY: Double = 0, maxScroll: Double = 0, windowTop: Double = 0, windowHeight: Double = 1,
-         hasVideo: Bool = false, boost: Bool = false) {
+         hasVideo: Bool = false, boost: Bool = false, tabID: String = "") {
         self.jpeg = jpeg
         self.url = url
         self.title = title
@@ -212,6 +299,7 @@ struct MirrorFrame: Sendable {
         self.windowHeight = windowHeight
         self.hasVideo = hasVideo
         self.boost = boost
+        self.tabID = tabID
     }
 
     init?(message: [String: Any]) {
@@ -235,6 +323,7 @@ struct MirrorFrame: Sendable {
         windowHeight = height > 0 ? height : 1
         hasVideo = message[Wire.hasVideo] as? Bool ?? false
         boost = message[Wire.boost] as? Bool ?? false
+        tabID = message[Wire.tabID] as? String ?? ""
     }
 
     var message: [String: Any] {
@@ -256,7 +345,8 @@ struct MirrorFrame: Sendable {
             Wire.windowTop: windowTop,
             Wire.windowHeight: windowHeight,
             Wire.hasVideo: hasVideo,
-            Wire.boost: boost
+            Wire.boost: boost,
+            Wire.tabID: tabID
         ]
     }
 
@@ -269,6 +359,6 @@ struct MirrorFrame: Sendable {
                     isLoading: isLoading, progress: progress, isReplay: true,
                     scrollY: scrollY, maxScroll: maxScroll,
                     windowTop: windowTop, windowHeight: windowHeight,
-                    hasVideo: hasVideo, boost: false)
+                    hasVideo: hasVideo, boost: false, tabID: tabID)
     }
 }

@@ -41,6 +41,26 @@ final class WatchSession: NSObject, ObservableObject {
     @Published var videoOffer: VideoOffer?
     /// 2× local zoom of the picture (toggled from the menu).
     @Published var zoomed = false
+    /// Open tabs, Favorites and recent history, kept by the iPhone.
+    @Published private(set) var library: Library?
+    /// Last picture seen of each tab, for the tab switcher.
+    @Published private(set) var thumbnails: [String: UIImage] = [:]
+    /// The frame each thumbnail came from (its scroll geometry), so a tab
+    /// can be shown from cache the moment you switch to it.
+    private var tabFrames: [String: MirrorFrame] = [:]
+    /// After a tab switch, frames of the old tab may still be in flight;
+    /// they update its thumbnail but aren't shown.
+    private var switchingToTab: String?
+    private var switchStartedAt = Date.distantPast
+
+    var tabs: [LibraryItem] { library?.tabs ?? [] }
+    var activeTabID: String { library?.activeTabID ?? frame?.tabID ?? "" }
+    var bookmarks: [LibraryItem] { library?.bookmarks ?? [] }
+    var history: [LibraryItem] { library?.history ?? [] }
+    var isBookmarked: Bool {
+        guard let url = frame?.url, !url.isEmpty else { return false }
+        return library?.isBookmarked(url) ?? false
+    }
 
     /// The page has a video the watch can play.
     var pageHasVideo: Bool { frame?.hasVideo ?? false }
@@ -258,6 +278,38 @@ final class WatchSession: NSObject, ObservableObject {
         send([Wire.kind: Wire.Kind.videoMirror.rawValue, Wire.on: on])
     }
 
+    // MARK: Tabs and Favorites
+
+    func newTab(url: String? = nil) {
+        var message: [String: Any] = [Wire.kind: Wire.Kind.newTab.rawValue]
+        if let url { message[Wire.url] = url }
+        send(message, queueIfUndelivered: true)
+    }
+
+    func switchTab(_ id: String) {
+        guard id != activeTabID else { return }
+        switchingToTab = id
+        switchStartedAt = Date()
+        // Show the tab's last picture straight away while the real one comes.
+        if let thumbnail = thumbnails[id], let cached = tabFrames[id] {
+            frame = cached
+            image = thumbnail
+            viewScroll = cached.scrollY
+            lastSentScroll = cached.scrollY
+        }
+        send([Wire.kind: Wire.Kind.switchTab.rawValue, Wire.tabID: id])
+    }
+
+    func closeTab(_ id: String) {
+        thumbnails[id] = nil
+        tabFrames[id] = nil
+        send([Wire.kind: Wire.Kind.closeTab.rawValue, Wire.tabID: id])
+    }
+
+    func toggleBookmark() {
+        send([Wire.kind: Wire.Kind.toggleBookmark.rawValue], queueIfUndelivered: true)
+    }
+
     /// iOS never lets an app bring itself to the foreground. This asks the
     /// iPhone to post a "tap to resume" notification instead.
     func wakeIPhone() {
@@ -297,9 +349,24 @@ final class WatchSession: NSObject, ObservableObject {
     private func receive(_ newFrame: MirrorFrame) {
         if let current = frame, newFrame.sequence < current.sequence { return }
         guard let decoded = UIImage(data: newFrame.jpeg) else { return }
+        if let target = switchingToTab {
+            if newFrame.tabID == target || Date().timeIntervalSince(switchStartedAt) > 2 {
+                switchingToTab = nil
+            } else {
+                if !newFrame.tabID.isEmpty {
+                    thumbnails[newFrame.tabID] = decoded
+                    tabFrames[newFrame.tabID] = newFrame
+                }
+                return
+            }
+        }
         let pageChanged = frame?.url != newFrame.url
         frame = newFrame
         image = decoded
+        if !newFrame.tabID.isEmpty {
+            thumbnails[newFrame.tabID] = decoded
+            tabFrames[newFrame.tabID] = newFrame
+        }
         // Follow the iPhone's scroll position unless the user is scrolling
         // here right now. After a scroll, a frame captured just before the
         // last move can still be in flight; only adopt the phone's position
@@ -350,6 +417,14 @@ final class WatchSession: NSObject, ObservableObject {
         } else {
             showStatus("Playing on iPhone — streaming here")
         }
+    }
+
+    private func receiveLibrary(_ newLibrary: Library) {
+        library = newLibrary
+        // Forget thumbnails of tabs that were closed.
+        let open = Set(newLibrary.tabs.map(\.id))
+        thumbnails = thumbnails.filter { open.contains($0.key) }
+        tabFrames = tabFrames.filter { open.contains($0.key) }
     }
 
     private func receiveInputPrompt(_ prompt: InputPrompt) {
@@ -418,6 +493,10 @@ extension WatchSession: WCSessionDelegate {
         }
         if let offer = VideoOffer(message: message) {
             Task { @MainActor in self.receiveVideoOffer(offer) }
+            return
+        }
+        if let library = Library(message: message) {
+            Task { @MainActor in self.receiveLibrary(library) }
             return
         }
     }

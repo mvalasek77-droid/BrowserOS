@@ -3,13 +3,16 @@ import SwiftUI
 import UserNotifications
 import WebKit
 
-/// Owns the web views (the main page plus any sign-in popups), the watch
-/// session and the mirror stream, and turns watch commands into actions on
-/// whichever page is in front.
+/// Owns the browser — tabs (each its own web view), sign-in popups,
+/// bookmarks and history — plus the watch session and the mirror stream, and
+/// turns watch commands into actions on whichever page is in front.
 @MainActor
 final class BrowserModel: ObservableObject {
     static let homeURL = "https://www.google.com"
     private static let lastURLKey = "BrowserOS.lastURL"
+    private static let tabsKey = "SteroidOS.tabs"
+    private static let activeTabKey = "SteroidOS.activeTab"
+    private static let maxTabs = 12
 
     @Published var addressText = ""
     @Published private(set) var currentURL = ""
@@ -18,8 +21,12 @@ final class BrowserModel: ObservableObject {
     @Published private(set) var progress: Double = 0
     @Published private(set) var canGoBack = false
     @Published private(set) var canGoForward = false
-    /// Popup windows (sign-in flows), front-most last.
+    /// Popup windows (sign-in flows), front-most last. Belong to the active tab.
     @Published private(set) var popups: [WKWebView] = []
+    @Published private(set) var tabs: [BrowserTab] = []
+    @Published private(set) var activeTabID = UUID()
+    /// The current page is in Favorites.
+    @Published private(set) var isBookmarked = false
 
     /// True while the watch is in use: iOS auto-lock is disabled, because a
     /// locked phone stops WebKit rendering and the mirror dies.
@@ -29,12 +36,17 @@ final class BrowserModel: ObservableObject {
     /// The user tapped the "Mirroring to Apple Watch" screen to use the phone.
     @Published var curtainDismissed = false
 
-    let mainWebView: WKWebView
-    /// The page the user sees and the watch mirrors.
+    var activeTab: BrowserTab { tabs.first { $0.id == activeTabID } ?? tabs[0] }
+    /// The active tab's page.
+    var mainWebView: WKWebView { activeTab.webView }
+    /// The page the user sees and the watch mirrors (a popup, if one is open).
     var activeWebView: WKWebView { popups.last ?? mainWebView }
     let session: PhoneSession
     let mirror: MirrorStreamer
+    let pages = PageStore()
     private let coordinator = WebCoordinator()
+    private var librarySyncScheduled = false
+    private var lastLibraryFingerprint = ""
 
     private var lastWatchActivity = Date.distantPast
     /// Extended while the watch is collecting text (dictation can take a while).
@@ -46,14 +58,26 @@ final class BrowserModel: ObservableObject {
     private static let wakeNotificationID = "sos.wake"
 
     init() {
-        let webView = WKWebView(frame: .zero, configuration: Self.makeConfiguration())
-        mainWebView = webView
+        let saved = Self.savedTabs()
+        let firstWebView = WKWebView(frame: .zero, configuration: Self.makeConfiguration())
         let session = PhoneSession()
         self.session = session
-        mirror = MirrorStreamer(webView: webView, session: session)
-
+        mirror = MirrorStreamer(webView: firstWebView, session: session)
         coordinator.model = self
-        attach(mainWebView)
+
+        // Restore tabs; each loads its page the first time it's shown.
+        var restored: [BrowserTab] = []
+        for (index, string) in saved.urls.enumerated() {
+            let webView = index == 0 ? firstWebView : WKWebView(frame: .zero, configuration: Self.makeConfiguration())
+            restored.append(BrowserTab(webView: webView, pendingURL: URL(string: string)))
+        }
+        if restored.isEmpty {
+            let start = UserDefaults.standard.string(forKey: Self.lastURLKey) ?? Self.homeURL
+            restored = [BrowserTab(webView: firstWebView, pendingURL: URL(string: start))]
+        }
+        restored.forEach { attach($0.webView) }
+        tabs = restored
+        activeTabID = restored[min(max(saved.active, 0), restored.count - 1)].id
 
         session.onCommand = { [weak self] command in
             self?.handle(command)
@@ -63,6 +87,7 @@ final class BrowserModel: ObservableObject {
             if reachable {
                 self.mirror.forceCapture()
                 self.requestNotificationPermissionIfActive()
+                self.sendLibrary(force: true)
             }
             self.updateKeepAwake()
         }
@@ -74,7 +99,8 @@ final class BrowserModel: ObservableObject {
             }
         }
 
-        load(UserDefaults.standard.string(forKey: Self.lastURLKey) ?? Self.homeURL)
+        activeTab.loadPendingIfNeeded()
+        activeWebViewChanged()
     }
 
     // MARK: - Web view setup
@@ -138,17 +164,127 @@ final class BrowserModel: ObservableObject {
         if let top = popups.last { closePopup(top) }
     }
 
+    private func closeAllPopups() {
+        if let first = popups.first { closePopup(first) }
+    }
+
     private func activeWebViewChanged() {
         mirror.setBoost(false)
+        mirror.tabID = activeTabID.uuidString
         mirror.retarget(activeWebView)
         updateWatchScrollInset()
         syncState()
         probeVideo()
+        scheduleLibrarySync()
+    }
+
+    // MARK: - Tabs
+
+    func newTab(url: String? = nil) {
+        guard tabs.count < Self.maxTabs else {
+            mirror.flash(status: "Too many tabs — close one first")
+            return
+        }
+        closeAllPopups()
+        let tab = BrowserTab(webView: WKWebView(frame: mainWebView.bounds, configuration: Self.makeConfiguration()))
+        attach(tab.webView)
+        tabs.append(tab)
+        activeTabID = tab.id
+        activeWebViewChanged()
+        load(url ?? Self.homeURL)
+        saveTabs()
+    }
+
+    func switchTab(to id: UUID) {
+        guard id != activeTabID, tabs.contains(where: { $0.id == id }) else { return }
+        closeAllPopups()
+        activeTabID = id
+        activeTab.loadPendingIfNeeded()
+        activeWebViewChanged()
+        saveTabs()
+    }
+
+    func closeTab(_ id: UUID) {
+        guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+        guard tabs.count > 1 else {
+            // Always keep one tab, like Safari's last tab going back to start.
+            load(Self.homeURL)
+            return
+        }
+        let wasActive = id == activeTabID
+        if wasActive { closeAllPopups() }
+        let tab = tabs.remove(at: index)
+        coordinator.stopObserving(tab.webView)
+        tab.webView.stopLoading()
+        if wasActive {
+            activeTabID = tabs[min(index, tabs.count - 1)].id
+            activeTab.loadPendingIfNeeded()
+            activeWebViewChanged()
+        }
+        saveTabs()
+        scheduleLibrarySync()
+    }
+
+    private static func savedTabs() -> (urls: [String], active: Int) {
+        let urls = (UserDefaults.standard.stringArray(forKey: tabsKey) ?? []).filter { URL(string: $0) != nil }
+        return (Array(urls.prefix(maxTabs)), UserDefaults.standard.integer(forKey: activeTabKey))
+    }
+
+    private func saveTabs() {
+        let urls = tabs.map(\.url)
+        UserDefaults.standard.set(urls.map { $0.isEmpty ? Self.homeURL : $0 }, forKey: Self.tabsKey)
+        UserDefaults.standard.set(tabs.firstIndex { $0.id == activeTabID } ?? 0, forKey: Self.activeTabKey)
+    }
+
+    // MARK: - Bookmarks and library sync
+
+    func toggleBookmark() {
+        guard popups.isEmpty, !currentURL.isEmpty else { return }
+        let added = pages.toggleBookmark(url: currentURL, title: title)
+        isBookmarked = added
+        mirror.flash(status: added ? "Added to Favorites" : "Removed from Favorites")
+        scheduleLibrarySync()
+    }
+
+    func clearHistory() {
+        pages.clearHistory()
+        scheduleLibrarySync()
+    }
+
+    /// Tabs, Favorites and recent history for the watch. Debounced, and only
+    /// sent when something visible to the watch actually changed.
+    private func scheduleLibrarySync() {
+        guard !librarySyncScheduled else { return }
+        librarySyncScheduled = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            self?.sendLibrary(force: false)
+        }
+    }
+
+    private func sendLibrary(force: Bool) {
+        librarySyncScheduled = false
+        guard session.canSend else { return }
+        let library = Library(
+            tabs: tabs.map { LibraryItem(id: $0.id.uuidString, title: $0.title, url: $0.url) },
+            activeTabID: activeTabID.uuidString,
+            bookmarks: pages.bookmarks.map { LibraryItem(id: $0.url, title: $0.title, url: $0.url) },
+            history: pages.history.prefix(30).map { LibraryItem(id: $0.url, title: $0.title, url: $0.url) }
+        )
+        let fingerprint = ([library.activeTabID]
+            + library.tabs.map { $0.id + $0.title + $0.url }
+            + library.bookmarks.map { "b" + $0.title + $0.url }
+            + library.history.map { "h" + $0.title + $0.url }).joined(separator: "|")
+        guard force || fingerprint != lastLibraryFingerprint else { return }
+        lastLibraryFingerprint = fingerprint
+        session.send(message: library.message)
     }
 
     // MARK: - Web view events (from the coordinator)
 
     func webViewChanged(_ webView: WKWebView) {
+        // Any tab's title can change; the watch's tab list should follow.
+        scheduleLibrarySync()
         guard webView === activeWebView else { return }
         syncState()
     }
@@ -302,12 +438,19 @@ final class BrowserModel: ObservableObject {
             if popups.isEmpty {
                 addressText = url
                 UserDefaults.standard.set(url, forKey: Self.lastURLKey)
+                pages.recordVisit(url: url, title: webView.title ?? "")
+                saveTabs()
             }
+            isBookmarked = popups.isEmpty && pages.isBookmarked(url)
             // New page: whatever video was being mirrored is gone.
             mirror.setBoost(false)
             mirror.hasVideo = false
         }
-        title = webView.title ?? ""
+        let newTitle = webView.title ?? ""
+        if newTitle != title, popups.isEmpty {
+            pages.updateTitle(newTitle, for: currentURL)
+        }
+        title = newTitle
         mirror.pageStateChanged(url: currentURL, title: title, isLoading: isLoading, progress: progress,
                                 canGoBack: canGoBack, canGoForward: canGoForward)
     }
@@ -344,6 +487,7 @@ final class BrowserModel: ObservableObject {
         case .hello(let width, let height):
             mirror.setWatchScreen(pixelWidth: width, pixelHeight: height)
             mirror.showWatchSomething()
+            sendLibrary(force: true)
         case .keepAlive:
             break
         case .wake:
@@ -384,6 +528,17 @@ final class BrowserModel: ObservableObject {
             playVideoOnWatch()
         case .videoMirror(let on):
             setVideoMirror(on)
+        case .newTab(let url):
+            newTab(url: url)
+            mirror.noteInteraction()
+        case .switchTab(let id):
+            if let uuid = UUID(uuidString: id) { switchTab(to: uuid) }
+            mirror.noteInteraction()
+        case .closeTab(let id):
+            if let uuid = UUID(uuidString: id) { closeTab(uuid) }
+            mirror.noteInteraction()
+        case .toggleBookmark:
+            toggleBookmark()
         }
     }
 
@@ -518,7 +673,7 @@ private extension WatchCommand {
     /// not — replaying them later could click the wrong thing.
     var isWorthReplaying: Bool {
         switch self {
-        case .fillInput, .fillLogin, .saveLogin, .navigate: return true
+        case .fillInput, .fillLogin, .saveLogin, .navigate, .newTab, .toggleBookmark: return true
         default: return false
         }
     }

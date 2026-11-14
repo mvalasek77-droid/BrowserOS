@@ -5,6 +5,7 @@ struct BrowserView: View {
     @ObservedObject var model: BrowserModel
     @ObservedObject var session: PhoneSession
     @State private var showWatchStatus = false
+    @State private var showTabs = false
     @State private var showTutorial = false
     @FocusState private var addressFocused: Bool
 
@@ -20,6 +21,7 @@ struct BrowserView: View {
             }
             ZStack {
                 WebView(webView: model.mainWebView)
+                    .id(model.activeTabID)
                 if let popup = model.popups.last {
                     popupWindow(popup)
                         .transition(.move(edge: .bottom))
@@ -35,6 +37,9 @@ struct BrowserView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: showCurtain)
+        .sheet(isPresented: $showTabs) {
+            PhoneTabsView(model: model)
+        }
         .sheet(isPresented: $showWatchStatus) {
             WatchStatusView(session: session, model: model)
         }
@@ -114,7 +119,19 @@ struct BrowserView: View {
             Button { model.goForward() } label: { Image(systemName: "chevron.right") }
                 .disabled(!model.canGoForward)
             Spacer()
-            Button { model.load(BrowserModel.homeURL) } label: { Image(systemName: "house") }
+            Button { model.toggleBookmark() } label: {
+                Image(systemName: model.isBookmarked ? "star.fill" : "star")
+            }
+            .disabled(model.currentURL.isEmpty || !model.popups.isEmpty)
+            Spacer()
+            Button { showTabs = true } label: {
+                ZStack {
+                    Image(systemName: "square.on.square")
+                    Text("\(model.tabs.count)")
+                        .font(.system(size: 10, weight: .bold))
+                        .offset(x: 2, y: 2)
+                }
+            }
             Spacer()
             Button { showWatchStatus = true } label: {
                 HStack(spacing: 4) {
@@ -206,7 +223,7 @@ struct WatchStatusView: View {
                 }
                 Section {
                     Text(session.isWatchReachable
-                         ? "The watch shows this page live. Tap to click, turn the Digital Crown or swipe to scroll, swipe sideways for back/forward. 🔍 searches Google, ☰ opens the menu, ▶︎ plays the page's video on the watch."
+                         ? "The watch is a browser too: tap to click, crown to scroll, pull down to reload, swipe sideways for back/forward. Tap the address bar for search and Favorites, the tabs button for tabs, ▶︎ for the page's video."
                          : "Open SteroidOS on your Apple Watch. The mirror streams only while both apps are on screen.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -227,6 +244,59 @@ struct WatchStatusView: View {
             Text(title)
             Spacer()
             Text(value).foregroundStyle(ok ? Color.green : Color.secondary)
+        }
+    }
+}
+
+
+/// Tab switcher on the iPhone (the watch has its own).
+struct PhoneTabsView: View {
+    @ObservedObject var model: BrowserModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(model.tabs) { tab in
+                    Button {
+                        model.switchTab(to: tab.id)
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: tab.id == model.activeTabID ? "checkmark.circle.fill" : "globe")
+                                .foregroundStyle(tab.id == model.activeTabID ? Color.accentColor : Color.secondary)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(tab.title.isEmpty ? "New Tab" : tab.title)
+                                    .lineLimit(1)
+                                    .foregroundStyle(.primary)
+                                Text(URL(string: tab.url)?.host ?? tab.url)
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .onDelete { offsets in
+                    let ids = offsets.map { model.tabs[$0].id }
+                    ids.forEach { model.closeTab($0) }
+                }
+            }
+            .navigationTitle("\(model.tabs.count) Tabs")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        model.newTab()
+                        dismiss()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }

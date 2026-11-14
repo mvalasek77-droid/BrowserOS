@@ -1,16 +1,24 @@
 import SwiftUI
 import WatchKit
 
-/// Full-screen live picture of the iPhone's page.
-/// Tap = click on the iPhone (instantly — there is no double-tap to wait for).
-/// Crown or vertical swipe = scroll (the picture moves at once; the iPhone
-/// follows). Swipe right/left = back/forward.
-/// 🔍 = search Google or open a URL. ☰ or long-press = menu (zoom, quick
-/// links, …). ▶︎ = play the page's video on the watch.
+/// The browser: a full-screen live picture of the iPhone's page with a
+/// Safari-style bar at the bottom (back · address · tabs) that tucks away
+/// as you scroll down and returns when you scroll up.
+/// Tap = click on the iPhone (instantly). Crown or vertical swipe = scroll;
+/// pull down at the top = reload. Swipe right/left = back/forward.
+/// Tap the address = start page (search, Favorites, recent). Long-press the
+/// address or the page = page options. ▶︎ = play the page's video.
 struct MirrorView: View {
     @EnvironmentObject private var session: WatchSession
 
     @State private var showControls = false
+    @State private var showAddress = false
+    @State private var showTabs = false
+    @State private var barVisible = true
+    @State private var barAnchorScroll: Double = 0
+    @State private var pulling = false
+    @State private var pullDistance: CGFloat = 0
+    @State private var pullArmed = false
     @State private var pan: CGSize = .zero
     @State private var panStart: CGSize = .zero
     @State private var dragLastY: CGFloat = 0
@@ -21,6 +29,8 @@ struct MirrorView: View {
     @FocusState private var crownFocused: Bool
 
     private let zoomScale: CGFloat = 2.2
+    /// How far to pull down at the top of a page to reload.
+    private let pullThreshold: CGFloat = 55
     /// Watch-screens scrolled per crown unit. A casual flick moves roughly one screen.
     private let crownStep = 0.035
     private var zoom: CGFloat { session.zoomed ? zoomScale : 1 }
@@ -81,6 +91,10 @@ struct MirrorView: View {
         // or the crown silently stops scrolling.
         .onAppear { crownFocused = true }
         .onChange(of: showControls) { _, shown in if !shown { refocusCrown() } }
+        .onChange(of: showAddress) { _, shown in if !shown { refocusCrown() } }
+        .onChange(of: showTabs) { _, shown in if !shown { refocusCrown() } }
+        .onChange(of: session.viewScroll) { _, value in updateBar(for: value) }
+        .onChange(of: session.frame?.url) { _, _ in showBar() }
         .onChange(of: session.activeInput?.id) { _, id in if id == nil { refocusCrown() } }
         .onChange(of: session.videoOffer?.id) { _, id in if id == nil { refocusCrown() } }
         .onChange(of: session.zoomed) { _, _ in
@@ -90,11 +104,67 @@ struct MirrorView: View {
         .sheet(isPresented: $showControls) {
             ControlsView().environmentObject(session)
         }
+        .sheet(isPresented: $showAddress) {
+            AddressSheet(onMore: {
+                showAddress = false
+                present { showControls = true }
+            })
+            .environmentObject(session)
+        }
+        .sheet(isPresented: $showTabs) {
+            TabsView(onNewTab: {
+                showTabs = false
+                session.newTab()
+                // Like Safari: a new tab opens on the start page.
+                present { showAddress = true }
+            })
+            .environmentObject(session)
+        }
         .sheet(item: $session.activeInput) { prompt in
             InputSheet(prompt: prompt).environmentObject(session)
         }
         .sheet(item: $session.videoOffer) { offer in
             VideoPlayerView(offer: offer).environmentObject(session)
+        }
+    }
+
+    /// Opens a sheet once the one before it has finished closing.
+    private func present(_ action: @escaping () -> Void) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 450_000_000)
+            action()
+        }
+    }
+
+    // MARK: - Bar visibility (Safari-style)
+
+    private func showBar() {
+        guard !barVisible else { return }
+        withAnimation(.easeInOut(duration: 0.2)) { barVisible = true }
+    }
+
+    /// Hide after scrolling down a bit, show again on scrolling up or at the top.
+    private func updateBar(for scroll: Double) {
+        if scroll < 0.05 {
+            showBar()
+            barAnchorScroll = scroll
+            return
+        }
+        let delta = scroll - barAnchorScroll
+        if barVisible {
+            if delta > 0.15 {
+                withAnimation(.easeInOut(duration: 0.2)) { barVisible = false }
+                barAnchorScroll = scroll
+            } else if delta < 0 {
+                barAnchorScroll = scroll
+            }
+        } else {
+            if delta < -0.15 {
+                showBar()
+                barAnchorScroll = scroll
+            } else if delta > 0 {
+                barAnchorScroll = scroll
+            }
         }
     }
 
@@ -129,6 +199,7 @@ struct MirrorView: View {
         .clipped()
         .scaleEffect(zoom, anchor: .center)
         .offset(pan)
+        .offset(y: pullDistance * 0.45)
         // Dim a picture that isn't live so it doesn't look current.
         .opacity(isPictureLive ? 1 : 0.4)
         .animation(.easeInOut(duration: 0.3), value: isPictureLive)
@@ -218,12 +289,15 @@ struct MirrorView: View {
     @ViewBuilder
     private var overlays: some View {
         VStack {
-            if let frame = session.frame, frame.isLoading {
+            if let frame = session.frame, frame.isLoading, !barVisible {
                 ProgressView(value: min(max(frame.progress, 0), 1))
                     .tint(.blue)
                     .frame(height: 2)
                     .padding(.top, 1)
                     .allowsHitTesting(false)
+            }
+            if pullDistance > 4 {
+                pullIndicator
             }
             Spacer()
             if let status = session.statusLine {
@@ -251,66 +325,177 @@ struct MirrorView: View {
                     .padding(.bottom, 6)
                     .allowsHitTesting(false)
             } else if showsNavButtons {
-                navButtons
+                if barVisible {
+                    videoButtonRow
+                    browserBar
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    collapsedBar
+                        .transition(.opacity)
+                }
             }
         }
     }
 
-    /// Small buttons along the bottom edge (which the round screen mostly
-    /// hides anyway): menu, video, one-tap Google search.
-    private var navButtons: some View {
-        HStack {
+    // MARK: - Browser bar
+
+    private var domain: String {
+        guard let url = session.frame?.url, let host = URL(string: url)?.host else {
+            return "Search or website"
+        }
+        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+    }
+
+    private var isSecure: Bool { session.frame?.url.hasPrefix("https") ?? false }
+    private var canGoBack: Bool { session.frame?.canGoBack ?? false }
+
+    /// back · address · tabs, like Safari's bottom bar.
+    private var browserBar: some View {
+        HStack(spacing: 5) {
             Button {
                 WKInterfaceDevice.current().play(.click)
-                showControls = true
+                session.goBack()
             } label: {
-                navIcon("list.bullet")
+                barIcon("chevron.left")
             }
             .buttonStyle(.plain)
+            .opacity(canGoBack ? 1 : 0.35)
+            .disabled(!canGoBack)
 
-            Spacer()
+            addressPill
 
-            if session.isVideoMirrorOn {
-                Button {
-                    WKInterfaceDevice.current().play(.click)
-                    session.setVideoMirror(false)
-                } label: {
-                    navIcon("stop.fill", tint: .red)
-                }
-                .buttonStyle(.plain)
-                Spacer()
-            } else if session.pageHasVideo {
-                Button {
-                    WKInterfaceDevice.current().play(.click)
-                    session.playVideo()
-                } label: {
-                    navIcon("play.fill", tint: .green)
-                }
-                .buttonStyle(.plain)
-                Spacer()
-            }
-
-            TextFieldLink(prompt: Text("Search Google or enter URL")) {
-                navIcon("magnifyingglass")
-            } onSubmit: { query in
-                let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty else { return }
+            Button {
                 WKInterfaceDevice.current().play(.click)
-                session.navigate(to: trimmed)
+                showTabs = true
+            } label: {
+                tabsIcon
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 6)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 4)
     }
 
-    private func navIcon(_ systemName: String, tint: Color = .black) -> some View {
+    private var addressPill: some View {
+        HStack(spacing: 3) {
+            if isSecure {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 8, weight: .semibold))
+            }
+            Text(domain)
+                .font(.system(size: 12, weight: .semibold))
+                .lineLimit(1)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity)
+        .frame(height: 30)
+        .background(Capsule().fill(Color.black.opacity(0.72)))
+        .overlay(alignment: .bottomLeading) {
+            if let frame = session.frame, frame.isLoading {
+                GeometryReader { geo in
+                    Rectangle()
+                        .fill(Color.blue)
+                        .frame(width: geo.size.width * CGFloat(min(max(frame.progress, 0.05), 1)), height: 2)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
+                }
+                .clipShape(Capsule())
+                .allowsHitTesting(false)
+            }
+        }
+        .overlay(Capsule().stroke(Color.white.opacity(0.22), lineWidth: 0.5))
+        .contentShape(Capsule())
+        .onTapGesture {
+            WKInterfaceDevice.current().play(.click)
+            showAddress = true
+        }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            WKInterfaceDevice.current().play(.click)
+            showControls = true
+        }
+    }
+
+    private var tabsIcon: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.white, lineWidth: 1.5)
+                .frame(width: 17, height: 17)
+            Text("\(max(1, session.tabs.count))")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: 30, height: 30)
+        .background(Circle().fill(Color.black.opacity(0.72)))
+        .overlay(Circle().stroke(Color.white.opacity(0.22), lineWidth: 0.5))
+    }
+
+    private func barIcon(_ systemName: String) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 14, weight: .semibold))
+            .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(.white)
-            .frame(width: 32, height: 32)
-            .background(tint.opacity(tint == .black ? 0.6 : 0.85), in: Circle())
-            .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
+            .frame(width: 30, height: 30)
+            .background(Circle().fill(Color.black.opacity(0.72)))
+            .overlay(Circle().stroke(Color.white.opacity(0.22), lineWidth: 0.5))
+    }
+
+    /// While scrolling down the bar shrinks to just the site name, like Safari.
+    private var collapsedBar: some View {
+        Button {
+            showBar()
+        } label: {
+            HStack(spacing: 3) {
+                if isSecure {
+                    Image(systemName: "lock.fill").font(.system(size: 7))
+                }
+                Text(domain)
+                    .font(.system(size: 10, weight: .semibold))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.black.opacity(0.6)))
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, 2)
+    }
+
+    /// ▶︎ (play on watch) or ■ (stop streaming the phone's video), above the bar.
+    @ViewBuilder
+    private var videoButtonRow: some View {
+        if session.isVideoMirrorOn || session.pageHasVideo {
+            HStack {
+                Spacer()
+                Button {
+                    WKInterfaceDevice.current().play(.click)
+                    if session.isVideoMirrorOn {
+                        session.setVideoMirror(false)
+                    } else {
+                        session.playVideo()
+                    }
+                } label: {
+                    Image(systemName: session.isVideoMirrorOn ? "stop.fill" : "play.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 30, height: 30)
+                        .background(Circle().fill((session.isVideoMirrorOn ? Color.red : Color.green).opacity(0.9)))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 2)
+        }
+    }
+
+    private var pullIndicator: some View {
+        Image(systemName: "arrow.clockwise")
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(.white)
+            .rotationEffect(.degrees(Double(min(pullDistance / pullThreshold, 1)) * 270))
+            .frame(width: 28, height: 28)
+            .background(Circle().fill(pullArmed ? Color.blue : Color.black.opacity(0.65)))
+            .padding(.top, min(pullDistance * 0.4, 28))
+            .allowsHitTesting(false)
     }
 
     // MARK: - Gestures
@@ -326,8 +511,19 @@ struct MirrorView: View {
                 // Decide once per swipe: vertical scrolls, horizontal navigates.
                 if dragAxis == nil {
                     dragAxis = abs(value.translation.width) > abs(value.translation.height) ? .horizontal : .vertical
+                    // Dragging down while already at the top = pull to refresh.
+                    pulling = dragAxis == .vertical && value.translation.height > 0 && session.viewScroll <= 0.001
                 }
                 guard dragAxis == .vertical else { return }
+                if pulling {
+                    pullDistance = max(0, value.translation.height)
+                    let armed = pullDistance > pullThreshold
+                    if armed != pullArmed {
+                        pullArmed = armed
+                        if armed { WKInterfaceDevice.current().play(.click) }
+                    }
+                    return
+                }
                 let delta = value.translation.height - dragLastY
                 dragLastY = value.translation.height
                 // 1:1 with the finger — the picture moves locally, so there's no lag to make up for.
@@ -338,8 +534,18 @@ struct MirrorView: View {
                     panStart = pan
                     dragLastY = 0
                     dragAxis = nil
+                    pulling = false
+                    pullArmed = false
+                    withAnimation(.easeOut(duration: 0.25)) { pullDistance = 0 }
                 }
                 guard zoom <= 1 else { return }
+                if pulling {
+                    if pullDistance > pullThreshold {
+                        WKInterfaceDevice.current().play(.success)
+                        session.reload()
+                    }
+                    return
+                }
                 if dragAxis == .horizontal {
                     let dx = value.translation.width
                     guard abs(dx) > 40 else { return }

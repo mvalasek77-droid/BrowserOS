@@ -30,6 +30,8 @@ final class MirrorStreamer {
     }
     /// Mirroring a video playing on the phone, as fast as the link allows.
     private(set) var boost = false
+    /// The tab being mirrored, so the watch can file thumbnails per tab.
+    var tabID = ""
 
     /// One-line status shown on the watch ("Login saved", …), sent with the next frame.
     private(set) var watchStatus: String?
@@ -330,7 +332,7 @@ final class MirrorStreamer {
         // Position is part of identity: a repeated-looking spot at another
         // scroll offset must still reach the watch, or taps would be mapped
         // against the wrong position.
-        let key = "\(url)|\(title)|\(isLoading)|\(Int(progress * 20))|\(canGoBack)|\(canGoForward)|\(hasVideo)|\(boost)"
+        let key = "\(url)|\(title)|\(isLoading)|\(Int(progress * 20))|\(canGoBack)|\(canGoForward)|\(hasVideo)|\(boost)|\(tabID)"
             + "|\(Int(geometry.scrollY * 1000))|\(Int(geometry.windowTop * 1000))|\(watchStatus ?? "")"
         if jpeg == lastSentJPEG, key == lastSentKey, !sendNextEvenIfUnchanged {
             captureFinished()
@@ -355,7 +357,8 @@ final class MirrorStreamer {
             windowTop: geometry.windowTop,
             windowHeight: geometry.windowHeight,
             hasVideo: hasVideo,
-            boost: boost
+            boost: boost,
+            tabID: tabID
         )
         var message = frame.message
         if let watchStatus { message[Wire.status] = watchStatus }

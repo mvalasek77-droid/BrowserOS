@@ -18,15 +18,22 @@ WKWebView ──takeSnapshot──► JPEG ≤56KB ──sendMessage──► Im
 
 ## Watch controls
 
+The watch works like Safari on iPhone, shrunk to the wrist.
+
 | Gesture | Action |
 |---|---|
-| Tap | Clicks that spot on the iPhone page — instantly, with a ripple where you touched |
+| Tap the page | Clicks there on the iPhone — instantly, with a ripple where you touched |
 | Digital Crown / vertical swipe | Scrolls (the picture moves at once; the iPhone follows) — flick to glide |
+| Pull down at the top | Reload |
 | Swipe right / left | Back / forward |
-| 🔍 (bottom right) | Dictate, Scribble or type → Google search or URL |
-| ▶︎ (bottom centre, when the page has a video) | Plays the video natively on the watch, with sound |
-| ☰ (bottom left) or long-press | Menu: search, back/forward/reload/top, zoom, quick links, fill saved login |
+| Bottom bar | ‹ back · address (lock, site, loading progress) · tabs — hides while scrolling down, returns on scroll up |
+| Tap the address | Start page: Search or website, Favorites, Recently Visited, reload / favourite / ••• |
+| Tabs button | Tab switcher with thumbnails — tap to switch, swipe to close, New Tab |
+| Long-press the address or page | Page options: back/forward/reload/top, play video, Favorites, zoom, New Tab, fill saved login |
+| ▶︎ above the bar | Plays the page's video natively on the watch, with sound (■ stops a streamed one) |
 | Tap a text field | Text entry on the watch; the text is typed into the page on the iPhone |
+
+Tabs, Favorites (bookmarks) and history live on the iPhone and sync to the watch.
 
 ## How it stays fluid
 
@@ -69,12 +76,15 @@ Shared/MirrorProtocol.swift   message keys, MirrorFrame, InputPrompt, VideoOffer
 iPhone/BrowserModel.swift     web views (main + popups), watch commands, video handoff
 iPhone/MirrorStreamer.swift   capture → encode → send, two frames in flight
 iPhone/PageScripts.swift      JavaScript for taps, text, logins and video
+iPhone/Library.swift          tabs, bookmarks and history
 iPhone/PhoneSession.swift     WCSession (iPhone side)
 iPhone/WebView.swift          WKWebView host + navigation delegate
 iPhone/BrowserView.swift      address bar, toolbar, watch status sheet
 Watch/WatchSession.swift      WCSession (watch side)
 Watch/MirrorView.swift        full-screen picture, gestures, crown, buttons
-Watch/ControlsView.swift      menu (☰ / long-press)
+Watch/AddressSheet.swift      start page: search, Favorites, Recently Visited
+Watch/TabsView.swift          tab switcher
+Watch/ControlsView.swift      page options (long-press)
 Watch/InputSheet.swift        text entry and saved logins
 Watch/VideoPlayerView.swift   native video playback
 ```

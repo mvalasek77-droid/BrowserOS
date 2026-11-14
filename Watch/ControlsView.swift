@@ -1,38 +1,21 @@
 import SwiftUI
 import WatchKit
 
-/// Navigation menu (☰ button or long-press): search, back/forward/reload,
-/// jump to top, quick links, and saved-login fill.
+/// Page options (long-press the address bar or the page, or ••• on the start
+/// page): navigation, video, zoom, Favorites, New Tab and saved-login fill.
 struct ControlsView: View {
     @EnvironmentObject private var session: WatchSession
     @Environment(\.dismiss) private var dismiss
 
-    private struct QuickSite: Identifiable {
-        let name: String
-        let url: String
-        let icon: String
-        var id: String { url }
-    }
-
-    private static let quickSites: [QuickSite] = [
-        QuickSite(name: "Google", url: "https://www.google.com", icon: "magnifyingglass.circle"),
-        QuickSite(name: "YouTube", url: "https://m.youtube.com", icon: "play.rectangle"),
-        QuickSite(name: "Wikipedia", url: "https://en.m.wikipedia.org", icon: "book"),
-        QuickSite(name: "Reddit", url: "https://www.reddit.com", icon: "bubble.left.and.bubble.right")
-    ]
-
     var body: some View {
         ScrollView {
             VStack(spacing: 8) {
-                // One tap → dictation / Scribble / keyboard → Google results
-                // (or the site, if what you said looks like an address).
-                TextFieldLink(prompt: Text("Search Google or enter URL")) {
-                    Label("Search or URL", systemImage: "magnifyingglass")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                } onSubmit: { query in
-                    go(query)
+                if let frame = session.frame {
+                    Text(frame.title.isEmpty ? frame.url : frame.title)
+                        .font(.footnote.weight(.semibold))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                 }
-                .buttonStyle(.borderedProminent)
 
                 HStack(spacing: 6) {
                     navButton("chevron.left", enabled: session.frame?.canGoBack ?? false) {
@@ -50,64 +33,29 @@ struct ControlsView: View {
                 }
 
                 if session.pageHasVideo && !session.isVideoMirrorOn {
-                    Button {
-                        WKInterfaceDevice.current().play(.click)
+                    row("Play video on watch", "play.rectangle.fill", prominent: true) {
                         session.playVideo()
-                        dismiss()
-                    } label: {
-                        Label("Play video on watch", systemImage: "play.rectangle.fill")
-                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.green)
                 }
 
-                Button {
-                    WKInterfaceDevice.current().play(.click)
+                row(session.isBookmarked ? "Remove from Favorites" : "Add to Favorites",
+                    session.isBookmarked ? "star.slash" : "star") {
+                    session.toggleBookmark()
+                }
+
+                row(session.zoomed ? "Zoom out" : "Zoom in 2×",
+                    session.zoomed ? "minus.magnifyingglass" : "plus.magnifyingglass") {
                     session.zoomed.toggle()
-                    dismiss()
-                } label: {
-                    Label(session.zoomed ? "Zoom out" : "Zoom in 2×",
-                          systemImage: session.zoomed ? "minus.magnifyingglass" : "plus.magnifyingglass")
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .buttonStyle(.bordered)
-
-                Text("Go to")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 2)
-
-                ForEach(Self.quickSites) { site in
-                    Button {
-                        go(site.url)
-                    } label: {
-                        Label(site.name, systemImage: site.icon)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.bordered)
                 }
 
-                Button {
+                row("New Tab", "plus.square.on.square") {
+                    session.newTab()
+                }
+
+                row("Fill saved login", "key.horizontal.fill") {
                     session.fillSavedLogin()
-                    dismiss()
-                } label: {
-                    Label("Fill saved login", systemImage: "key.horizontal.fill")
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.bordered)
-                // Only meaningful when there's a page to fill on.
                 .disabled(session.image == nil)
-
-                if let frame = session.frame {
-                    Text(frame.title.isEmpty ? frame.url : frame.title)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 2)
-                }
 
                 Text(session.isPhoneReachable ? "iPhone connected" : "iPhone not reachable")
                     .font(.caption2)
@@ -130,11 +78,21 @@ struct ControlsView: View {
         .disabled(!enabled)
     }
 
-    private func go(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        WKInterfaceDevice.current().play(.click)
-        session.navigate(to: trimmed)
-        dismiss()
+    @ViewBuilder
+    private func row(_ title: String, _ systemImage: String, prominent: Bool = false,
+                     action: @escaping () -> Void) -> some View {
+        let button = Button {
+            WKInterfaceDevice.current().play(.click)
+            action()
+            dismiss()
+        } label: {
+            Label(title, systemImage: systemImage)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        if prominent {
+            button.buttonStyle(.borderedProminent).tint(.green)
+        } else {
+            button.buttonStyle(.bordered)
+        }
     }
 }

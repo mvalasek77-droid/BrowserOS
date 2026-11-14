@@ -23,7 +23,7 @@ struct TutorialView: View {
              body: "Your iPhone browser, mirrored live on your Apple Watch. Whatever you open here appears on your wrist in real time — no sync delay."),
         Step(id: 1, icon: "hand.tap",
              title: "Browse from your wrist",
-             body: "On the watch: tap to click links and buttons, turn the Digital Crown or swipe to scroll, swipe right to go back. 🔍 searches Google; ☰ opens the menu with back, reload, zoom and quick links."),
+             body: "The watch works like Safari: tap to click, turn the Digital Crown to scroll, pull down to reload, swipe right to go back. Tap the address bar for search, Favorites and recent pages; the tabs button switches tabs."),
         Step(id: 2, icon: "play.rectangle.fill",
              title: "Watch videos on your wrist",
              body: "When a page has a video, tap ▶︎ on the watch. It plays right on the watch, smooth and with sound. If a site won't hand over the video, the iPhone plays it and streams it to the watch instead."),

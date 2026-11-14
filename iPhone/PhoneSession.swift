@@ -19,6 +19,10 @@ enum WatchCommand {
     case scrollTo(y: Double)
     case playVideo
     case videoMirror(on: Bool)
+    case newTab(url: String?)
+    case switchTab(id: String)
+    case closeTab(id: String)
+    case toggleBookmark
 
     init?(message: [String: Any]) {
         guard let raw = message[Wire.kind] as? String, let kind = Wire.Kind(rawValue: raw) else { return nil }
@@ -53,7 +57,15 @@ enum WatchCommand {
             self = .scrollTo(y: y)
         case .playVideo: self = .playVideo
         case .videoMirror: self = .videoMirror(on: message[Wire.on] as? Bool ?? false)
-        case .frame, .inputFocus, .alive, .videoOffer: return nil
+        case .newTab: self = .newTab(url: message[Wire.url] as? String)
+        case .switchTab:
+            guard let id = message[Wire.tabID] as? String else { return nil }
+            self = .switchTab(id: id)
+        case .closeTab:
+            guard let id = message[Wire.tabID] as? String else { return nil }
+            self = .closeTab(id: id)
+        case .toggleBookmark: self = .toggleBookmark
+        case .frame, .inputFocus, .alive, .videoOffer, .library: return nil
         }
     }
 }
