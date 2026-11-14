@@ -1,32 +1,35 @@
 import Foundation
 
-/// Wire format shared by the iPhone (sender) and the Watch (receiver).
+/// Wire format shared by the iPhone and the Watch.
 /// Every message is a property-list dictionary sent with `WCSession.sendMessage`.
 enum Wire {
     static let kind = "k"
 
     enum Kind: String {
-        case hello, frame, navigate, tap, scroll, back, forward, reload
-        /// iPhone → watch: the user tapped an input, open text entry.
+        // iPhone → watch
+        /// A picture of the page plus its state.
+        case frame
+        /// The user tapped a text field; open text entry on the watch.
         case inputFocus
-        /// Watch → iPhone: fill the input the tap focused with this text.
-        case fillInput
-        /// Watch → iPhone: store these credentials for the current host.
-        case saveLogin
-        /// Watch → iPhone: fill the saved credentials for the current host.
-        case fillLogin
-        /// Watch → iPhone: bring the app forward (iPhone presents itself if possible).
-        case wake
-        /// iPhone → watch, ~1 Hz: "I'm here", plus whether WebKit can render
-        /// right now. Lets the watch tell a static page from a sleeping phone.
+        /// ~1 Hz heartbeat, plus whether WebKit can render right now.
         case alive
-        /// Watch → iPhone, every ~10 s while the watch app is in use: keeps
-        /// the iPhone's auto-lock disabled.
-        case keepAlive
-        /// Watch → iPhone: scroll to an absolute position (`scrollY`, in
-        /// watch-screen heights from the top of the page). Absolute, so a
-        /// lost message never leaves the two sides out of step.
+        /// A video the watch can play natively (or, without a URL, notice
+        /// that the iPhone is playing it and mirroring it fast instead).
+        case videoOffer
+
+        // watch → iPhone
+        case hello, keepAlive, navigate, tap, back, forward, reload
+        /// Relative scroll (legacy).
+        case scroll
+        /// Absolute scroll to `scrollY` (watch-screens from the top).
         case scrollTo
+        case fillInput, saveLogin, fillLogin
+        /// Ask the iPhone to post a "tap to resume" notification.
+        case wake
+        /// Play the page's video on the watch.
+        case playVideo
+        /// Turn fast video mirroring on or off (`on`).
+        case videoMirror
     }
 
     static let jpeg = "jpg"
@@ -50,7 +53,7 @@ enum Wire {
     static let currentValue = "cv"
     static let submitOnReturn = "sr"
     static let username = "un"
-    static let password = "pw"
+    static let password = "pwd"
     static let host = "hs"
     static let status = "st"
     static let rendering = "rnd"
@@ -59,6 +62,11 @@ enum Wire {
     static let maxScroll = "ms"
     static let windowTop = "wt"
     static let windowHeight = "wh"
+    static let hasVideo = "hv"
+    static let boost = "bo"
+    static let videoURL = "vu"
+    static let startTime = "vt"
+    static let on = "on"
 
     /// WatchConnectivity rejects interactive messages above ~65 KB, so a frame
     /// is always encoded to fit under this with room for the header.
@@ -115,6 +123,39 @@ struct InputPrompt: Identifiable {
     }
 }
 
+/// A video for the watch. With a URL the watch plays it itself (smooth, with
+/// sound on the watch). Without one, the stream couldn't be extracted, so the
+/// iPhone plays it and mirrors it as fast as the link allows.
+struct VideoOffer: Identifiable {
+    let id = UUID()
+    let url: URL?
+    let title: String
+    let startTime: Double
+
+    init(url: URL?, title: String, startTime: Double) {
+        self.url = url
+        self.title = title
+        self.startTime = startTime
+    }
+
+    init?(message: [String: Any]) {
+        guard (message[Wire.kind] as? String) == Wire.Kind.videoOffer.rawValue else { return nil }
+        url = (message[Wire.videoURL] as? String).flatMap { URL(string: $0) }
+        title = message[Wire.title] as? String ?? ""
+        startTime = message[Wire.startTime] as? Double ?? 0
+    }
+
+    var message: [String: Any] {
+        var message: [String: Any] = [
+            Wire.kind: Wire.Kind.videoOffer.rawValue,
+            Wire.title: title,
+            Wire.startTime: startTime
+        ]
+        if let url { message[Wire.videoURL] = url.absoluteString }
+        return message
+    }
+}
+
 /// One mirrored picture of the iPhone's web view plus the page state shown
 /// alongside it on the watch.
 struct MirrorFrame: Sendable {
@@ -145,9 +186,15 @@ struct MirrorFrame: Sendable {
     /// …and how much of the picture's height the window takes up.
     let windowHeight: Double
 
+    /// The page has a video the watch can offer to play.
+    let hasVideo: Bool
+    /// The iPhone is playing a video and mirroring it as fast as it can.
+    let boost: Bool
+
     init(jpeg: Data, url: String, title: String, sequence: Int, pixelWidth: Int, pixelHeight: Int,
          canGoBack: Bool, canGoForward: Bool, isLoading: Bool, progress: Double, isReplay: Bool = false,
-         scrollY: Double = 0, maxScroll: Double = 0, windowTop: Double = 0, windowHeight: Double = 1) {
+         scrollY: Double = 0, maxScroll: Double = 0, windowTop: Double = 0, windowHeight: Double = 1,
+         hasVideo: Bool = false, boost: Bool = false) {
         self.jpeg = jpeg
         self.url = url
         self.title = title
@@ -163,6 +210,8 @@ struct MirrorFrame: Sendable {
         self.maxScroll = maxScroll
         self.windowTop = windowTop
         self.windowHeight = windowHeight
+        self.hasVideo = hasVideo
+        self.boost = boost
     }
 
     init?(message: [String: Any]) {
@@ -184,16 +233,13 @@ struct MirrorFrame: Sendable {
         windowTop = message[Wire.windowTop] as? Double ?? 0
         let height = message[Wire.windowHeight] as? Double ?? 1
         windowHeight = height > 0 ? height : 1
+        hasVideo = message[Wire.hasVideo] as? Bool ?? false
+        boost = message[Wire.boost] as? Bool ?? false
     }
 
     var message: [String: Any] {
         [
             Wire.kind: Wire.Kind.frame.rawValue,
-            Wire.replay: isReplay,
-            Wire.scrollY: scrollY,
-            Wire.maxScroll: maxScroll,
-            Wire.windowTop: windowTop,
-            Wire.windowHeight: windowHeight,
             Wire.jpeg: jpeg,
             Wire.url: url,
             Wire.title: title,
@@ -203,7 +249,26 @@ struct MirrorFrame: Sendable {
             Wire.canGoBack: canGoBack,
             Wire.canGoForward: canGoForward,
             Wire.isLoading: isLoading,
-            Wire.progress: progress
+            Wire.progress: progress,
+            Wire.replay: isReplay,
+            Wire.scrollY: scrollY,
+            Wire.maxScroll: maxScroll,
+            Wire.windowTop: windowTop,
+            Wire.windowHeight: windowHeight,
+            Wire.hasVideo: hasVideo,
+            Wire.boost: boost
         ]
+    }
+
+    /// The same picture resent later (phone can't render), with a fresh
+    /// sequence number so the watch accepts it.
+    func replay(sequence: Int) -> MirrorFrame {
+        MirrorFrame(jpeg: jpeg, url: url, title: title, sequence: sequence,
+                    pixelWidth: pixelWidth, pixelHeight: pixelHeight,
+                    canGoBack: canGoBack, canGoForward: canGoForward,
+                    isLoading: isLoading, progress: progress, isReplay: true,
+                    scrollY: scrollY, maxScroll: maxScroll,
+                    windowTop: windowTop, windowHeight: windowHeight,
+                    hasVideo: hasVideo, boost: false)
     }
 }

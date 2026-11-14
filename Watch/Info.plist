@@ -22,5 +22,10 @@
 	<true/>
 	<key>WKCompanionAppBundleIdentifier</key>
 	<string>com.steroidos.ios</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoadsForMedia</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

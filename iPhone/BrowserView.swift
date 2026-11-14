@@ -1,4 +1,5 @@
 import SwiftUI
+import WebKit
 
 struct BrowserView: View {
     @ObservedObject var model: BrowserModel
@@ -17,7 +18,14 @@ struct BrowserView: View {
             } else {
                 Divider()
             }
-            WebView(webView: model.webView)
+            ZStack {
+                WebView(webView: model.mainWebView)
+                if let popup = model.popups.last {
+                    popupWindow(popup)
+                        .transition(.move(edge: .bottom))
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: model.popups.count)
             toolbar
         }
         .overlay {
@@ -42,6 +50,36 @@ struct BrowserView: View {
                 }
             }
         }
+    }
+
+    /// A sign-in (or other) popup window, shown over the page like a sheet.
+    /// The watch mirrors it while it's open; it closes itself when the site
+    /// finishes signing in.
+    private func popupWindow(_ popup: WKWebView) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 8) {
+                Image(systemName: "lock.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(model.title.isEmpty ? (popup.url?.host ?? "Sign in") : model.title)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Spacer()
+                Button {
+                    model.closeTopPopup()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(.bar)
+            WebView(webView: popup)
+                .id(ObjectIdentifier(popup))
+        }
+        .background(Color(.systemBackground))
     }
 
     private var addressBar: some View {
@@ -168,7 +206,7 @@ struct WatchStatusView: View {
                 }
                 Section {
                     Text(session.isWatchReachable
-                         ? "The watch shows the top of this page live. Tap on the watch to click, turn the Digital Crown to scroll, double-tap to zoom, long-press for the address bar."
+                         ? "The watch shows this page live. Tap to click, turn the Digital Crown or swipe to scroll, swipe sideways for back/forward. 🔍 searches Google, ☰ opens the menu, ▶︎ plays the page's video on the watch."
                          : "Open SteroidOS on your Apple Watch. The mirror streams only while both apps are on screen.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

@@ -17,6 +17,8 @@ enum WatchCommand {
     case wake
     case keepAlive
     case scrollTo(y: Double)
+    case playVideo
+    case videoMirror(on: Bool)
 
     init?(message: [String: Any]) {
         guard let raw = message[Wire.kind] as? String, let kind = Wire.Kind(rawValue: raw) else { return nil }
@@ -49,7 +51,9 @@ enum WatchCommand {
         case .scrollTo:
             guard let y = message[Wire.scrollY] as? Double else { return nil }
             self = .scrollTo(y: y)
-        case .frame, .inputFocus, .alive: return nil
+        case .playVideo: self = .playVideo
+        case .videoMirror: self = .videoMirror(on: message[Wire.on] as? Bool ?? false)
+        case .frame, .inputFocus, .alive, .videoOffer: return nil
         }
     }
 }

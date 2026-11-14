@@ -49,6 +49,30 @@ struct ControlsView: View {
                     }
                 }
 
+                if session.pageHasVideo && !session.isVideoMirrorOn {
+                    Button {
+                        WKInterfaceDevice.current().play(.click)
+                        session.playVideo()
+                        dismiss()
+                    } label: {
+                        Label("Play video on watch", systemImage: "play.rectangle.fill")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                }
+
+                Button {
+                    WKInterfaceDevice.current().play(.click)
+                    session.zoomed.toggle()
+                    dismiss()
+                } label: {
+                    Label(session.zoomed ? "Zoom out" : "Zoom in 2×",
+                          systemImage: session.zoomed ? "minus.magnifyingglass" : "plus.magnifyingglass")
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(.bordered)
+
                 Text("Go to")
                     .font(.caption2)
                     .foregroundStyle(.secondary)

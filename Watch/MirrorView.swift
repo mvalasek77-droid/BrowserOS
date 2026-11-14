@@ -2,26 +2,33 @@ import SwiftUI
 import WatchKit
 
 /// Full-screen live picture of the iPhone's page.
-/// Tap = click on the iPhone. Crown or vertical swipe = scroll (the picture
-/// moves instantly; the iPhone follows). Swipe right/left = back/forward.
-/// Double-tap = zoom in/out locally (drag pans while zoomed).
-/// 🔍 = search Google or open a URL. ☰ or long-press = navigation menu.
+/// Tap = click on the iPhone (instantly — there is no double-tap to wait for).
+/// Crown or vertical swipe = scroll (the picture moves at once; the iPhone
+/// follows). Swipe right/left = back/forward.
+/// 🔍 = search Google or open a URL. ☰ or long-press = menu (zoom, quick
+/// links, …). ▶︎ = play the page's video on the watch.
 struct MirrorView: View {
     @EnvironmentObject private var session: WatchSession
 
     @State private var showControls = false
-    @State private var zoom: CGFloat = 1
-    @State private var zoomAnchor: UnitPoint = .center
     @State private var pan: CGSize = .zero
     @State private var panStart: CGSize = .zero
     @State private var dragLastY: CGFloat = 0
     @State private var dragAxis: Axis?
     @State private var crown: Double = 0
     @State private var crownLast: Double = 0
+    @State private var ripple: Ripple?
+    @FocusState private var crownFocused: Bool
 
     private let zoomScale: CGFloat = 2.2
     /// Watch-screens scrolled per crown unit. A casual flick moves roughly one screen.
     private let crownStep = 0.035
+    private var zoom: CGFloat { session.zoomed ? zoomScale : 1 }
+
+    private struct Ripple: Equatable {
+        let id = UUID()
+        let point: CGPoint
+    }
 
     var body: some View {
         GeometryReader { geo in
@@ -33,9 +40,6 @@ struct MirrorView: View {
 
                 Color.clear
                     .contentShape(Rectangle())
-                    .onTapGesture(count: 2) { location in
-                        toggleZoom(at: location, in: geo.size)
-                    }
                     .onTapGesture { location in
                         sendTap(at: location, in: geo.size)
                     }
@@ -44,6 +48,16 @@ struct MirrorView: View {
                         showControls = true
                     }
                     .gesture(drag(in: geo.size))
+
+                if let ripple {
+                    Circle()
+                        .fill(Color.white.opacity(0.35))
+                        .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1.5))
+                        .frame(width: 34, height: 34)
+                        .position(ripple.point)
+                        .transition(.scale(scale: 0.4).combined(with: .opacity))
+                        .allowsHitTesting(false)
+                }
 
                 // Above the gesture layer, or its button can never be tapped.
                 if session.image == nil {
@@ -55,6 +69,7 @@ struct MirrorView: View {
         }
         .ignoresSafeArea()
         .focusable()
+        .focused($crownFocused)
         .digitalCrownRotation($crown, from: -1_000_000, through: 1_000_000, by: 1,
                               sensitivity: .high, isContinuous: true, isHapticFeedbackEnabled: false)
         .onChange(of: crown) { _, value in
@@ -62,17 +77,38 @@ struct MirrorView: View {
             crownLast = value
             session.scrollBy(delta * crownStep)
         }
+        // A sheet takes the crown away; give it back when the sheet closes,
+        // or the crown silently stops scrolling.
+        .onAppear { crownFocused = true }
+        .onChange(of: showControls) { _, shown in if !shown { refocusCrown() } }
+        .onChange(of: session.activeInput?.id) { _, id in if id == nil { refocusCrown() } }
+        .onChange(of: session.videoOffer?.id) { _, id in if id == nil { refocusCrown() } }
+        .onChange(of: session.zoomed) { _, _ in
+            pan = .zero
+            panStart = .zero
+        }
         .sheet(isPresented: $showControls) {
             ControlsView().environmentObject(session)
         }
         .sheet(item: $session.activeInput) { prompt in
             InputSheet(prompt: prompt).environmentObject(session)
         }
+        .sheet(item: $session.videoOffer) { offer in
+            VideoPlayerView(offer: offer).environmentObject(session)
+        }
+    }
+
+    private func refocusCrown() {
+        Task { @MainActor in
+            // Let the sheet finish dismissing first.
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            crownFocused = true
+        }
     }
 
     // MARK: - Picture
 
-    /// The picture is drawn at screen width and shifted so that the part the
+    /// The picture is drawn at screen width and shifted so the part the
     /// iPhone calls the "window" lines up with the screen, then shifted again
     /// by however far the watch has scrolled past the frame's own position.
     /// That second shift is what makes scrolling instant and smooth.
@@ -91,7 +127,7 @@ struct MirrorView: View {
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .clipped()
-        .scaleEffect(zoom, anchor: zoomAnchor)
+        .scaleEffect(zoom, anchor: .center)
         .offset(pan)
         // Dim a picture that isn't live so it doesn't look current.
         .opacity(isPictureLive ? 1 : 0.4)
@@ -138,7 +174,7 @@ struct MirrorView: View {
                     .foregroundStyle(.secondary)
             }
             .padding(.horizontal, 12)
-            .allowsHitTesting(false) // long-press for Controls still works
+            .allowsHitTesting(false) // long-press for the menu still works
         case .connecting, .live:
             VStack(spacing: 10) {
                 Image(systemName: "iphone")
@@ -193,9 +229,12 @@ struct MirrorView: View {
             if let status = session.statusLine {
                 Text(status)
                     .font(.caption2.weight(.semibold))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(.blue.opacity(0.9), in: Capsule())
+                    .padding(.horizontal, 10)
                     .padding(.bottom, 4)
                     .transition(.opacity)
                     .allowsHitTesting(false)
@@ -217,8 +256,8 @@ struct MirrorView: View {
         }
     }
 
-    /// Two small buttons tucked into the bottom corners (which the round
-    /// screen mostly hides anyway): the menu, and one-tap Google search.
+    /// Small buttons along the bottom edge (which the round screen mostly
+    /// hides anyway): menu, video, one-tap Google search.
     private var navButtons: some View {
         HStack {
             Button {
@@ -230,6 +269,26 @@ struct MirrorView: View {
             .buttonStyle(.plain)
 
             Spacer()
+
+            if session.isVideoMirrorOn {
+                Button {
+                    WKInterfaceDevice.current().play(.click)
+                    session.setVideoMirror(false)
+                } label: {
+                    navIcon("stop.fill", tint: .red)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            } else if session.pageHasVideo {
+                Button {
+                    WKInterfaceDevice.current().play(.click)
+                    session.playVideo()
+                } label: {
+                    navIcon("play.fill", tint: .green)
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
 
             TextFieldLink(prompt: Text("Search Google or enter URL")) {
                 navIcon("magnifyingglass")
@@ -245,12 +304,12 @@ struct MirrorView: View {
         .padding(.bottom, 6)
     }
 
-    private func navIcon(_ systemName: String) -> some View {
+    private func navIcon(_ systemName: String, tint: Color = .black) -> some View {
         Image(systemName: systemName)
             .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: 32, height: 32)
-            .background(.black.opacity(0.6), in: Circle())
+            .background(tint.opacity(tint == .black ? 0.6 : 0.85), in: Circle())
             .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 0.5))
     }
 
@@ -304,7 +363,7 @@ struct MirrorView: View {
             }
     }
 
-    // MARK: - Taps and zoom
+    // MARK: - Taps
 
     private func sendTap(at point: CGPoint, in size: CGSize) {
         guard session.image != nil else { return }
@@ -314,43 +373,37 @@ struct MirrorView: View {
             WKInterfaceDevice.current().play(.failure)
             return
         }
-        // Undo the local zoom/pan: screen = anchor + (content - anchor) * zoom + pan
-        let anchor = CGPoint(x: zoomAnchor.x * size.width, y: zoomAnchor.y * size.height)
-        let content = CGPoint(x: anchor.x + (point.x - pan.width - anchor.x) / zoom,
-                              y: anchor.y + (point.y - pan.height - anchor.y) / zoom)
+        // Undo the local zoom/pan: screen = center + (content - center) * zoom + pan
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let content = CGPoint(x: center.x + (point.x - pan.width - center.x) / zoom,
+                              y: center.y + (point.y - pan.height - center.y) / zoom)
         // The screen always shows the page from `viewScroll` down, and the
         // tap first scrolls the iPhone there, so screen position = window position.
         let nx = content.x / max(size.width, 1)
         let ny = content.y / windowDisplayHeight(in: size)
         guard nx >= 0, nx <= 1, ny >= 0, ny <= 1 else { return }
         WKInterfaceDevice.current().play(.click)
+        showRipple(at: point)
         session.tap(x: Double(nx), y: Double(ny))
     }
 
-    private func toggleZoom(at point: CGPoint, in size: CGSize) {
-        guard session.image != nil else { return }
-        WKInterfaceDevice.current().play(.click)
-        withAnimation(.easeInOut(duration: 0.15)) {
-            if zoom > 1 {
-                zoom = 1
-                pan = .zero
-                panStart = .zero
-                zoomAnchor = .center
-            } else {
-                zoomAnchor = UnitPoint(x: point.x / max(size.width, 1), y: point.y / max(size.height, 1))
-                zoom = zoomScale
+    /// Instant visual acknowledgement, before the iPhone has even answered.
+    private func showRipple(at point: CGPoint) {
+        let new = Ripple(point: point)
+        withAnimation(.easeOut(duration: 0.12)) { ripple = new }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            if ripple?.id == new.id {
+                withAnimation(.easeOut(duration: 0.25)) { ripple = nil }
             }
         }
     }
 
     private func clampedPan(_ proposed: CGSize, in size: CGSize) -> CGSize {
-        let anchor = CGPoint(x: zoomAnchor.x * size.width, y: zoomAnchor.y * size.height)
-        let grow = zoom - 1
-        let minX = -(size.width - anchor.x) * grow
-        let maxX = anchor.x * grow
-        let minY = -(size.height - anchor.y) * grow
-        let maxY = anchor.y * grow
-        return CGSize(width: min(max(proposed.width, minX), maxX),
-                      height: min(max(proposed.height, minY), maxY))
+        let grow = (zoom - 1) / 2
+        let maxX = size.width * grow
+        let maxY = size.height * grow
+        return CGSize(width: min(max(proposed.width, -maxX), maxX),
+                      height: min(max(proposed.height, -maxY), maxY))
     }
 }

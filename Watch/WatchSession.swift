@@ -37,6 +37,15 @@ final class WatchSession: NSObject, ObservableObject {
     /// crown/finger; the picture is offset by `viewScroll - frame.scrollY`
     /// until the iPhone's next frame (taken at the new position) catches up.
     @Published private(set) var viewScroll: Double = 0
+    /// A video the iPhone handed over to play natively; drives the player sheet.
+    @Published var videoOffer: VideoOffer?
+    /// 2× local zoom of the picture (toggled from the menu).
+    @Published var zoomed = false
+
+    /// The page has a video the watch can play.
+    var pageHasVideo: Bool { frame?.hasVideo ?? false }
+    /// The iPhone is playing a video and mirroring it fast.
+    var isVideoMirrorOn: Bool { frame?.boost ?? false }
 
     private let session: WCSession? = WCSession.isSupported() ? WCSession.default : nil
     private var lastSentScroll: Double?
@@ -238,6 +247,17 @@ final class WatchSession: NSObject, ObservableObject {
         send([Wire.kind: Wire.Kind.fillLogin.rawValue], queueIfUndelivered: true)
     }
 
+    /// Ask the iPhone for the page's video. It replies with a stream the
+    /// watch plays itself, or starts fast-mirroring it if it can't extract one.
+    func playVideo() {
+        showStatus("Opening video…")
+        send([Wire.kind: Wire.Kind.playVideo.rawValue])
+    }
+
+    func setVideoMirror(_ on: Bool) {
+        send([Wire.kind: Wire.Kind.videoMirror.rawValue, Wire.on: on])
+    }
+
     /// iOS never lets an app bring itself to the foreground. This asks the
     /// iPhone to post a "tap to resume" notification instead.
     func wakeIPhone() {
@@ -323,6 +343,15 @@ final class WatchSession: NSObject, ObservableObject {
         }
     }
 
+    private func receiveVideoOffer(_ offer: VideoOffer) {
+        if offer.url != nil {
+            statusLine = nil
+            videoOffer = offer
+        } else {
+            showStatus("Playing on iPhone — streaming here")
+        }
+    }
+
     private func receiveInputPrompt(_ prompt: InputPrompt) {
         activeInput = prompt
         sendKeepAlive()
@@ -385,6 +414,10 @@ extension WatchSession: WCSessionDelegate {
         }
         if let prompt = InputPrompt(message: message) {
             Task { @MainActor in self.receiveInputPrompt(prompt) }
+            return
+        }
+        if let offer = VideoOffer(message: message) {
+            Task { @MainActor in self.receiveVideoOffer(offer) }
             return
         }
     }

@@ -8,79 +8,62 @@ struct WebView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
 
-/// Forwards web view events to the model and nudges the mirror whenever the
-/// page could look different.
+/// Delegate for the main web view and any popups. Forwards events to the
+/// model, which decides what matters for the view being mirrored.
 final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
     weak var model: BrowserModel?
-    private var observations: [NSKeyValueObservation] = []
-    /// Lets the model force the native keyboard for a field the user just
-    /// tapped on the PHONE itself (programmatic .focus() alone won't).
-    var keyboardFocusRequest: (() -> Void)?
-
-    /// Called by BrowserModel right after a phone-side tap focuses an editable
-    /// element: makes the WKWebView first responder so iOS raises the keyboard.
-    @MainActor func showKeyboard() {
-        model?.webView.becomeFirstResponder()
-    }
+    private var observations: [ObjectIdentifier: [NSKeyValueObservation]] = [:]
 
     func observe(_ webView: WKWebView) {
-        observations = [
-            webView.observe(\.estimatedProgress) { [weak self] _, _ in self?.sync() },
-            webView.observe(\.title) { [weak self] _, _ in self?.sync() },
-            webView.observe(\.url) { [weak self] _, _ in self?.sync() },
-            webView.observe(\.isLoading) { [weak self] _, _ in self?.sync() },
-            webView.observe(\.canGoBack) { [weak self] _, _ in self?.sync() },
-            webView.observe(\.canGoForward) { [weak self] _, _ in self?.sync() },
-            webView.scrollView.observe(\.contentOffset) { [weak self] _, _ in self?.capture() }
+        observations[ObjectIdentifier(webView)] = [
+            webView.observe(\.estimatedProgress) { [weak self] view, _ in self?.changed(view) },
+            webView.observe(\.title) { [weak self] view, _ in self?.changed(view) },
+            webView.observe(\.url) { [weak self] view, _ in self?.changed(view) },
+            webView.observe(\.isLoading) { [weak self] view, _ in self?.changed(view) },
+            webView.observe(\.canGoBack) { [weak self] view, _ in self?.changed(view) },
+            webView.observe(\.canGoForward) { [weak self] view, _ in self?.changed(view) },
+            webView.scrollView.observe(\.contentOffset) { [weak self, weak webView] _, _ in
+                guard let webView else { return }
+                self?.scrolled(webView)
+            }
         ]
     }
 
-    private func sync() {
-        Task { @MainActor [weak self] in self?.model?.syncState() }
+    func stopObserving(_ webView: WKWebView) {
+        observations[ObjectIdentifier(webView)] = nil
     }
 
-    private func capture() {
-        Task { @MainActor [weak self] in self?.model?.mirror.requestCapture() }
+    private func changed(_ webView: WKWebView) {
+        Task { @MainActor [weak self, weak webView] in
+            guard let webView else { return }
+            self?.model?.webViewChanged(webView)
+        }
     }
 
-    private func finished() {
-        Task { @MainActor [weak self] in
-            self?.model?.syncState()
-            self?.model?.mirror.pageDidFinish()
+    private func scrolled(_ webView: WKWebView) {
+        Task { @MainActor [weak self, weak webView] in
+            guard let webView else { return }
+            self?.model?.webViewScrolled(webView)
+        }
+    }
+
+    private func finished(_ webView: WKWebView) {
+        Task { @MainActor [weak self, weak webView] in
+            guard let webView else { return }
+            self?.model?.webViewFinished(webView)
         }
     }
 
     // MARK: WKNavigationDelegate
 
-    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { sync() }
-    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) { finished() }
-    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { finished() }
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { sync() }
-    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { sync() }
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { changed(webView) }
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) { finished(webView) }
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { finished(webView) }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { changed(webView) }
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { changed(webView) }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         webView.reload()
-    }
-
-    func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
-        guard let url = webView.url else { return }
-        if Self.isChallengeURL(url) {
-            // Bot-detection redirect (e.g. claude.ai/api/challenge_redirect).
-            // The challenge page may already be visible; just surfacing it here
-            // so the user knows sign-in is happening through a challenge.
-            // A future escape hatch could offer ASWebAuthenticationSession.
-        }
-    }
-
-    /// Heuristic: a URL that carries the site through a known anti-bot
-    /// challenge before it reaches the real login form.
-    static func isChallengeURL(_ url: URL) -> Bool {
-        let path = url.path.lowercased()
-        return path.contains("/api/challenge_redirect")
-            || path.contains("/challenge")
-            || path.contains("/cdn-cgi/challenge")
-            || path.contains("/verify")
-            || path.contains("/checkpoint")
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
@@ -92,16 +75,20 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let scheme = url.scheme?.lowercased() ?? ""
 
         if scheme == "http" || scheme == "https" {
-            // A user's link tap is handed to WebKit as "user initiated", which lets
-            // it open universal links in other apps. Re-issuing the same request
-            // ourselves keeps every link inside this view. Same for target="_blank".
-            let isMainFrameLinkTap = navigationAction.navigationType == .linkActivated
-                && navigationAction.targetFrame?.isMainFrame == true
-            if navigationAction.targetFrame == nil || isMainFrameLinkTap {
-                webView.load(navigationAction.request)
-                decisionHandler(.cancel)
-                return
+            if navigationAction.navigationType == .linkActivated {
+                // A user's link tap is handed to WebKit as "user initiated",
+                // which lets it open universal links in other apps. Re-issuing
+                // the request ourselves keeps it here. A plain target="_blank"
+                // link opens in this view too (no popup needed for it).
+                let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+                if isMainFrame {
+                    webView.load(navigationAction.request)
+                    decisionHandler(.cancel)
+                    return
+                }
             }
+            // window.open() (sign-in popups) arrives here with no target
+            // frame; allowing it makes WebKit call createWebViewWith below.
             decisionHandler(.allow)
             return
         }
@@ -125,11 +112,38 @@ final class WebCoordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 
     // MARK: WKUIDelegate
 
+    /// A real popup window, created from WebKit's configuration so the page
+    /// keeps its `window.opener` link — sign-in flows ("Sign in with Google /
+    /// Apple") hand their result back through it and break without it.
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if navigationAction.targetFrame == nil {
-            webView.load(navigationAction.request)
+        MainActor.assumeIsolated {
+            model?.openPopup(configuration: configuration, opener: webView)
         }
-        return nil
+    }
+
+    /// The popup called window.close() (typically right after signing in).
+    func webViewDidClose(_ webView: WKWebView) {
+        Task { @MainActor [weak self, weak webView] in
+            guard let webView else { return }
+            self?.model?.closePopup(webView)
+        }
+    }
+
+    // JavaScript dialogs: without these, alert/confirm silently do nothing
+    // and some sign-in pages wait forever.
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        Task { @MainActor [weak self] in
+            self?.model?.mirror.flash(status: String(message.prefix(80)))
+            completionHandler()
+        }
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        // The user can't answer a dialog from the watch; "OK" is what they
+        // asked for by tapping the button that raised it.
+        completionHandler(true)
     }
 }

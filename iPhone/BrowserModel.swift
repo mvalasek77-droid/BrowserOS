@@ -3,8 +3,9 @@ import SwiftUI
 import UserNotifications
 import WebKit
 
-/// Owns the one real web view, the watch session and the mirror stream, and
-/// turns watch commands into actions on the page.
+/// Owns the web views (the main page plus any sign-in popups), the watch
+/// session and the mirror stream, and turns watch commands into actions on
+/// whichever page is in front.
 @MainActor
 final class BrowserModel: ObservableObject {
     static let homeURL = "https://www.google.com"
@@ -17,61 +18,42 @@ final class BrowserModel: ObservableObject {
     @Published private(set) var progress: Double = 0
     @Published private(set) var canGoBack = false
     @Published private(set) var canGoForward = false
+    /// Popup windows (sign-in flows), front-most last.
+    @Published private(set) var popups: [WKWebView] = []
 
     /// True while the watch is in use: iOS auto-lock is disabled, because a
     /// locked phone stops WebKit rendering and the mirror dies.
     @Published private(set) var watchKeepsPhoneAwake = false
-    /// The user is actually driving the page from the watch (tapped,
-    /// scrolled, typed), not just glancing at it.
+    /// The user is actually driving the page from the watch.
     @Published private(set) var watchIsDriving = false
     /// The user tapped the "Mirroring to Apple Watch" screen to use the phone.
     @Published var curtainDismissed = false
 
-    private var lastWatchActivity = Date.distantPast
-    /// Extended while the watch is collecting text, which can take a while
-    /// (dictation, Scribble) and may background the watch app briefly.
-    private var keepAwakeUntil = Date.distantPast
-    private var awakeTimer: Timer?
-    /// Text the watch sent while WebKit couldn't run (phone locked); applied
-    /// as soon as the app is back on screen.
-    private var pendingWhileAsleep: [WatchCommand] = []
-    private var lastWakeNotificationAt = Date.distantPast
-    private static let wakeNotificationID = "sos.wake"
-
-    let webView: WKWebView
+    let mainWebView: WKWebView
+    /// The page the user sees and the watch mirrors.
+    var activeWebView: WKWebView { popups.last ?? mainWebView }
     let session: PhoneSession
     let mirror: MirrorStreamer
     private let coordinator = WebCoordinator()
 
-    init() {
-        let config = WKWebViewConfiguration()
-        config.websiteDataStore = .default()
-        config.allowsInlineMediaPlayback = true
-        config.defaultWebpagePreferences.allowsContentJavaScript = true
-        let webView = WKWebView(frame: .zero, configuration: config)
-        webView.allowsBackForwardNavigationGestures = true
-        // The link preview sheet offers "Open in Safari"; keep everything in-app.
-        webView.allowsLinkPreview = false
-        // Report the real WebKit UA. A hardcoded fake UA (e.g. claiming iOS 17
-        // on an iOS 26 device) triggers Cloudflare-class bot detection on sites
-        // like claude.ai, which then redirect to /api/challenge_redirect and
-        // never show a login form. The true UA matches the device's actual
-        // fingerprint and clears those challenges.
-        webView.customUserAgent = nil
-        // Native keyboard: when the user taps a field ON THE PHONE, WebKit's own
-        // touch handling focuses it and raises the keyboard — keep that path
-        // untouched. (Watch-driven taps use programmatic focus, which must NOT
-        // raise the phone keyboard; they route through InputSheet instead.)
-        self.webView = webView
+    private var lastWatchActivity = Date.distantPast
+    /// Extended while the watch is collecting text (dictation can take a while).
+    private var keepAwakeUntil = Date.distantPast
+    private var housekeepingTimer: Timer?
+    /// Text the watch sent while WebKit couldn't run; applied once back on screen.
+    private var pendingWhileAsleep: [WatchCommand] = []
+    private var lastWakeNotificationAt = Date.distantPast
+    private static let wakeNotificationID = "sos.wake"
 
+    init() {
+        let webView = WKWebView(frame: .zero, configuration: Self.makeConfiguration())
+        mainWebView = webView
         let session = PhoneSession()
         self.session = session
         mirror = MirrorStreamer(webView: webView, session: session)
 
         coordinator.model = self
-        webView.navigationDelegate = coordinator
-        webView.uiDelegate = coordinator
-        coordinator.observe(webView)
+        attach(mainWebView)
 
         session.onCommand = { [weak self] command in
             self?.handle(command)
@@ -85,11 +67,102 @@ final class BrowserModel: ObservableObject {
             self.updateKeepAwake()
         }
 
-        awakeTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.updateKeepAwake() }
+        housekeepingTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.updateKeepAwake()
+                self?.probeVideo()
+            }
         }
 
         load(UserDefaults.standard.string(forKey: Self.lastURLKey) ?? Self.homeURL)
+    }
+
+    // MARK: - Web view setup
+
+    private static func makeConfiguration() -> WKWebViewConfiguration {
+        let config = WKWebViewConfiguration()
+        config.websiteDataStore = .default()
+        config.allowsInlineMediaPlayback = true
+        // Taps from the watch are synthetic, so they don't count as a user
+        // gesture; without this, videos wouldn't start from the watch.
+        config.mediaTypesRequiringUserActionForPlayback = []
+        // Same reason: sign-in buttons that call window.open() need this.
+        config.preferences.javaScriptCanOpenWindowsAutomatically = true
+        config.defaultWebpagePreferences.allowsContentJavaScript = true
+        // Identify as Safari on this exact iOS version. A made-up version
+        // trips bot checks (Cloudflare on claude.ai); no "Safari" token makes
+        // Google refuse to sign in ("This browser or app may not be secure").
+        config.applicationNameForUserAgent = safariApplicationName
+        return config
+    }
+
+    private static var safariApplicationName: String {
+        let parts = UIDevice.current.systemVersion.split(separator: ".")
+        let major = parts.first.map(String.init) ?? "17"
+        let minor = parts.count > 1 ? String(parts[1]) : "0"
+        return "Version/\(major).\(minor) Mobile/15E148 Safari/604.1"
+    }
+
+    private func attach(_ webView: WKWebView) {
+        webView.allowsBackForwardNavigationGestures = true
+        // The link preview sheet offers "Open in Safari"; keep everything in-app.
+        webView.allowsLinkPreview = false
+        webView.customUserAgent = nil
+        webView.navigationDelegate = coordinator
+        webView.uiDelegate = coordinator
+        coordinator.observe(webView)
+    }
+
+    // MARK: - Popups (sign-in windows)
+
+    func openPopup(configuration: WKWebViewConfiguration, opener: WKWebView) -> WKWebView? {
+        guard popups.count < 3 else { return nil }
+        let popup = WKWebView(frame: opener.bounds, configuration: configuration)
+        attach(popup)
+        popups.append(popup)
+        activeWebViewChanged()
+        return popup
+    }
+
+    func closePopup(_ webView: WKWebView) {
+        guard let index = popups.firstIndex(where: { $0 === webView }) else { return }
+        for popup in popups[index...] {
+            coordinator.stopObserving(popup)
+            popup.stopLoading()
+        }
+        popups.removeSubrange(index...)
+        activeWebViewChanged()
+    }
+
+    func closeTopPopup() {
+        if let top = popups.last { closePopup(top) }
+    }
+
+    private func activeWebViewChanged() {
+        mirror.setBoost(false)
+        mirror.retarget(activeWebView)
+        updateWatchScrollInset()
+        syncState()
+        probeVideo()
+    }
+
+    // MARK: - Web view events (from the coordinator)
+
+    func webViewChanged(_ webView: WKWebView) {
+        guard webView === activeWebView else { return }
+        syncState()
+    }
+
+    func webViewScrolled(_ webView: WKWebView) {
+        guard webView === activeWebView else { return }
+        mirror.requestCapture()
+    }
+
+    func webViewFinished(_ webView: WKWebView) {
+        guard webView === activeWebView else { return }
+        syncState()
+        mirror.pageDidFinish()
+        probeVideo()
     }
 
     // MARK: - App lifecycle
@@ -99,10 +172,10 @@ final class BrowserModel: ObservableObject {
         guard active else { return }
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [Self.wakeNotificationID])
         requestNotificationPermissionIfActive()
-        // Give the web content process a moment to resume before replaying.
         let queued = pendingWhileAsleep
         pendingWhileAsleep = []
         guard !queued.isEmpty else { return }
+        // Give the web content process a moment to resume before replaying.
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 400_000_000)
             queued.forEach { self?.handle($0) }
@@ -127,16 +200,15 @@ final class BrowserModel: ObservableObject {
 
     /// The watch shows only the top part of the phone's web view, so at the
     /// page's normal maximum scroll the last bit of the page sits below the
-    /// watch's view and can never be reached. While the watch is in use, let
-    /// the page scroll further by that amount.
+    /// watch's view. While the watch is in use, let the page scroll further.
     private func updateWatchScrollInset() {
-        let scrollView = webView.scrollView
+        let webView = activeWebView
         let window = mirror.captureRect
         let extra = watchKeepsPhoneAwake && window.height > 0
             ? max(0, webView.bounds.height - window.height)
             : 0
-        if abs(scrollView.contentInset.bottom - extra) > 0.5 {
-            scrollView.contentInset.bottom = extra
+        if abs(webView.scrollView.contentInset.bottom - extra) > 0.5 {
+            webView.scrollView.contentInset.bottom = extra
         }
     }
 
@@ -182,10 +254,11 @@ final class BrowserModel: ObservableObject {
 
     func load(_ text: String) {
         guard let url = Self.resolve(text) else { return }
+        if !popups.isEmpty, let first = popups.first { closePopup(first) }
         addressText = url.absoluteString
         var request = URLRequest(url: url)
         request.timeoutInterval = 30
-        webView.load(request)
+        mainWebView.load(request)
     }
 
     static func resolve(_ input: String) -> URL? {
@@ -197,32 +270,55 @@ final class BrowserModel: ObservableObject {
         return URL(string: "https://www.google.com/search?q=" + query)
     }
 
-    func goBack() { webView.goBack() }
-    func goForward() { webView.goForward() }
+    /// Back in the front page; a popup with no history closes instead.
+    func goBack() {
+        if activeWebView.canGoBack {
+            activeWebView.goBack()
+        } else if !popups.isEmpty {
+            closeTopPopup()
+        }
+    }
+
+    func goForward() { activeWebView.goForward() }
 
     func reloadOrStop() {
         if isLoading {
-            webView.stopLoading()
+            activeWebView.stopLoading()
         } else {
-            webView.reload()
+            activeWebView.reload()
         }
     }
 
     // MARK: - State from the web view
 
     func syncState() {
-        canGoBack = webView.canGoBack
+        let webView = activeWebView
+        canGoBack = webView.canGoBack || !popups.isEmpty
         canGoForward = webView.canGoForward
         isLoading = webView.isLoading
         progress = webView.estimatedProgress
         if let url = webView.url?.absoluteString, !url.isEmpty, url != "about:blank", url != currentURL {
             currentURL = url
-            addressText = url
-            UserDefaults.standard.set(url, forKey: Self.lastURLKey)
+            if popups.isEmpty {
+                addressText = url
+                UserDefaults.standard.set(url, forKey: Self.lastURLKey)
+            }
+            // New page: whatever video was being mirrored is gone.
+            mirror.setBoost(false)
+            mirror.hasVideo = false
         }
         title = webView.title ?? ""
         mirror.pageStateChanged(url: currentURL, title: title, isLoading: isLoading, progress: progress,
                                 canGoBack: canGoBack, canGoForward: canGoForward)
+    }
+
+    private func probeVideo() {
+        guard session.isWatchReachable, mirror.canRenderNow else { return }
+        activeWebView.evaluateJavaScript(PageScripts.probeVideo) { [weak self] result, _ in
+            Task { @MainActor [weak self] in
+                self?.mirror.hasVideo = (result as? Bool) ?? false
+            }
+        }
     }
 
     // MARK: - Watch commands
@@ -239,7 +335,7 @@ final class BrowserModel: ObservableObject {
                 if pendingWhileAsleep.count > 10 { pendingWhileAsleep.removeFirst() }
                 mirror.flash(status: "Saved — unlock iPhone to apply")
             }
-            mirror.sendLastKnownFrameIfBackgrounded()
+            mirror.showWatchSomething()
             postWakeNotification()
             return
         }
@@ -247,25 +343,32 @@ final class BrowserModel: ObservableObject {
         switch command {
         case .hello(let width, let height):
             mirror.setWatchScreen(pixelWidth: width, pixelHeight: height)
-            // Replay the last frame so the watch sees content immediately,
-            // even if WebKit can't paint right now (phone backgrounded).
-            mirror.sendLastKnownFrameIfBackgrounded()
+            mirror.showWatchSomething()
+        case .keepAlive:
+            break
+        case .wake:
+            mirror.showWatchSomething()
+            postWakeNotification()
         case .navigate(let text):
             load(text)
+            mirror.noteInteraction()
         case .tap(let x, let y):
             tap(normalizedX: x, normalizedY: y)
         case .scroll(let deltaY):
-            scroll(byViewportFraction: deltaY)
+            scroll(byWindowFraction: deltaY)
         case .scrollTo(let y):
             scroll(toWindowUnits: y)
         case .back:
             goBack()
+            mirror.noteInteraction()
         case .forward:
             goForward()
+            mirror.noteInteraction()
         case .reload:
-            webView.reload()
+            activeWebView.reload()
+            mirror.noteInteraction()
         case .fillInput(let text, let submit):
-            fillActiveInput(text: text, submit: submit)
+            run(PageScripts.fillInput(text: text, submit: submit))
         case .saveLogin(let username, let password):
             if let host = currentHost {
                 LoginStore.save(host: host, username: username, password: password)
@@ -277,142 +380,63 @@ final class BrowserModel: ObservableObject {
                 return
             }
             fillSavedLogin(login)
-        case .wake:
-            // Open the "watch is actively looking" window so follow-up frames
-            // skip dedup and the user sees fresh pixels as soon as the phone
-            // can paint; replay the last known frame right now so the watch
-            // isn't left on a stale picture while we wait for the webview to
-            // come back from the background.
-            mirror.openWatchActiveWindow()
-            mirror.sendLastKnownFrameIfBackgrounded()
-            postWakeNotification()
-        case .keepAlive:
-            break
+        case .playVideo:
+            playVideoOnWatch()
+        case .videoMirror(let on):
+            setVideoMirror(on)
         }
     }
 
     private var currentHost: String? {
-        webView.url?.host
+        activeWebView.url?.host
     }
 
-    /// Fills username + password on the current page from the Keychain.
-    /// Targets up to two text inputs (username-ish) and one password input
-    /// inside the same (or nearest) form; submits only on request.
+    /// Runs a page script for the watch and keeps frames flowing while its
+    /// effect appears.
+    private func run(_ script: String) {
+        mirror.noteInteraction()
+        activeWebView.evaluateJavaScript(script) { [weak self] _, _ in
+            Task { @MainActor [weak self] in self?.mirror.noteInteraction() }
+        }
+    }
+
     private func fillSavedLogin(_ login: SavedLogin) {
-        let dict: [String: Any] = ["u": login.username, "p": login.password]
-        guard let data = try? JSONSerialization.data(withJSONObject: dict),
-              let json = String(data: data, encoding: .utf8) else { return }
-        let js = """
-        (function(data) {
-          var pw = document.querySelector('input[type=password]');
-          if (!pw) { return JSON.stringify({filled: false, reason: 'no-password-field'}); }
-          var doc = pw.form || pw.closest('form') || document;
-          var inputs = Array.from(doc.querySelectorAll('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio])'));
-          var userField = inputs.find(function(i) {
-            var n = (i.name||'') + ' ' + (i.id||'') + ' ' + (i.autocomplete||'') + ' ' + (i.placeholder||'');
-            return i.type === 'email' || /user|email|login|acct|name/i.test(n);
-          }) || inputs.find(function(i) { return i !== pw; });
-          function setVal(el, v) {
-            if (!el) return;
-            var proto = el.tagName === 'INPUT' ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
-            var setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
-            setter.call(el, v);
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-          setVal(userField, data.u);
-          setVal(pw, data.p);
-          window.__sosActive = pw;
-          return JSON.stringify({filled: true, user: !!(userField && userField !== pw), pass: true});
-        })(\(json));
-        """
-        webView.evaluateJavaScript(js) { [weak self] result, _ in
+        mirror.noteInteraction()
+        activeWebView.evaluateJavaScript(PageScripts.fillLogin(username: login.username, password: login.password)) { [weak self] result, _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.mirror.pageDidFinish()
                 if let text = result as? String,
-                   let d = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any],
-                   d["filled"] as? Bool == true {
-                    self.mirror.flash(status: "Filled saved login")
+                   let info = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any],
+                   info["filled"] as? Bool == true {
+                    self.mirror.flash(status: info["pass"] as? Bool == true ? "Filled saved login" : "Filled username — continue")
                 } else {
-                    self.mirror.flash(status: "No password field on this page")
+                    self.mirror.flash(status: "No login form on this page")
                 }
             }
         }
     }
 
-    /// Clicks whatever is under the given point of the mirrored region. If the
-    /// hit element is an editable field, reports back to the watch so it can
-    /// open its own text-entry sheet (the iPhone's keyboard is useless to the
-    /// user, who is looking at the watch).
+    /// Clicks whatever is under the given point of the mirrored region. If it
+    /// is a text field, asks the watch to open its own text entry (the
+    /// iPhone's keyboard is no use to someone looking at the watch).
     private func tap(normalizedX x: Double, normalizedY y: Double) {
         let rect = mirror.captureRect
         guard rect.width > 0, rect.height > 0 else { return }
         let px = Double(rect.minX) + Double(rect.width) * x
         let py = Double(rect.minY) + Double(rect.height) * y
-        let js = """
-        (function(px, py) {
-          var vv = window.visualViewport;
-          var x = vv ? (vv.offsetLeft + px / vv.scale) : px;
-          var y = vv ? (vv.offsetTop + py / vv.scale) : py;
-          var el = document.elementFromPoint(x, y);
-          if (!el) { return JSON.stringify({ hit: false }); }
-          var target = el.closest('a,button,input,select,textarea,summary,label,[role="button"],[role="link"],[onclick]') || el;
-          var editable = el.closest('input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=checkbox]):not([type=radio]), textarea, [contenteditable=""], [contenteditable="true"]');
-          var clickTarget = editable || target;
-          var before = location.href;
-          var opts = { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window };
-          ['pointerdown', 'mousedown', 'pointerup', 'mouseup'].forEach(function(type) {
-            try {
-              clickTarget.dispatchEvent(type.indexOf('pointer') === 0 ? new PointerEvent(type, opts) : new MouseEvent(type, opts));
-            } catch (e) {}
-          });
-          if (typeof clickTarget.focus === 'function') { try { clickTarget.focus(); } catch (e) {} }
-          if (!editable) {
-            if (typeof target.click === 'function') { target.click(); }
-            else { try { target.dispatchEvent(new MouseEvent('click', opts)); } catch (e) {} }
-          }
-          var link = target.closest ? target.closest('a[href]') : null;
-          if (!editable && link && link.href && /^https?:/i.test(link.href)) {
-            setTimeout(function() { if (location.href === before) { location.assign(link.href); } }, 500);
-          }
-          if (editable) {
-            window.__sosActive = editable;
-            var ce = editable.getAttribute && editable.getAttribute('contenteditable');
-            var tag = editable.tagName;
-            var type = (tag === 'TEXTAREA') ? 'textarea'
-                     : (ce === '' || ce === 'true') ? 'editable'
-                     : (editable.type || 'text').toLowerCase();
-            var val = (tag === 'INPUT' || tag === 'TEXTAREA') ? (editable.value || '')
-                                                              : (editable.innerText || editable.textContent || '');
-            var ph = editable.placeholder
-                  || (editable.getAttribute && (editable.getAttribute('aria-label') || editable.getAttribute('title')))
-                  || '';
-            var inForm = !!(editable.form || (editable.closest && editable.closest('form')));
-            var submitLike = inForm || type === 'search' || type === 'url' || type === 'email';
-            return JSON.stringify({
-              hit: true, input: true, type: type,
-              placeholder: String(ph || '').slice(0, 120),
-              value: String(val || '').slice(0, 1000),
-              submitOnReturn: submitLike
-            });
-          }
-          return JSON.stringify({ hit: true, input: false });
-        })(\(px), \(py));
-        """
-        webView.evaluateJavaScript(js) { [weak self] result, _ in
+        mirror.noteInteraction()
+        activeWebView.evaluateJavaScript(PageScripts.tap(px: px, py: py)) { [weak self] result, _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                self.mirror.pageDidFinish()
+                self.mirror.noteInteraction()
                 guard let text = result as? String,
-                      let data = text.data(using: .utf8),
-                      let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      dict["input"] as? Bool == true else { return }
+                      let info = try? JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any],
+                      info["input"] as? Bool == true else { return }
                 let prompt = InputPrompt(
-                    inputType: dict["type"] as? String ?? "text",
-                    placeholder: dict["placeholder"] as? String ?? "",
-                    currentValue: dict["value"] as? String ?? "",
-                    submitOnReturn: dict["submitOnReturn"] as? Bool ?? false
+                    inputType: info["type"] as? String ?? "text",
+                    placeholder: info["placeholder"] as? String ?? "",
+                    currentValue: info["value"] as? String ?? "",
+                    submitOnReturn: info["submitOnReturn"] as? Bool ?? false
                 )
                 // Dictation / Scribble on the watch can take a while; don't
                 // let auto-lock kill the page before the text comes back.
@@ -423,51 +447,11 @@ final class BrowserModel: ObservableObject {
         }
     }
 
-    /// The watch typed something — put it in the input the user tapped and,
-    /// if the field is in a form or submit-like (search/url/email), press Enter.
-    private func fillActiveInput(text: String, submit: Bool) {
-        let dict: [String: Any] = ["t": text, "s": submit]
-        guard let data = try? JSONSerialization.data(withJSONObject: dict),
-              let json = String(data: data, encoding: .utf8) else { return }
-        let js = """
-        (function(data) {
-          var el = window.__sosActive || document.activeElement;
-          if (!el || el === document.body) { return; }
-          var tag = el.tagName;
-          if (tag === 'INPUT' || tag === 'TEXTAREA') {
-            // React/Vue track value via the native setter — using the native
-            // setter and dispatching 'input' makes them notice.
-            var proto = tag === 'INPUT' ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
-            var setter = Object.getOwnPropertyDescriptor(proto, 'value').set;
-            setter.call(el, data.t);
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-          } else if (el.isContentEditable) {
-            el.textContent = data.t;
-            el.dispatchEvent(new InputEvent('input', { bubbles: true }));
-          }
-          if (data.s) {
-            var form = el.form || (el.closest ? el.closest('form') : null);
-            var kd = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13 });
-            var ku = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', code: 'Enter', keyCode: 13, which: 13 });
-            el.dispatchEvent(kd);
-            el.dispatchEvent(ku);
-            if (form) {
-              if (typeof form.requestSubmit === 'function') { try { form.requestSubmit(); } catch (e) { try { form.submit(); } catch (e2) {} } }
-              else { try { form.submit(); } catch (e) {} }
-            }
-          }
-        })(\(json));
-        """
-        webView.evaluateJavaScript(js) { [weak self] _, _ in
-            Task { @MainActor [weak self] in self?.mirror.pageDidFinish() }
-        }
-    }
-
-    private func scroll(byViewportFraction deltaY: Double) {
+    private func scroll(byWindowFraction deltaY: Double) {
         let rect = mirror.captureRect
         guard rect.height > 0 else { return }
-        let current = (webView.scrollView.contentOffset.y + webView.scrollView.adjustedContentInset.top) / rect.height
+        let scrollView = activeWebView.scrollView
+        let current = (scrollView.contentOffset.y + scrollView.adjustedContentInset.top) / rect.height
         scroll(toWindowUnits: Double(current) + deltaY)
     }
 
@@ -475,7 +459,7 @@ final class BrowserModel: ObservableObject {
     /// top of the page — the same unit frames report in `scrollY`.
     private func scroll(toWindowUnits y: Double) {
         updateWatchScrollInset()
-        let scrollView = webView.scrollView
+        let scrollView = activeWebView.scrollView
         let rect = mirror.captureRect
         guard rect.height > 0 else { return }
         let minY = -scrollView.adjustedContentInset.top
@@ -485,6 +469,38 @@ final class BrowserModel: ObservableObject {
         guard abs(direction) > 0.25 else { return }
         scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: target), animated: false)
         mirror.noteScrollMotion(direction: direction)
+    }
+
+    // MARK: - Video
+
+    /// Hand the page's video to the watch's own player: smooth, full frame
+    /// rate, sound on the watch. When the stream can't be extracted (many
+    /// sites stream through blob: URLs), play it on the phone instead and
+    /// mirror it as fast as the link allows.
+    private func playVideoOnWatch() {
+        mirror.noteInteraction()
+        activeWebView.evaluateJavaScript(PageScripts.extractVideo) { [weak self] result, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let info = (result as? String)
+                    .flatMap { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Any] } ?? [:]
+                let title = info["title"] as? String ?? self.title
+                let start = info["time"] as? Double ?? 0
+                if let string = info["url"] as? String,
+                   let url = URL(string: string),
+                   let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" {
+                    self.session.send(message: VideoOffer(url: url, title: title, startTime: start).message)
+                } else {
+                    self.setVideoMirror(true)
+                    self.session.send(message: VideoOffer(url: nil, title: title, startTime: start).message)
+                }
+            }
+        }
+    }
+
+    private func setVideoMirror(_ on: Bool) {
+        mirror.setBoost(on)
+        activeWebView.evaluateJavaScript(PageScripts.setMainVideoPlaying(on), completionHandler: nil)
     }
 }
 

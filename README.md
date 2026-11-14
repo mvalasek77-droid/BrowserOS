@@ -20,10 +20,28 @@ WKWebView ──takeSnapshot──► JPEG ≤56KB ──sendMessage──► Im
 
 | Gesture | Action |
 |---|---|
-| Tap | Clicks that spot on the iPhone page |
-| Digital Crown / vertical drag | Scrolls the iPhone page |
-| Double-tap | Zooms the picture in/out locally (drag to pan while zoomed) |
-| Long-press | Back / forward / reload and the address field |
+| Tap | Clicks that spot on the iPhone page — instantly, with a ripple where you touched |
+| Digital Crown / vertical swipe | Scrolls (the picture moves at once; the iPhone follows) — flick to glide |
+| Swipe right / left | Back / forward |
+| 🔍 (bottom right) | Dictate, Scribble or type → Google search or URL |
+| ▶︎ (bottom centre, when the page has a video) | Plays the video natively on the watch, with sound |
+| ☰ (bottom left) or long-press | Menu: search, back/forward/reload/top, zoom, quick links, fill saved login |
+| Tap a text field | Text entry on the watch; the text is typed into the page on the iPhone |
+
+## How it stays fluid
+
+- **Local scrolling:** every frame carries its scroll position, so the watch
+  scrolls the picture itself at full frame rate and slots new frames in.
+- **Pipelined frames:** two pictures travel at once; after any watch action
+  the phone captures continuously for a moment so results appear as soon as
+  the page paints them.
+- **Video:** the phone hands the stream URL to the watch's own player. When a
+  site won't expose one (e.g. Media Source / blob: streams), the phone plays it
+  and mirrors it at the fastest rate the link allows.
+- **Sign-in:** popups (`window.open`, "Sign in with Google/Apple") open as real
+  windows so they can hand the login back to the page; the browser identifies
+  as Safari on the device's real iOS version.
+- **Phone stays awake** while the watch is in use, under a dark screen.
 
 ## Requirements
 
@@ -47,15 +65,18 @@ scheme on the paired watch.
 ## Layout
 
 ```
-Shared/MirrorProtocol.swift   message keys + MirrorFrame
-iPhone/BrowserModel.swift     owns the web view, applies watch commands
-iPhone/MirrorStreamer.swift   capture → encode → send, one frame in flight
+Shared/MirrorProtocol.swift   message keys, MirrorFrame, InputPrompt, VideoOffer
+iPhone/BrowserModel.swift     web views (main + popups), watch commands, video handoff
+iPhone/MirrorStreamer.swift   capture → encode → send, two frames in flight
+iPhone/PageScripts.swift      JavaScript for taps, text, logins and video
 iPhone/PhoneSession.swift     WCSession (iPhone side)
 iPhone/WebView.swift          WKWebView host + navigation delegate
 iPhone/BrowserView.swift      address bar, toolbar, watch status sheet
 Watch/WatchSession.swift      WCSession (watch side)
-Watch/MirrorView.swift        full-screen picture + gestures + crown
-Watch/ControlsView.swift      long-press sheet
+Watch/MirrorView.swift        full-screen picture, gestures, crown, buttons
+Watch/ControlsView.swift      menu (☰ / long-press)
+Watch/InputSheet.swift        text entry and saved logins
+Watch/VideoPlayerView.swift   native video playback
 ```
 
 ## Tuning
